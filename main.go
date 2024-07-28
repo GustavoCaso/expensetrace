@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	_ "database/sql"
 	"encoding/csv"
 	"fmt"
@@ -34,7 +35,7 @@ type Expense struct {
 	Amount      uint16
 	Decimal     uint16
 	Type        ExpenseType
-	Coin        string
+	Currency    string
 }
 
 func main() {
@@ -98,7 +99,7 @@ func main() {
 			Amount:      uint16(parsedAmount),
 			Decimal:     uint16(parsedDecimal),
 			Type:        et,
-			Coin:        record[4],
+			Currency:    record[4],
 		}
 
 		expenses = append(expenses, expense)
@@ -106,32 +107,31 @@ func main() {
 
 	fmt.Println(expenses)
 
-	// rows, err := file.GetRows("Sheet1")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	db, err := sql.Open("sqlite3", "expenses.db")
 
-	// for _, row := range rows {
-	// 	for _, col := range row {
-	// 		fmt.Print(col, "\t")
-	// 	}
-	// 	fmt.Println()
-	// }
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// db, err := sql.Open("sqlite3", "expenses.db")
+	defer db.Close()
 
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	// Create table
+	statement, err := db.Prepare("CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY, amount INTEGER NOT NULL, decimal INTEGER NOT NULL,  description TEXT NOT NULL, expense_type INTEGER NOT NULL, date INTEGER NOT NULL, currency TEXT NOT NULL) STRICT;")
+	if err != nil {
+		log.Printf("Error in creating table: %s\n", err.Error())
+		os.Exit(1)
+	} else {
+		log.Println("Successfully created table expenses!")
+	}
+	statement.Exec()
 
-	// defer db.Close()
+	// Insert records
+	insertstmt, err := db.Prepare("INSERT INTO expenses(amount, decimal, description, expense_type, date, currency) values(?, ?, ?, ?, ?, ?)")
 
-	// // Create table
-	// statement, err := db.Prepare("CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY, isbn INTEGER, author VARCHAR(64), name VARCHAR(64) NULL)")
-	// if err != nil {
-	// 	log.Println("Error in creating table")
-	// } else {
-	// 	log.Println("Successfully created table books!")
-	// }
-	// statement.Exec()
+	for _, expense := range expenses {
+		_, err := insertstmt.Exec(expense.Amount, expense.Decimal, expense.Description, expense.Type, expense.Date.Unix(), expense.Currency)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
