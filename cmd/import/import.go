@@ -73,7 +73,7 @@ func main() {
 			amount := matches[amountIndex]
 			decimal := matches[decimalIndex]
 
-			parsedAmount, err := strconv.ParseUint(amount, 10, 16)
+			parsedAmount, err := strconv.ParseUint(amount, 10, 32)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -92,7 +92,7 @@ func main() {
 			expense := expense.Expense{
 				Date:        t,
 				Description: description,
-				Amount:      uint16(parsedAmount),
+				Amount:      uint32(parsedAmount),
 				Decimal:     uint16(parsedDecimal),
 				Type:        et,
 				Currency:    record[4],

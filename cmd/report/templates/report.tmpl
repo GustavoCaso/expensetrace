@@ -5,6 +5,6 @@ Savings:  {{printf "%.2f" .Savings}} EUR
 
 Categories 
 ---------------------
-{{range $key, $value := .Categories}}
-{{$key}} {{printf "%.2f" $value}}
+{{range $category := .Categories}}
+{{html $category.Display}}
 {{- end}}

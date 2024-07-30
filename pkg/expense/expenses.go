@@ -14,7 +14,7 @@ const (
 type Expense struct {
 	Date        time.Time
 	Description string
-	Amount      uint16
+	Amount      uint32
 	Decimal     uint16
 	Type        ExpenseType
 	Currency    string

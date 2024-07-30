@@ -8,8 +8,11 @@ import (
 	"log"
 	"os"
 	"path"
+	"sort"
 	"strconv"
 	"time"
+
+	"golang.org/x/exp/maps"
 
 	expenseDB "github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/db"
 	"github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/expense"
@@ -22,11 +25,28 @@ var month = flag.Int("month", 0, "what month to use for calculating the report")
 //go:embed templates/*
 var content embed.FS
 
+type category struct {
+	name         string
+	amount       float32
+	categoryType expense.ExpenseType
+}
+
+func (c category) Display() string {
+	var sign string
+	if c.categoryType == expense.IncomeType {
+		sign = "+"
+	} else {
+		sign = "-"
+	}
+
+	return fmt.Sprintf("%s %s%.2f", c.name, sign, c.amount)
+}
+
 type Report struct {
 	Spending   float32
 	Income     float32
 	Savings    float32
-	Categories map[string]float32
+	Categories []category
 }
 
 func main() {
@@ -61,7 +81,7 @@ func main() {
 
 	var income float32
 	var spending float32
-	categories := make(map[string]float32)
+	categories := make(map[string]category)
 
 	for _, ex := range expenses {
 		switch ex.Type {
@@ -73,7 +93,8 @@ func main() {
 				os.Exit(1)
 			}
 			spending += float32(v)
-			categories[ex.Category] += float32(v)
+			addCategory(categories, ex, v)
+
 		case expense.IncomeType:
 			value := fmt.Sprintf("%d.%d", ex.Amount, ex.Decimal)
 			v, err := strconv.ParseFloat(value, 32)
@@ -82,14 +103,21 @@ func main() {
 				os.Exit(1)
 			}
 			income += float32(v)
-			categories[ex.Category] += float32(v)
+			addCategory(categories, ex, v)
 		}
 	}
 
 	report.Income = income
 	report.Spending = spending
 	report.Savings = income - spending
-	report.Categories = categories
+
+	categoriesSlice := maps.Values(categories)
+
+	sort.Slice(categoriesSlice, func(i, j int) bool {
+		return categoriesSlice[i].name < categoriesSlice[j].name
+	})
+
+	report.Categories = categoriesSlice
 
 	tmpl, tmplErr := content.ReadFile(path.Join("templates", "report.tmpl"))
 	if tmplErr != nil {
@@ -103,4 +131,24 @@ func main() {
 		os.Exit(1)
 	}
 	os.Exit(0)
+}
+
+func addCategory(categories map[string]category, ex expense.Expense, v float64) {
+	c, ok := categories[ex.Category]
+	if ok {
+		c.amount += float32(v)
+	} else {
+		var cName string
+		if ex.Category == "" {
+			cName = "uncategorized"
+		} else {
+			cName = ex.Category
+		}
+		c := category{
+			amount:       float32(v),
+			name:         cName,
+			categoryType: ex.Type,
+		}
+		categories[ex.Category] = c
+	}
 }
