@@ -75,3 +75,32 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]exp
 
 	return expenses, nil
 }
+
+func GetExpensesWithoutCategory(db *sql.DB) ([]expense.Expense, error) {
+	rows, err := db.Query("SELECT * FROM expenses WHERE category == \"\"")
+	if err != nil {
+		return []expense.Expense{}, err
+	}
+
+	defer rows.Close()
+
+	expenses := []expense.Expense{}
+
+	for rows.Next() {
+		var ex expense.Expense
+		var id int
+		var date int64
+		var expenseType int
+
+		if err := rows.Scan(&id, &ex.Amount, &ex.Decimal, &ex.Description, &expenseType, &date, &ex.Currency, &ex.Category); err != nil {
+			log.Fatal(err)
+		}
+
+		ex.Type = expense.ExpenseType(expenseType)
+		ex.Date = time.Unix(date, 0).UTC()
+
+		expenses = append(expenses, ex)
+	}
+
+	return expenses, nil
+}
