@@ -12,6 +12,7 @@ const (
 )
 
 type Expense struct {
+	ID          int
 	Date        time.Time
 	Description string
 	Amount      uint32

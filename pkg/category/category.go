@@ -39,7 +39,7 @@ var restarantsMatcher = CategoryMatcher{
 }
 
 var groceriesMatcher = CategoryMatcher{
-	re:       regexp.MustCompile(`supermercado|lidl|ahorramas|syra coffee`),
+	re:       regexp.MustCompile(`supermercado|lidl|ahorramas|syra coffee|vida al natural`),
 	category: "groceries",
 }
 

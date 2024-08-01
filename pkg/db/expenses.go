@@ -1,13 +1,24 @@
 package db
 
 import (
+	"bytes"
 	"database/sql"
+	"embed"
+	"fmt"
+	"io"
 	"log"
+	"path"
+	"text/template"
 	"time"
 
 	"github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/expense"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+// content holds our static content.
+//
+//go:embed templates/*
+var content embed.FS
 
 func GetOrCreateExpenseDB() (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", "expenses.db")
@@ -47,6 +58,36 @@ func InsertExpenses(db *sql.DB, expenses []expense.Expense) error {
 	return nil
 }
 
+func UpdateExpenses(db *sql.DB, expenses []expense.Expense) (int64, error) {
+	// Update records
+	query := "INSERT OR REPLACE INTO expenses(id, amount, decimal, description, expense_type, date, currency, category) VALUES %s;"
+	var buffer = bytes.Buffer{}
+
+	err := renderTemplate(&buffer, "values.tmpl", struct {
+		Length   int
+		Expenses []expense.Expense
+	}{
+		// Insde the template we itarte over expenses, the index starts at 0
+		Length:   len(expenses) - 1,
+		Expenses: expenses,
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	formattedQuery := fmt.Sprintf(query, buffer.String())
+
+	result, err := db.Exec(formattedQuery)
+	if err != nil {
+		return 0, err
+	}
+
+	count, _ := result.RowsAffected()
+
+	return count, nil
+}
+
 func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]expense.Expense, error) {
 	rows, err := db.Query("SELECT * FROM expenses WHERE date BETWEEN ? and ?", start.Unix(), end.Unix())
 	if err != nil {
@@ -67,6 +108,7 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]exp
 			log.Fatal(err)
 		}
 
+		ex.ID = id
 		ex.Type = expense.ExpenseType(expenseType)
 		ex.Date = time.Unix(date, 0).UTC()
 
@@ -96,6 +138,7 @@ func GetExpensesWithoutCategory(db *sql.DB) ([]expense.Expense, error) {
 			log.Fatal(err)
 		}
 
+		ex.ID = id
 		ex.Type = expense.ExpenseType(expenseType)
 		ex.Date = time.Unix(date, 0).UTC()
 
@@ -103,4 +146,18 @@ func GetExpensesWithoutCategory(db *sql.DB) ([]expense.Expense, error) {
 	}
 
 	return expenses, nil
+}
+
+func renderTemplate(out io.Writer, templateName string, value interface{}) error {
+	tmpl, err := content.ReadFile(path.Join("templates", templateName))
+	if err != nil {
+		return err
+	}
+	t := template.Must(template.New(templateName).Parse(string(tmpl)))
+	err = t.Execute(out, value)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

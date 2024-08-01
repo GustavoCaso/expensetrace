@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/category"
 	expenseDB "github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/db"
 	"github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/expense"
 )
@@ -13,6 +14,7 @@ import (
 func main() {
 	var actionFlag string
 	flag.StringVar(&actionFlag, "a", "inspect", "What action to perform. Supported values are: inspect, reprocess")
+	flag.Parse()
 
 	db, err := expenseDB.GetOrCreateExpenseDB()
 	if err != nil {
@@ -32,7 +34,7 @@ func main() {
 	case "inspect":
 		inspect(expenses)
 	case "reprocess":
-		reprocess(db)
+		reprocess(db, expenses)
 	default:
 		log.Fatalf("Unsupported action: %s", actionFlag)
 	}
@@ -52,6 +54,28 @@ func inspect(expenses []expense.Expense) {
 	os.Exit(0)
 }
 
-func reprocess(db *sql.DB) {
+func reprocess(db *sql.DB, expenses []expense.Expense) {
+	expensesToUpdate := []expense.Expense{}
+	for _, ex := range expenses {
+		c := category.Match(ex.Description)
+
+		if c != "" {
+			ex.Category = c
+			expensesToUpdate = append(expensesToUpdate, ex)
+		}
+	}
+
+	updated, err := expenseDB.UpdateExpenses(db, expensesToUpdate)
+
+	if err != nil {
+		log.Fatalf("Unexpected error updating categories: %v", err)
+	}
+
+	if updated != int64(len(expensesToUpdate)) {
+		log.Printf("Not all records were updated :(")
+	}
+
+	log.Printf("%d updated\n", updated)
+
 	os.Exit(0)
 }
