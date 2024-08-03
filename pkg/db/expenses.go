@@ -27,7 +27,7 @@ func GetOrCreateExpenseDB() (*sql.DB, error) {
 	}
 
 	// Create table
-	statement, err := db.Prepare("CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY, amount INTEGER NOT NULL, decimal INTEGER NOT NULL,  description TEXT NOT NULL, expense_type INTEGER NOT NULL, date INTEGER NOT NULL, currency TEXT NOT NULL, category TEXT NOT NULL) STRICT;")
+	statement, err := db.Prepare("CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY, amount INTEGER NOT NULL,  description TEXT NOT NULL, expense_type INTEGER NOT NULL, date INTEGER NOT NULL, currency TEXT NOT NULL, category TEXT NOT NULL) STRICT;")
 	if err != nil {
 		return nil, err
 	}
@@ -43,13 +43,13 @@ func GetOrCreateExpenseDB() (*sql.DB, error) {
 
 func InsertExpenses(db *sql.DB, expenses []expense.Expense) error {
 	// Insert records
-	insertStmt, err := db.Prepare("INSERT INTO expenses(amount, decimal, description, expense_type, date, currency, category) values(?, ?, ?, ?, ?, ?, ?)")
+	insertStmt, err := db.Prepare("INSERT INTO expenses(amount, description, expense_type, date, currency, category) values(?, ?, ?, ?, ?, ?)")
 
 	if err != nil {
 		return err
 	}
 	for _, expense := range expenses {
-		_, err := insertStmt.Exec(expense.Amount, expense.Decimal, expense.Description, expense.Type, expense.Date.Unix(), expense.Currency, expense.Category)
+		_, err := insertStmt.Exec(expense.Amount, expense.Description, expense.Type, expense.Date.Unix(), expense.Currency, expense.Category)
 		if err != nil {
 			return err
 		}
@@ -60,7 +60,7 @@ func InsertExpenses(db *sql.DB, expenses []expense.Expense) error {
 
 func UpdateExpenses(db *sql.DB, expenses []expense.Expense) (int64, error) {
 	// Update records
-	query := "INSERT OR REPLACE INTO expenses(id, amount, decimal, description, expense_type, date, currency, category) VALUES %s;"
+	query := "INSERT OR REPLACE INTO expenses(id, amount, description, expense_type, date, currency, category) VALUES %s;"
 	var buffer = bytes.Buffer{}
 
 	err := renderTemplate(&buffer, "values.tmpl", struct {
@@ -104,7 +104,7 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]exp
 		var date int64
 		var expenseType int
 
-		if err := rows.Scan(&id, &ex.Amount, &ex.Decimal, &ex.Description, &expenseType, &date, &ex.Currency, &ex.Category); err != nil {
+		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.Category); err != nil {
 			log.Fatal(err)
 		}
 
@@ -134,7 +134,7 @@ func GetExpensesWithoutCategory(db *sql.DB) ([]expense.Expense, error) {
 		var date int64
 		var expenseType int
 
-		if err := rows.Scan(&id, &ex.Amount, &ex.Decimal, &ex.Description, &expenseType, &date, &ex.Currency, &ex.Category); err != nil {
+		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.Category); err != nil {
 			log.Fatal(err)
 		}
 

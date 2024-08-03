@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -73,11 +74,7 @@ func main() {
 			amount := matches[amountIndex]
 			decimal := matches[decimalIndex]
 
-			parsedAmount, err := strconv.ParseUint(amount, 10, 32)
-			if err != nil {
-				log.Fatal(err)
-			}
-			parsedDecimal, err := strconv.ParseUint(decimal, 10, 16)
+			parsedAmount, err := strconv.ParseInt(fmt.Sprintf("%s%s", amount, decimal), 10, 64)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -92,8 +89,7 @@ func main() {
 			expense := expense.Expense{
 				Date:        t,
 				Description: description,
-				Amount:      uint32(parsedAmount),
-				Decimal:     uint16(parsedDecimal),
+				Amount:      parsedAmount,
 				Type:        et,
 				Currency:    record[4],
 				Category:    c,

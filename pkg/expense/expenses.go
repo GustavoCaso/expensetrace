@@ -15,8 +15,7 @@ type Expense struct {
 	ID          int
 	Date        time.Time
 	Description string
-	Amount      uint32
-	Decimal     uint16
+	Amount      int64
 	Type        ExpenseType
 	Currency    string
 	Category    string
