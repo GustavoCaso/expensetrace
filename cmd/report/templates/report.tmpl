@@ -1,10 +1,10 @@
-Spending: {{printf "%.2f" .Spending}} EUR
-Income:   {{printf "%.2f" .Income}} EUR
+Spending:                 {{formatMoney .Spending "." ","}}€
+Income:                   {{formatMoney .Income "." ","}}€ 
 
-Savings:  {{printf "%.2f" .Savings}} EUR
+Savings:                  {{formatMoney .Savings "." ","}}€ 
 
-Earnings Per Day:         {{printf "%.2f" .EarningsPerday}} EUR
-Average Spending Per Day: {{printf "%.2f" .AverageSpendingPerDay}} EUR
+Earnings Per Day:         {{formatMoney .EarningsPerDay "." ","}}€ 
+Average Spending Per Day: {{formatMoney .AverageSpendingPerDay "." "," }}€ 
 
 Categories 
 ---------------------

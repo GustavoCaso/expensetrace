@@ -5,11 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"os"
 	"path"
 	"sort"
-	"strconv"
 	"time"
 
 	"golang.org/x/exp/maps"
@@ -28,27 +28,26 @@ var content embed.FS
 
 type category struct {
 	name         string
-	amount       float32
+	amount       int64
 	categoryType expense.ExpenseType
 }
 
 func (c category) Display() string {
-	var sign string
-	if c.categoryType == expense.IncomeType {
-		sign = "+"
-	} else {
-		sign = "-"
+	value := c.amount
+
+	if c.categoryType == expense.ChargeType {
+		value = -(value)
 	}
 
-	return fmt.Sprintf("%s %s%.2f", c.name, sign, c.amount)
+	return fmt.Sprintf("%s: %s€", c.name, formatMoney(value, ".", ","))
 }
 
 type Report struct {
-	Spending              float32
-	Income                float32
-	Savings               float32
-	EarningsPerday        float32
-	AverageSpendingPerDay float32
+	Spending              int64
+	Income                int64
+	Savings               int64
+	EarningsPerDay        int64
+	AverageSpendingPerDay int64
 	Categories            []category
 }
 
@@ -82,8 +81,8 @@ func main() {
 
 	var report Report
 
-	var income float32
-	var spending float32
+	var income int64
+	var spending int64
 	categories := make(map[string]category)
 
 	for _, ex := range expenses {
@@ -93,23 +92,11 @@ func main() {
 
 		switch ex.Type {
 		case expense.ChargeType:
-			value := fmt.Sprintf("%d.%d", ex.Amount, ex.Decimal)
-			v, err := strconv.ParseFloat(value, 32)
-			if err != nil {
-				log.Fatalf("Unable to parse numbre: %s", err.Error())
-				os.Exit(1)
-			}
-			spending += float32(v)
-			addCategory(categories, ex, v)
+			spending += ex.Amount
+			addCategory(categories, ex, ex.Amount)
 		case expense.IncomeType:
-			value := fmt.Sprintf("%d.%d", ex.Amount, ex.Decimal)
-			v, err := strconv.ParseFloat(value, 32)
-			if err != nil {
-				log.Fatalf("Unable to parse numbre: %s", err.Error())
-				os.Exit(1)
-			}
-			income += float32(v)
-			addCategory(categories, ex, v)
+			income += ex.Amount
+			addCategory(categories, ex, ex.Amount)
 		}
 	}
 
@@ -118,35 +105,29 @@ func main() {
 	report.Savings = income - spending
 
 	numberOfDaysPerMonth := calendarDays(lastOfMonth, firstOfMonth)
-	report.AverageSpendingPerDay = spending / float32(numberOfDaysPerMonth)
-	report.EarningsPerday = income / float32(numberOfDaysPerMonth)
+	report.AverageSpendingPerDay = spending / int64(numberOfDaysPerMonth)
+	report.EarningsPerDay = income / int64(numberOfDaysPerMonth)
 
 	categoriesSlice := maps.Values(categories)
 
 	sort.Slice(categoriesSlice, func(i, j int) bool {
-		return categoriesSlice[i].name < categoriesSlice[j].name
+		return categoriesSlice[i].amount > categoriesSlice[j].amount
 	})
 
 	report.Categories = categoriesSlice
 
-	tmpl, tmplErr := content.ReadFile(path.Join("templates", "report.tmpl"))
-	if tmplErr != nil {
-		log.Fatalf("Unable to parse template: %s", tmplErr.Error())
-		os.Exit(1)
-	}
-	t := template.Must(template.New("report").Parse(string(tmpl)))
-	err = t.Execute(os.Stdout, report)
+	err = renderTemplate(os.Stdout, "report.tmpl", report)
 	if err != nil {
 		log.Fatalf("Error rendering the report: %s", err.Error())
-		os.Exit(1)
 	}
+
 	os.Exit(0)
 }
 
-func addCategory(categories map[string]category, ex expense.Expense, v float64) {
+func addCategory(categories map[string]category, ex expense.Expense, v int64) {
 	c, ok := categories[ex.Category]
 	if ok {
-		c.amount += float32(v)
+		c.amount += v
 		categories[ex.Category] = c
 	} else {
 		var cName string
@@ -156,7 +137,7 @@ func addCategory(categories map[string]category, ex expense.Expense, v float64) 
 			cName = ex.Category
 		}
 		c := category{
-			amount:       float32(v),
+			amount:       v,
 			name:         cName,
 			categoryType: ex.Type,
 		}
@@ -172,4 +153,48 @@ func calendarDays(t2, t1 time.Time) int {
 	u1 := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 	days := u2.Sub(u1) / (24 * time.Hour)
 	return int(days)
+}
+
+func formatMoney(value int64, thousand, decimal string) string {
+	var result string
+	var isNegative bool
+
+	if value < 0 {
+		value = value * -1
+		isNegative = true
+	}
+
+	// apply the decimal separator
+	result = fmt.Sprintf("%s%02d%s", decimal, value%100, result)
+	value /= 100
+
+	// for each 3 dígits put a dot "."
+	for value >= 1000 {
+		result = fmt.Sprintf("%s%03d%s", thousand, value%1000, result)
+		value /= 1000
+	}
+
+	if isNegative {
+		return fmt.Sprintf("-%d%s", value, result)
+	}
+
+	return fmt.Sprintf("%d%s", value, result)
+}
+
+var templateFuncs = template.FuncMap{
+	"formatMoney": formatMoney,
+}
+
+func renderTemplate(out io.Writer, templateName string, value interface{}) error {
+	tmpl, err := content.ReadFile(path.Join("templates", templateName))
+	if err != nil {
+		return err
+	}
+	t := template.Must(template.New(templateName).Funcs(templateFuncs).Parse(string(tmpl)))
+	err = t.Execute(out, value)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
