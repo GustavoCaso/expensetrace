@@ -46,6 +46,7 @@ type Report struct {
 	Spending              int64
 	Income                int64
 	Savings               int64
+	SavingsPercentage     float32
 	EarningsPerDay        int64
 	AverageSpendingPerDay int64
 	Categories            []category
@@ -101,7 +102,9 @@ func main() {
 
 	report.Income = income
 	report.Spending = spending
-	report.Savings = income - spending
+	savings := income - spending
+	report.Savings = savings
+	report.SavingsPercentage = (float32(savings) / float32(income)) * 100
 
 	numberOfDaysPerMonth := calendarDays(lastOfMonth, firstOfMonth)
 	report.AverageSpendingPerDay = spending / int64(numberOfDaysPerMonth)

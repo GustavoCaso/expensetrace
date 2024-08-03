@@ -1,7 +1,7 @@
 Spending:                 {{formatMoney .Spending "." ","}}€
 Income:                   {{formatMoney .Income "." ","}}€ 
 
-Savings:                  {{formatMoney .Savings "." ","}}€ 
+Savings:                  {{formatMoney .Savings "." ","}}€ {{printf "%.2f%%" .SavingsPercentage}}
 
 Earnings Per Day:         {{formatMoney .EarningsPerDay "." ","}}€ 
 Average Spending Per Day: {{formatMoney .AverageSpendingPerDay "." "," }}€ 
