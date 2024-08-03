@@ -14,6 +14,7 @@ import (
 
 	"golang.org/x/exp/maps"
 
+	pkgCategory "github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/category"
 	expenseDB "github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/db"
 	"github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/expense"
 )
@@ -84,6 +85,10 @@ func main() {
 	categories := make(map[string]category)
 
 	for _, ex := range expenses {
+		if ex.Category == pkgCategory.Exclude {
+			continue
+		}
+
 		switch ex.Type {
 		case expense.ChargeType:
 			value := fmt.Sprintf("%d.%d", ex.Amount, ex.Decimal)
@@ -94,7 +99,6 @@ func main() {
 			}
 			spending += float32(v)
 			addCategory(categories, ex, v)
-
 		case expense.IncomeType:
 			value := fmt.Sprintf("%d.%d", ex.Amount, ex.Decimal)
 			v, err := strconv.ParseFloat(value, 32)
