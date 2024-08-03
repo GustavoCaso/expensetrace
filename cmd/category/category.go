@@ -65,17 +65,21 @@ func reprocess(db *sql.DB, expenses []expense.Expense) {
 		}
 	}
 
-	updated, err := expenseDB.UpdateExpenses(db, expensesToUpdate)
+	if len(expensesToUpdate) > 0 {
+		updated, err := expenseDB.UpdateExpenses(db, expensesToUpdate)
 
-	if err != nil {
-		log.Fatalf("Unexpected error updating categories: %v", err)
+		if err != nil {
+			log.Fatalf("Unexpected error updating categories: %v", err)
+		}
+
+		if updated != int64(len(expensesToUpdate)) {
+			log.Printf("Not all records were updated :(")
+		}
+
+		log.Printf("%d updated\n", updated)
+	} else {
+		log.Println("No expenses that could recategorize")
 	}
-
-	if updated != int64(len(expensesToUpdate)) {
-		log.Printf("Not all records were updated :(")
-	}
-
-	log.Printf("%d updated\n", updated)
 
 	os.Exit(0)
 }
