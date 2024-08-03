@@ -141,6 +141,7 @@ func addCategory(categories map[string]category, ex expense.Expense, v float64) 
 	c, ok := categories[ex.Category]
 	if ok {
 		c.amount += float32(v)
+		categories[ex.Category] = c
 	} else {
 		var cName string
 		if ex.Category == "" {
