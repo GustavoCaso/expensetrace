@@ -14,7 +14,7 @@ var shoppingMatcher = CategoryMatcher{
 	category: "shopping",
 }
 var payrollMatcher = CategoryMatcher{
-	re:       regexp.MustCompile(`datadog cloud spain`),
+	re:       regexp.MustCompile(`datadog`),
 	category: "payroll",
 }
 var finesMatcher = CategoryMatcher{
