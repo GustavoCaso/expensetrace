@@ -106,7 +106,7 @@ var interestMatcher = CategoryMatcher{
 }
 
 var excludeMatcher = CategoryMatcher{
-	re:       regexp.MustCompile(`traspaso de 0239*`),
+	re:       regexp.MustCompile(`traspaso.*0239*`),
 	category: Exclude,
 }
 
@@ -128,6 +128,11 @@ var dentalMatcher = CategoryMatcher{
 var internetMatcher = CategoryMatcher{
 	re:       regexp.MustCompile(`rcbo\.o2 fibra`),
 	category: "internet",
+}
+
+var waterMatcher = CategoryMatcher{
+	re:       regexp.MustCompile(`rcbo\.canal de isabel ii`),
+	category: "water",
 }
 
 var allMatchers = []CategoryMatcher{
@@ -156,6 +161,7 @@ var allMatchers = []CategoryMatcher{
 	parkingMatcher,
 	dentalMatcher,
 	internetMatcher,
+	waterMatcher,
 }
 
 func Match(s string) string {
