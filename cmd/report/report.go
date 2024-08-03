@@ -63,7 +63,7 @@ func main() {
 	currentLocation := today.Location()
 
 	firstOfMonth := time.Date(today.Year(), time.Month(*month), 1, 0, 0, 0, 0, currentLocation)
-	lastOfMonth := firstOfMonth.AddDate(0, 1, -1)
+	lastOfMonth := firstOfMonth.AddDate(0, 1, 0).Add(time.Nanosecond * -1)
 
 	db, err := expenseDB.GetOrCreateExpenseDB()
 	if err != nil {
@@ -72,7 +72,6 @@ func main() {
 	}
 
 	defer db.Close()
-
 	expenses, err := expenseDB.GetExpensesFromDateRange(db, firstOfMonth, lastOfMonth)
 	if err != nil {
 		log.Fatalf("Unable to get expenses: %s", err.Error())
