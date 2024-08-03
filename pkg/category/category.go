@@ -7,6 +7,8 @@ type CategoryMatcher struct {
 	category string
 }
 
+var Exclude = "exclude"
+
 var shoppingMatcher = CategoryMatcher{
 	re:       regexp.MustCompile(`amazon|amzn|books`),
 	category: "shopping",
@@ -39,17 +41,17 @@ var restarantsMatcher = CategoryMatcher{
 }
 
 var groceriesMatcher = CategoryMatcher{
-	re:       regexp.MustCompile(`supermercado|lidl|ahorramas|syra coffee|vida al natural`),
+	re:       regexp.MustCompile(`supermercado|lidl|ahorramas|syra coffee|vida al natural|alcampo|frutas|queseria|fruteria`),
 	category: "groceries",
 }
 
 var homeSpendingsMatcher = CategoryMatcher{
-	re:       regexp.MustCompile(`ferreteria|leroy merlin|ikea|el corte ingles venta|fronda`),
+	re:       regexp.MustCompile(`ferreteria|leroy merlin|ikea|el corte ingles venta|fronda|stop deshollinadores|viveros del pozo|teclum`),
 	category: "home",
 }
 
 var gasMatcher = CategoryMatcher{
-	re:       regexp.MustCompile(`ballenoil`),
+	re:       regexp.MustCompile(`ballenoil|repsol`),
 	category: "gas",
 }
 
@@ -79,7 +81,7 @@ var communityChargeMatcher = CategoryMatcher{
 }
 
 var insurancesMatcher = CategoryMatcher{
-	re:       regexp.MustCompile(`rcbo\.santa lucia`),
+	re:       regexp.MustCompile(`rcbo\.santa lucia|rcbo\.liberty|mutua madrileãa motor`),
 	category: "insurances",
 }
 
@@ -103,6 +105,31 @@ var interestMatcher = CategoryMatcher{
 	category: "interest",
 }
 
+var excludeMatcher = CategoryMatcher{
+	re:       regexp.MustCompile(`traspaso de 0239*`),
+	category: Exclude,
+}
+
+var medicationsMatcher = CategoryMatcher{
+	re:       regexp.MustCompile(`farmacia`),
+	category: "medications",
+}
+
+var parkingMatcher = CategoryMatcher{
+	re:       regexp.MustCompile(`parking`),
+	category: "parking",
+}
+
+var dentalMatcher = CategoryMatcher{
+	re:       regexp.MustCompile(`adentis`),
+	category: "dental",
+}
+
+var internetMatcher = CategoryMatcher{
+	re:       regexp.MustCompile(`rcbo\.o2 fibra`),
+	category: "internet",
+}
+
 var allMatchers = []CategoryMatcher{
 	shoppingMatcher,
 	payrollMatcher,
@@ -124,6 +151,11 @@ var allMatchers = []CategoryMatcher{
 	mortgageMatcher,
 	irpfMatcher,
 	interestMatcher,
+	excludeMatcher,
+	medicationsMatcher,
+	parkingMatcher,
+	dentalMatcher,
+	internetMatcher,
 }
 
 func Match(s string) string {
