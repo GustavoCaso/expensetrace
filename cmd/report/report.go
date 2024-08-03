@@ -44,10 +44,12 @@ func (c category) Display() string {
 }
 
 type Report struct {
-	Spending   float32
-	Income     float32
-	Savings    float32
-	Categories []category
+	Spending              float32
+	Income                float32
+	Savings               float32
+	EarningsPerday        float32
+	AverageSpendingPerDay float32
+	Categories            []category
 }
 
 func main() {
@@ -115,6 +117,10 @@ func main() {
 	report.Spending = spending
 	report.Savings = income - spending
 
+	numberOfDaysPerMonth := calendarDays(lastOfMonth, firstOfMonth)
+	report.AverageSpendingPerDay = spending / float32(numberOfDaysPerMonth)
+	report.EarningsPerday = income / float32(numberOfDaysPerMonth)
+
 	categoriesSlice := maps.Values(categories)
 
 	sort.Slice(categoriesSlice, func(i, j int) bool {
@@ -156,4 +162,14 @@ func addCategory(categories map[string]category, ex expense.Expense, v float64) 
 		}
 		categories[ex.Category] = c
 	}
+}
+
+// calendarDays returns the calendar difference between times (t2 - t1) as days.
+func calendarDays(t2, t1 time.Time) int {
+	y, m, d := t2.Date()
+	u2 := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+	y, m, d = t1.In(t2.Location()).Date()
+	u1 := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+	days := u2.Sub(u1) / (24 * time.Hour)
+	return int(days)
 }
