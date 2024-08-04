@@ -3,8 +3,13 @@ package main
 import (
 	"database/sql"
 	"flag"
+	"fmt"
+	"io"
 	"log"
 	"os"
+	"sort"
+
+	"golang.org/x/exp/maps"
 
 	"github.com/GustavoCaso/expensetrace/pkg/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
@@ -13,7 +18,9 @@ import (
 
 func main() {
 	var actionFlag string
+	var outputLocation string
 	flag.StringVar(&actionFlag, "a", "inspect", "What action to perform. Supported values are: inspect, reprocess")
+	flag.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")
 	flag.Parse()
 
 	db, err := expenseDB.GetOrCreateExpenseDB()
@@ -32,7 +39,19 @@ func main() {
 
 	switch actionFlag {
 	case "inspect":
-		inspect(expenses)
+		var output io.Writer
+		output = os.Stdout
+		if outputLocation != "" {
+			f, err := os.Create(outputLocation)
+			if err != nil {
+				log.Fatalf("Unable to create inspect file output: %s", err.Error())
+			}
+
+			output = f
+
+			defer f.Close()
+		}
+		inspect(output, expenses)
 	case "reprocess":
 		reprocess(db, expenses)
 	default:
@@ -40,15 +59,26 @@ func main() {
 	}
 }
 
-func inspect(expenses []expense.Expense) {
+func inspect(writer io.Writer, expenses []expense.Expense) {
 	if len(expenses) == 0 {
 		log.Println("No expenses without category 🎉")
 		os.Exit(0)
 	}
 
-	log.Println("This are the expenses descriptions that do not have a category")
+	groupedExpenses := map[string]int{}
+
 	for _, ex := range expenses {
-		log.Printf("- %s\n", ex.Description)
+		groupedExpenses[ex.Description]++
+	}
+
+	keys := maps.Keys(groupedExpenses)
+
+	sort.SliceStable(keys, func(i, j int) bool {
+		return groupedExpenses[keys[i]] > groupedExpenses[keys[j]]
+	})
+
+	for _, k := range keys {
+		fmt.Fprintf(writer, "%s -> %d\n", k, groupedExpenses[k])
 	}
 
 	os.Exit(0)
