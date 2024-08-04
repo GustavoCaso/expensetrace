@@ -41,6 +41,27 @@ func GetOrCreateExpenseDB(dbsource string) (*sql.DB, error) {
 	return db, nil
 }
 
+func DeleteExpenseDB(dbsource string) error {
+	db, err := sql.Open("sqlite3", dbsource)
+	if err != nil {
+		return err
+	}
+
+	// drop table
+	statement, err := db.Prepare("DROP TABLE IF EXISTS expenses;")
+	if err != nil {
+		return err
+	}
+
+	_, err = statement.Exec()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func InsertExpenses(db *sql.DB, expenses []expense.Expense) error {
 	// Insert records
 	insertStmt, err := db.Prepare("INSERT INTO expenses(amount, description, expense_type, date, currency, category) values(?, ?, ?, ?, ?, ?)")
