@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/pkg/category"
+	"github.com/GustavoCaso/expensetrace/pkg/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
 	"github.com/GustavoCaso/expensetrace/pkg/expense"
 )
@@ -23,11 +25,23 @@ var amountIndex = re.SubexpIndex("amount")
 var decimalIndex = re.SubexpIndex("decimal")
 
 func main() {
+	var configPath string
+	flag.StringVar(&configPath, "c", "expense.toml", "Configuration file")
+	flag.Parse()
+
+	conf, err := config.Parse(configPath)
+
+	if err != nil {
+		log.Fatalf("Unable to parse the configuration: %s", err.Error())
+	}
+
 	argsLength := len(os.Args)
 
 	if argsLength != 2 {
 		panic("must provide a CSV file with your expenseses")
 	}
+
+	categoryMatcher := category.New(conf.Categories)
 
 	expenseFile := os.Args[1]
 
@@ -80,7 +94,7 @@ func main() {
 			}
 
 			description := strings.ToLower(record[2])
-			c := category.Match(description)
+			c := categoryMatcher.Match(description)
 
 			if c == "" {
 				log.Printf("expense without category. Description: %s\n", description)
@@ -103,7 +117,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	db, err := expenseDB.GetOrCreateExpenseDB()
+	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
 	if err != nil {
 		log.Fatalf("Unable to get expenses DB: %s", err.Error())
 		os.Exit(1)

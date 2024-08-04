@@ -12,6 +12,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/GustavoCaso/expensetrace/pkg/category"
+	"github.com/GustavoCaso/expensetrace/pkg/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
 	"github.com/GustavoCaso/expensetrace/pkg/expense"
 )
@@ -19,11 +20,19 @@ import (
 func main() {
 	var actionFlag string
 	var outputLocation string
+	var configPath string
 	flag.StringVar(&actionFlag, "a", "inspect", "What action to perform. Supported values are: inspect, reprocess")
 	flag.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")
+	flag.StringVar(&configPath, "c", "expense.toml", "Configuration file")
 	flag.Parse()
 
-	db, err := expenseDB.GetOrCreateExpenseDB()
+	conf, err := config.Parse(configPath)
+
+	if err != nil {
+		log.Fatalf("Unable to parse the configuration: %s", err.Error())
+	}
+
+	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
 	if err != nil {
 		log.Fatalf("Unable to get expenses DB: %s", err.Error())
 		os.Exit(1)
@@ -53,7 +62,9 @@ func main() {
 		}
 		inspect(output, expenses)
 	case "reprocess":
-		reprocess(db, expenses)
+		categoryMatcher := category.New(conf.Categories)
+
+		reprocess(db, categoryMatcher, expenses)
 	default:
 		log.Fatalf("Unsupported action: %s", actionFlag)
 	}
@@ -84,10 +95,10 @@ func inspect(writer io.Writer, expenses []expense.Expense) {
 	os.Exit(0)
 }
 
-func reprocess(db *sql.DB, expenses []expense.Expense) {
+func reprocess(db *sql.DB, categoryMatcher category.Category, expenses []expense.Expense) {
 	expensesToUpdate := []expense.Expense{}
 	for _, ex := range expenses {
-		c := category.Match(ex.Description)
+		c := categoryMatcher.Match(ex.Description)
 
 		if c != "" {
 			ex.Category = c

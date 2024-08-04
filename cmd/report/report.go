@@ -15,6 +15,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	pkgCategory "github.com/GustavoCaso/expensetrace/pkg/category"
+	"github.com/GustavoCaso/expensetrace/pkg/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
 	"github.com/GustavoCaso/expensetrace/pkg/expense"
 )
@@ -53,7 +54,15 @@ type Report struct {
 }
 
 func main() {
+	var configPath string
+	flag.StringVar(&configPath, "c", "expense.toml", "Configuration file")
 	flag.Parse()
+
+	conf, err := config.Parse(configPath)
+
+	if err != nil {
+		log.Fatalf("Unable to parse the configuration: %s", err.Error())
+	}
 
 	if *month == 0 {
 		log.Fatal("You must provide the moth you want to generate the report")
@@ -66,7 +75,7 @@ func main() {
 	firstOfMonth := time.Date(today.Year(), time.Month(*month), 1, 0, 0, 0, 0, currentLocation)
 	lastOfMonth := firstOfMonth.AddDate(0, 1, 0).Add(time.Nanosecond * -1)
 
-	db, err := expenseDB.GetOrCreateExpenseDB()
+	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
 	if err != nil {
 		log.Fatalf("Unable to get expenses DB: %s", err.Error())
 		os.Exit(1)

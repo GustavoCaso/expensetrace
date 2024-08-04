@@ -20,8 +20,8 @@ import (
 //go:embed templates/*
 var content embed.FS
 
-func GetOrCreateExpenseDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "expenses.db")
+func GetOrCreateExpenseDB(dbsource string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", dbsource)
 	if err != nil {
 		return nil, err
 	}
