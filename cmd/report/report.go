@@ -14,9 +14,9 @@ import (
 
 	"golang.org/x/exp/maps"
 
-	pkgCategory "github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/category"
-	expenseDB "github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/db"
-	"github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/expense"
+	pkgCategory "github.com/GustavoCaso/expensetrace/pkg/category"
+	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
+	"github.com/GustavoCaso/expensetrace/pkg/expense"
 )
 
 var month = flag.Int("month", 0, "what month to use for calculating the report")

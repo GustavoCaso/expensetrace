@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/category"
-	expenseDB "github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/db"
-	"github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/expense"
+	"github.com/GustavoCaso/expensetrace/pkg/category"
+	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
+	"github.com/GustavoCaso/expensetrace/pkg/expense"
 )
 
 var re = regexp.MustCompile(`(?P<charge>-)?(?P<amount>\d+)\.?(?P<decimal>\d*)`)

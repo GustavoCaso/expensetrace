@@ -11,7 +11,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/GustavoCaso/sandbox/go/moneyTracker/pkg/expense"
+	"github.com/GustavoCaso/expensetrace/pkg/expense"
 	_ "github.com/mattn/go-sqlite3"
 )
 

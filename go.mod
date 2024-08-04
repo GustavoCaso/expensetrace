@@ -1,4 +1,4 @@
-module github.com/GustavoCaso/sandbox/go/moneyTracker
+module github.com/GustavoCaso/expensetrace
 
 go 1.22.0
 
