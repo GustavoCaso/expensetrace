@@ -18,6 +18,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/pkg/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
 	"github.com/GustavoCaso/expensetrace/pkg/expense"
+	"github.com/GustavoCaso/expensetrace/pkg/util"
 	"github.com/fatih/color"
 )
 
@@ -42,9 +43,9 @@ func (c category) Display() string {
 	}
 
 	if value < 0 {
-		return fmt.Sprintf("%s: %s€", c.name, colorOutput(formatMoney(value, ".", ","), "red", "underline"))
+		return fmt.Sprintf("%s: %s€", c.name, colorOutput(util.FormatMoney(value, ".", ","), "red", "underline"))
 	} else {
-		return fmt.Sprintf("%s: %s€", c.name, colorOutput(formatMoney(value, ".", ","), "green", "bold"))
+		return fmt.Sprintf("%s: %s€", c.name, colorOutput(util.FormatMoney(value, ".", ","), "green", "bold"))
 	}
 }
 
@@ -176,32 +177,6 @@ func calendarDays(t2, t1 time.Time) int {
 	return int(days)
 }
 
-func formatMoney(value int64, thousand, decimal string) string {
-	var result string
-	var isNegative bool
-
-	if value < 0 {
-		value = value * -1
-		isNegative = true
-	}
-
-	// apply the decimal separator
-	result = fmt.Sprintf("%s%02d%s", decimal, value%100, result)
-	value /= 100
-
-	// for each 3 dígits put a dot "."
-	for value >= 1000 {
-		result = fmt.Sprintf("%s%03d%s", thousand, value%1000, result)
-		value /= 1000
-	}
-
-	if isNegative {
-		return fmt.Sprintf("-%d%s", value, result)
-	}
-
-	return fmt.Sprintf("%d%s", value, result)
-}
-
 var colorsOptions = map[string]color.Attribute{
 	"red":       color.FgHiRed,
 	"green":     color.FgGreen,
@@ -224,7 +199,7 @@ func colorOutput(text string, colorOptions ...string) string {
 }
 
 var templateFuncs = template.FuncMap{
-	"formatMoney": formatMoney,
+	"formatMoney": util.FormatMoney,
 	"colorOutput": colorOutput,
 }
 

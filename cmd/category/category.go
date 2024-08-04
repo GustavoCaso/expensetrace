@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"time"
 
 	"golang.org/x/exp/maps"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/pkg/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
 	"github.com/GustavoCaso/expensetrace/pkg/expense"
+	"github.com/GustavoCaso/expensetrace/pkg/util"
 )
 
 func main() {
@@ -70,26 +72,50 @@ func main() {
 	}
 }
 
+type reportExpense struct {
+	count   int
+	dates   []time.Time
+	amounts []int64
+}
+
 func inspect(writer io.Writer, expenses []expense.Expense) {
 	if len(expenses) == 0 {
 		log.Println("No expenses without category 🎉")
 		os.Exit(0)
 	}
 
-	groupedExpenses := map[string]int{}
+	groupedExpenses := map[string]reportExpense{}
 
 	for _, ex := range expenses {
-		groupedExpenses[ex.Description]++
+		if r, ok := groupedExpenses[ex.Description]; ok {
+			r.count++
+			r.dates = append(r.dates, ex.Date)
+			r.amounts = append(r.amounts, ex.Amount)
+			groupedExpenses[ex.Description] = r
+		} else {
+			groupedExpenses[ex.Description] = reportExpense{
+				count: 1,
+				dates: []time.Time{
+					ex.Date,
+				},
+				amounts: []int64{
+					ex.Amount,
+				},
+			}
+		}
 	}
 
 	keys := maps.Keys(groupedExpenses)
 
 	sort.SliceStable(keys, func(i, j int) bool {
-		return groupedExpenses[keys[i]] > groupedExpenses[keys[j]]
+		return groupedExpenses[keys[i]].count > groupedExpenses[keys[j]].count
 	})
 
 	for _, k := range keys {
-		fmt.Fprintf(writer, "%s -> %d\n", k, groupedExpenses[k])
+		fmt.Fprintf(writer, "%s -> %d\n", k, groupedExpenses[k].count)
+		for i, date := range groupedExpenses[k].dates {
+			fmt.Fprintf(writer, "	%s %s€\n", date.Format("2006-01-02"), util.FormatMoney(groupedExpenses[k].amounts[i], ".", ","))
+		}
 	}
 
 	os.Exit(0)
