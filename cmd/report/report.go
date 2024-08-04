@@ -4,12 +4,12 @@ import (
 	"embed"
 	"flag"
 	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"os"
 	"path"
 	"sort"
+	"text/template"
 	"time"
 
 	"golang.org/x/exp/maps"
@@ -18,6 +18,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/pkg/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
 	"github.com/GustavoCaso/expensetrace/pkg/expense"
+	"github.com/fatih/color"
 )
 
 var month = flag.Int("month", 0, "what month to use for calculating the report")
@@ -40,10 +41,16 @@ func (c category) Display() string {
 		value = -(value)
 	}
 
-	return fmt.Sprintf("%s: %s€", c.name, formatMoney(value, ".", ","))
+	if value < 0 {
+		return fmt.Sprintf("%s: %s€", c.name, colorOutput(formatMoney(value, ".", ","), "red", "underline"))
+	} else {
+		return fmt.Sprintf("%s: %s€", c.name, colorOutput(formatMoney(value, ".", ","), "green", "bold"))
+	}
 }
 
 type Report struct {
+	Year                  int
+	Month                 string
 	Spending              int64
 	Income                int64
 	Savings               int64
@@ -69,10 +76,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	goMonth := time.Month(*month)
+
 	today := time.Now()
 	currentLocation := today.Location()
 
-	firstOfMonth := time.Date(today.Year(), time.Month(*month), 1, 0, 0, 0, 0, currentLocation)
+	firstOfMonth := time.Date(today.Year(), goMonth, 1, 0, 0, 0, 0, currentLocation)
 	lastOfMonth := firstOfMonth.AddDate(0, 1, 0).Add(time.Nanosecond * -1)
 
 	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
@@ -108,7 +117,8 @@ func main() {
 			addCategory(categories, ex, ex.Amount)
 		}
 	}
-
+	report.Year = today.Year()
+	report.Month = goMonth.String()
 	report.Income = income
 	report.Spending = spending
 	savings := income - spending
@@ -192,8 +202,30 @@ func formatMoney(value int64, thousand, decimal string) string {
 	return fmt.Sprintf("%d%s", value, result)
 }
 
+var colorsOptions = map[string]color.Attribute{
+	"red":       color.FgHiRed,
+	"green":     color.FgGreen,
+	"underline": color.Underline,
+	"bold":      color.Bold,
+	"bgRed":     color.BgRed,
+	"bgGreen":   color.BgGreen,
+}
+
+func colorOutput(text string, colorOptions ...string) string {
+	attributes := []color.Attribute{}
+	for _, option := range colorOptions {
+		if o, ok := colorsOptions[option]; ok {
+			attributes = append(attributes, o)
+		}
+
+	}
+	c := color.New(attributes...)
+	return c.Sprint(text)
+}
+
 var templateFuncs = template.FuncMap{
 	"formatMoney": formatMoney,
+	"colorOutput": colorOutput,
 }
 
 func renderTemplate(out io.Writer, templateName string, value interface{}) error {

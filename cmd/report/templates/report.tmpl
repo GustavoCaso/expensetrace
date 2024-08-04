@@ -1,13 +1,23 @@
-Spending:                 {{formatMoney .Spending "." ","}}€
-Income:                   {{formatMoney .Income "." ","}}€ 
 
-Savings:                  {{formatMoney .Savings "." ","}}€ {{printf "%.2f%%" .SavingsPercentage}}
+Report for {{.Month}} {{.Year}}
+-----------------------
+
+Spending:                 {{colorOutput (formatMoney .Spending "." ",") "red" "underline"}}€
+Income:                   {{colorOutput (formatMoney .Income "." ",") "green" "bold"}}€
+
+{{if gt .Savings 0}}
+Savings:                  {{formatMoney .Savings "." ","}}€
+                          📈{{colorOutput (printf "%.2f%%" .SavingsPercentage) "green" "bold"}}
+{{else}}
+Savings:                  {{formatMoney .Savings "." ","}}€
+                          📉 {{colorOutput (printf "%.2f%%" .SavingsPercentage) "red" "underline"}}
+{{end}}
 
 Earnings Per Day:         {{formatMoney .EarningsPerDay "." ","}}€ 
 Average Spending Per Day: {{formatMoney .AverageSpendingPerDay "." "," }}€ 
 
-Categories 
----------------------
+Categorized 
+-----------------------
 {{range $category := .Categories}}
-{{html $category.Display}}
+{{$category.Display}}
 {{- end}}
