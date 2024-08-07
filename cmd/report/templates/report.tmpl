@@ -19,5 +19,5 @@ Average Spending Per Day: {{formatMoney .AverageSpendingPerDay "." "," }}€
 Categorized 
 -----------------------
 {{range $category := .Categories}}
-{{$category.Display}}
+{{$category.Display $.Verbose}}
 {{- end}}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"flag"
 	"fmt"
@@ -23,6 +24,7 @@ import (
 )
 
 var month = flag.Int("month", 0, "what month to use for calculating the report")
+var verbose = flag.Bool("v", false, "show verbose report output")
 
 // content holds our static content.
 //
@@ -33,20 +35,32 @@ type category struct {
 	name         string
 	amount       int64
 	categoryType expense.ExpenseType
+	expenses     []expense.Expense
 }
 
-func (c category) Display() string {
+func (c category) Display(verbose bool) string {
 	value := c.amount
 
 	if c.categoryType == expense.ChargeType {
 		value = -(value)
 	}
 
+	var buffer = bytes.Buffer{}
+
 	if value < 0 {
-		return fmt.Sprintf("%s: %s€", c.name, colorOutput(util.FormatMoney(value, ".", ","), "red", "underline"))
+		buffer.WriteString(fmt.Sprintf("%s: %s€", c.name, colorOutput(util.FormatMoney(value, ".", ","), "red", "underline")))
 	} else {
-		return fmt.Sprintf("%s: %s€", c.name, colorOutput(util.FormatMoney(value, ".", ","), "green", "bold"))
+		buffer.WriteString(fmt.Sprintf("%s: %s€", c.name, colorOutput(util.FormatMoney(value, ".", ","), "green", "bold")))
 	}
+
+	if verbose {
+		buffer.WriteString("\n")
+		for _, ex := range c.expenses {
+			buffer.WriteString(fmt.Sprintf("%s %s %s€\n", ex.Date.Format("2006-01-02"), ex.Description, util.FormatMoney(ex.Amount, ".", ",")))
+		}
+	}
+
+	return buffer.String()
 }
 
 type Report struct {
@@ -59,6 +73,7 @@ type Report struct {
 	EarningsPerDay        int64
 	AverageSpendingPerDay int64
 	Categories            []category
+	Verbose               bool
 }
 
 func main() {
@@ -112,12 +127,13 @@ func main() {
 		switch ex.Type {
 		case expense.ChargeType:
 			spending += ex.Amount
-			addCategory(categories, ex, ex.Amount)
+			addExpenseToCategory(categories, ex)
 		case expense.IncomeType:
 			income += ex.Amount
-			addCategory(categories, ex, ex.Amount)
+			addExpenseToCategory(categories, ex)
 		}
 	}
+	report.Verbose = *verbose
 	report.Year = today.Year()
 	report.Month = goMonth.String()
 	report.Income = income
@@ -146,10 +162,11 @@ func main() {
 	os.Exit(0)
 }
 
-func addCategory(categories map[string]category, ex expense.Expense, v int64) {
+func addExpenseToCategory(categories map[string]category, ex expense.Expense) {
 	c, ok := categories[ex.Category]
 	if ok {
-		c.amount += v
+		c.amount += ex.Amount
+		c.expenses = append(c.expenses, ex)
 		categories[ex.Category] = c
 	} else {
 		var cName string
@@ -159,9 +176,12 @@ func addCategory(categories map[string]category, ex expense.Expense, v int64) {
 			cName = ex.Category
 		}
 		c := category{
-			amount:       v,
+			amount:       ex.Amount,
 			name:         cName,
 			categoryType: ex.Type,
+			expenses: []expense.Expense{
+				ex,
+			},
 		}
 		categories[ex.Category] = c
 	}
