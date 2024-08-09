@@ -23,7 +23,8 @@ import (
 	"github.com/fatih/color"
 )
 
-var month = flag.Int("month", 0, "what month to use for calculating the report")
+var month = flag.Int("month", 0, "what month to use for generating report")
+var year = flag.Int("year", 0, "what year to use for generating report")
 var verbose = flag.Bool("v", false, "show verbose report output")
 
 // content holds our static content.
@@ -64,8 +65,7 @@ func (c category) Display(verbose bool) string {
 }
 
 type Report struct {
-	Year                  int
-	Month                 string
+	Title                 string
 	Spending              int64
 	Income                int64
 	Savings               int64
@@ -87,32 +87,34 @@ func main() {
 		log.Fatalf("Unable to parse the configuration: %s", err.Error())
 	}
 
-	if *month == 0 {
-		log.Fatal("You must provide the moth you want to generate the report")
+	if *month == 0 && *year == 0 {
+		log.Fatal("You must provide either the month or year to generate the report")
 		os.Exit(1)
 	}
 
-	goMonth := time.Month(*month)
+	var reportType string
+	var startDate, endDate time.Time
+	if *month > 0 {
+		reportType = "monthly"
+		startDate, endDate = getMonthDates(*month, *year)
+	} else if *month == 0 && *year > 0 {
+		reportType = "yearly"
+		startDate, endDate = getYearDates(*year)
+	}
 
-	today := time.Now()
-	currentLocation := today.Location()
-
-	firstOfMonth := time.Date(today.Year(), goMonth, 1, 0, 0, 0, 0, currentLocation)
-	lastOfMonth := firstOfMonth.AddDate(0, 1, 0).Add(time.Nanosecond * -1)
-
-	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
+	expenses, err := getExpenses(startDate, endDate, conf)
 	if err != nil {
-		log.Fatalf("Unable to get expenses DB: %s", err.Error())
-		os.Exit(1)
+		log.Fatalf("Unable to fetch expenses: %v", err.Error())
 	}
-
-	defer db.Close()
-	expenses, err := expenseDB.GetExpensesFromDateRange(db, firstOfMonth, lastOfMonth)
+	err = generateReport(startDate, endDate, expenses, reportType)
 	if err != nil {
-		log.Fatalf("Unable to get expenses: %s", err.Error())
-		os.Exit(1)
+		log.Fatalf("Unable to render report: %v", err.Error())
 	}
 
+	os.Exit(0)
+}
+
+func generateReport(startDate, endDate time.Time, expenses []expense.Expense, reportType string) error {
 	var report Report
 
 	var income int64
@@ -133,16 +135,14 @@ func main() {
 			addExpenseToCategory(categories, ex)
 		}
 	}
+
 	report.Verbose = *verbose
-	report.Year = today.Year()
-	report.Month = goMonth.String()
 	report.Income = income
 	report.Spending = spending
 	savings := income - spending
 	report.Savings = savings
 	report.SavingsPercentage = (float32(savings) / float32(income)) * 100
-
-	numberOfDaysPerMonth := calendarDays(lastOfMonth, firstOfMonth)
+	numberOfDaysPerMonth := calendarDays(startDate, endDate)
 	report.AverageSpendingPerDay = spending / int64(numberOfDaysPerMonth)
 	report.EarningsPerDay = income / int64(numberOfDaysPerMonth)
 
@@ -154,41 +154,98 @@ func main() {
 
 	report.Categories = categoriesSlice
 
-	err = renderTemplate(os.Stdout, "report.tmpl", report)
-	if err != nil {
-		log.Fatalf("Error rendering the report: %s", err.Error())
+	if reportType == "monthly" {
+		report.Title = fmt.Sprintf("%s %d", startDate.Month().String(), startDate.Year())
+	} else {
+		report.Title = fmt.Sprintf("%d", startDate.Year())
 	}
 
-	os.Exit(0)
+	err := renderTemplate(os.Stdout, "report.tmpl", report)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func addExpenseToCategory(categories map[string]category, ex expense.Expense) {
-	c, ok := categories[ex.Category]
+	categoryName := expeseCategory(ex)
+
+	c, ok := categories[categoryName]
 	if ok {
 		c.amount += ex.Amount
 		c.expenses = append(c.expenses, ex)
-		categories[ex.Category] = c
+		categories[categoryName] = c
 	} else {
-		var cName string
-		if ex.Category == "" {
-			cName = "uncategorized"
-		} else {
-			cName = ex.Category
-		}
 		c := category{
 			amount:       ex.Amount,
-			name:         cName,
+			name:         categoryName,
 			categoryType: ex.Type,
 			expenses: []expense.Expense{
 				ex,
 			},
 		}
-		categories[ex.Category] = c
+		categories[categoryName] = c
 	}
 }
 
+func expeseCategory(ex expense.Expense) string {
+	if ex.Category == "" {
+		if ex.Type == expense.IncomeType {
+			return "uncategorized income"
+		} else {
+			return "uncategorized charge"
+		}
+	}
+	return ex.Category
+}
+
+func getMonthDates(month int, year int) (time.Time, time.Time) {
+	goMonth := time.Month(month)
+
+	today := time.Now()
+	currentLocation := today.Location()
+
+	var y int
+	if year > 0 {
+		y = year
+	} else {
+		y = today.Year()
+	}
+
+	firstOfMonth := time.Date(y, goMonth, 1, 0, 0, 0, 0, currentLocation)
+	lastOfMonth := firstOfMonth.AddDate(0, 1, 0).Add(time.Nanosecond * -1)
+
+	return firstOfMonth, lastOfMonth
+}
+
+func getYearDates(year int) (time.Time, time.Time) {
+	today := time.Now()
+	currentLocation := today.Location()
+
+	firstOfYear := time.Date(year, 1, 1, 0, 0, 0, 0, currentLocation)
+	lastOfYear := time.Date(year, 12, 31, 0, 0, 0, 0, currentLocation)
+
+	return firstOfYear, lastOfYear
+}
+
+func getExpenses(startDate, endDate time.Time, conf *config.Config) ([]expense.Expense, error) {
+	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
+	if err != nil {
+		return []expense.Expense{}, err
+	}
+
+	defer db.Close()
+	expenses, err := expenseDB.GetExpensesFromDateRange(db, startDate, endDate)
+	if err != nil {
+		return []expense.Expense{}, err
+	}
+
+	return expenses, nil
+}
+
 // calendarDays returns the calendar difference between times (t2 - t1) as days.
-func calendarDays(t2, t1 time.Time) int {
+func calendarDays(t1, t2 time.Time) int {
 	y, m, d := t2.Date()
 	u2 := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 	y, m, d = t1.In(t2.Location()).Date()
