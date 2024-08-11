@@ -1,4 +1,4 @@
-package main
+package report
 
 import (
 	"bytes"
@@ -16,16 +16,13 @@ import (
 	"golang.org/x/exp/maps"
 
 	pkgCategory "github.com/GustavoCaso/expensetrace/pkg/category"
+	"github.com/GustavoCaso/expensetrace/pkg/command"
 	"github.com/GustavoCaso/expensetrace/pkg/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
 	"github.com/GustavoCaso/expensetrace/pkg/expense"
 	"github.com/GustavoCaso/expensetrace/pkg/util"
 	"github.com/fatih/color"
 )
-
-var month = flag.Int("month", 0, "what month to use for generating report")
-var year = flag.Int("year", 0, "what year to use for generating report")
-var verbose = flag.Bool("v", false, "show verbose report output")
 
 // content holds our static content.
 //
@@ -76,30 +73,37 @@ type Report struct {
 	Verbose               bool
 }
 
-func main() {
-	var configPath string
-	flag.StringVar(&configPath, "c", "expense.toml", "Configuration file")
-	flag.Parse()
+type reportCommand struct {
+}
 
-	conf, err := config.Parse(configPath)
+func NewCommand() command.Command {
+	return reportCommand{}
+}
 
-	if err != nil {
-		log.Fatalf("Unable to parse the configuration: %s", err.Error())
-	}
+var month int
+var year int
+var verbose bool
 
-	if *month == 0 && *year == 0 {
+func (c reportCommand) SetFlags(fs *flag.FlagSet) {
+	fs.IntVar(&month, "month", 0, "what month to use for generating report")
+	fs.IntVar(&year, "year", 0, "what year to use for generating report")
+	fs.BoolVar(&verbose, "v", false, "show verbose report output")
+}
+
+func (c reportCommand) Run(conf *config.Config) {
+	if month == 0 && year == 0 {
 		log.Fatal("You must provide either the month or year to generate the report")
 		os.Exit(1)
 	}
 
 	var reportType string
 	var startDate, endDate time.Time
-	if *month > 0 {
+	if month > 0 {
 		reportType = "monthly"
-		startDate, endDate = getMonthDates(*month, *year)
-	} else if *month == 0 && *year > 0 {
+		startDate, endDate = getMonthDates(month, year)
+	} else if month == 0 && year > 0 {
 		reportType = "yearly"
-		startDate, endDate = getYearDates(*year)
+		startDate, endDate = getYearDates(year)
 	}
 
 	expenses, err := getExpenses(startDate, endDate, conf)
@@ -136,7 +140,7 @@ func generateReport(startDate, endDate time.Time, expenses []expense.Expense, re
 		}
 	}
 
-	report.Verbose = *verbose
+	report.Verbose = verbose
 	report.Income = income
 	report.Spending = spending
 	savings := income - spending

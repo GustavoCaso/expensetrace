@@ -1,4 +1,4 @@
-package main
+package category
 
 import (
 	"database/sql"
@@ -13,27 +13,25 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/GustavoCaso/expensetrace/pkg/category"
+	"github.com/GustavoCaso/expensetrace/pkg/command"
 	"github.com/GustavoCaso/expensetrace/pkg/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
 	"github.com/GustavoCaso/expensetrace/pkg/expense"
 	"github.com/GustavoCaso/expensetrace/pkg/util"
 )
 
-func main() {
-	var actionFlag string
-	var outputLocation string
-	var configPath string
-	flag.StringVar(&actionFlag, "a", "inspect", "What action to perform. Supported values are: inspect, reprocess")
-	flag.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")
-	flag.StringVar(&configPath, "c", "expense.toml", "Configuration file")
-	flag.Parse()
+var actionFlag string
+var outputLocation string
 
-	conf, err := config.Parse(configPath)
+type categoryCommand struct {
+}
 
-	if err != nil {
-		log.Fatalf("Unable to parse the configuration: %s", err.Error())
-	}
+func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
+	fs.StringVar(&actionFlag, "a", "inspect", "What action to perform. Supported values are: inspect, reprocess")
+	fs.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")
+}
 
+func (c categoryCommand) Run(conf *config.Config) {
 	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
 	if err != nil {
 		log.Fatalf("Unable to get expenses DB: %s", err.Error())
@@ -70,6 +68,10 @@ func main() {
 	default:
 		log.Fatalf("Unsupported action: %s", actionFlag)
 	}
+}
+
+func NewCommand() command.Command {
+	return categoryCommand{}
 }
 
 type reportExpense struct {

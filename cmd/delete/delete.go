@@ -1,26 +1,27 @@
-package main
+package delete
 
 import (
 	"flag"
 	"log"
 	"os"
 
+	"github.com/GustavoCaso/expensetrace/pkg/command"
 	"github.com/GustavoCaso/expensetrace/pkg/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
 )
 
-func main() {
-	var configPath string
-	flag.StringVar(&configPath, "c", "expense.toml", "Configuration file")
-	flag.Parse()
+type deleteCommand struct {
+}
 
-	conf, err := config.Parse(configPath)
+func NewCommand() command.Command {
+	return deleteCommand{}
+}
 
-	if err != nil {
-		log.Fatalf("Unable to parse the configuration: %s", err.Error())
-	}
+func (c deleteCommand) SetFlags(*flag.FlagSet) {
+}
 
-	err = expenseDB.DeleteExpenseDB(conf.DB)
+func (c deleteCommand) Run(conf *config.Config) {
+	err := expenseDB.DeleteExpenseDB(conf.DB)
 	if err != nil {
 		log.Fatalf("Unable to delete expense table: %s", err.Error())
 	}

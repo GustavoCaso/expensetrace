@@ -1,4 +1,4 @@
-package main
+package importCmd
 
 import (
 	"encoding/csv"
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/pkg/category"
+	"github.com/GustavoCaso/expensetrace/pkg/command"
 	"github.com/GustavoCaso/expensetrace/pkg/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
 	"github.com/GustavoCaso/expensetrace/pkg/expense"
@@ -24,17 +25,17 @@ var chargeIndex = re.SubexpIndex("charge")
 var amountIndex = re.SubexpIndex("amount")
 var decimalIndex = re.SubexpIndex("decimal")
 
-func main() {
-	var configPath string
-	flag.StringVar(&configPath, "c", "expense.toml", "Configuration file")
-	flag.Parse()
+type importCommand struct {
+}
 
-	conf, err := config.Parse(configPath)
+func NewCommand() command.Command {
+	return importCommand{}
+}
 
-	if err != nil {
-		log.Fatalf("Unable to parse the configuration: %s", err.Error())
-	}
+func (c importCommand) SetFlags(*flag.FlagSet) {
+}
 
+func (c importCommand) Run(conf *config.Config) {
 	argsLength := len(os.Args)
 
 	if argsLength != 2 {
