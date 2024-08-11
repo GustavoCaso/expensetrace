@@ -12,12 +12,12 @@ import (
 
 	"golang.org/x/exp/maps"
 
-	"github.com/GustavoCaso/expensetrace/pkg/category"
-	"github.com/GustavoCaso/expensetrace/pkg/command"
-	"github.com/GustavoCaso/expensetrace/pkg/config"
-	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
-	"github.com/GustavoCaso/expensetrace/pkg/expense"
-	"github.com/GustavoCaso/expensetrace/pkg/util"
+	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/cli"
+	"github.com/GustavoCaso/expensetrace/internal/config"
+	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/expense"
+	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
 var actionFlag string
@@ -70,7 +70,7 @@ func (c categoryCommand) Run(conf *config.Config) {
 	}
 }
 
-func NewCommand() command.Command {
+func NewCommand() cli.Command {
 	return categoryCommand{}
 }
 

@@ -5,15 +5,15 @@ import (
 	"log"
 	"os"
 
-	"github.com/GustavoCaso/expensetrace/pkg/command"
-	"github.com/GustavoCaso/expensetrace/pkg/config"
-	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
+	"github.com/GustavoCaso/expensetrace/internal/cli"
+	"github.com/GustavoCaso/expensetrace/internal/config"
+	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 )
 
 type deleteCommand struct {
 }
 
-func NewCommand() command.Command {
+func NewCommand() cli.Command {
 	return deleteCommand{}
 }
 

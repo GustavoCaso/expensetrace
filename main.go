@@ -5,15 +5,15 @@ import (
 	"log"
 	"os"
 
-	"github.com/GustavoCaso/expensetrace/cmd/category"
-	"github.com/GustavoCaso/expensetrace/cmd/delete"
-	importCmd "github.com/GustavoCaso/expensetrace/cmd/import"
-	"github.com/GustavoCaso/expensetrace/cmd/report"
-	"github.com/GustavoCaso/expensetrace/pkg/command"
-	"github.com/GustavoCaso/expensetrace/pkg/config"
+	"github.com/GustavoCaso/expensetrace/internal/cli"
+	"github.com/GustavoCaso/expensetrace/internal/cli/category"
+	"github.com/GustavoCaso/expensetrace/internal/cli/delete"
+	importCmd "github.com/GustavoCaso/expensetrace/internal/cli/import"
+	"github.com/GustavoCaso/expensetrace/internal/cli/report"
+	"github.com/GustavoCaso/expensetrace/internal/config"
 )
 
-var subcommands = map[string]command.Command{
+var subcommands = map[string]cli.Command{
 	"delete":   delete.NewCommand(),
 	"category": category.NewCommand(),
 	"import":   importCmd.NewCommand(),

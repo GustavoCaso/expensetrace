@@ -1,9 +1,9 @@
-package command
+package cli
 
 import (
 	"flag"
 
-	"github.com/GustavoCaso/expensetrace/pkg/config"
+	"github.com/GustavoCaso/expensetrace/internal/config"
 )
 
 type Command interface {

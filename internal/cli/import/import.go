@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/pkg/category"
-	"github.com/GustavoCaso/expensetrace/pkg/command"
-	"github.com/GustavoCaso/expensetrace/pkg/config"
-	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
-	"github.com/GustavoCaso/expensetrace/pkg/expense"
+	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/cli"
+	"github.com/GustavoCaso/expensetrace/internal/config"
+	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/expense"
 )
 
 var re = regexp.MustCompile(`(?P<charge>-)?(?P<amount>\d+)\.?(?P<decimal>\d*)`)
@@ -28,7 +28,7 @@ var decimalIndex = re.SubexpIndex("decimal")
 type importCommand struct {
 }
 
-func NewCommand() command.Command {
+func NewCommand() cli.Command {
 	return importCommand{}
 }
 

@@ -15,12 +15,12 @@ import (
 
 	"golang.org/x/exp/maps"
 
-	pkgCategory "github.com/GustavoCaso/expensetrace/pkg/category"
-	"github.com/GustavoCaso/expensetrace/pkg/command"
-	"github.com/GustavoCaso/expensetrace/pkg/config"
-	expenseDB "github.com/GustavoCaso/expensetrace/pkg/db"
-	"github.com/GustavoCaso/expensetrace/pkg/expense"
-	"github.com/GustavoCaso/expensetrace/pkg/util"
+	pkgCategory "github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/cli"
+	"github.com/GustavoCaso/expensetrace/internal/config"
+	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/expense"
+	"github.com/GustavoCaso/expensetrace/internal/util"
 	"github.com/fatih/color"
 )
 
@@ -76,7 +76,7 @@ type Report struct {
 type reportCommand struct {
 }
 
-func NewCommand() command.Command {
+func NewCommand() cli.Command {
 	return reportCommand{}
 }
 
