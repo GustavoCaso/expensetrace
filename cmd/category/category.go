@@ -90,7 +90,7 @@ func inspect(writer io.Writer, expenses []expense.Expense) {
 		if r, ok := groupedExpenses[ex.Description]; ok {
 			r.count++
 			r.dates = append(r.dates, ex.Date)
-			r.amounts = append(r.amounts, ex.Amount)
+			r.amounts = append(r.amounts, ex.AmountWithSign())
 			groupedExpenses[ex.Description] = r
 		} else {
 			groupedExpenses[ex.Description] = reportExpense{
@@ -99,7 +99,7 @@ func inspect(writer io.Writer, expenses []expense.Expense) {
 					ex.Date,
 				},
 				amounts: []int64{
-					ex.Amount,
+					ex.AmountWithSign(),
 				},
 			}
 		}
@@ -111,12 +111,22 @@ func inspect(writer io.Writer, expenses []expense.Expense) {
 		return groupedExpenses[keys[i]].count > groupedExpenses[keys[j]].count
 	})
 
+	var total int
+
 	for _, k := range keys {
-		fmt.Fprintf(writer, "%s -> %d\n", k, groupedExpenses[k].count)
+		expense := groupedExpenses[k]
+		count := expense.count
+		fmt.Fprintf(writer, "%s -> %d\n", k, count)
+		total += count
+
 		for i, date := range groupedExpenses[k].dates {
-			fmt.Fprintf(writer, "	%s %s€\n", date.Format("2006-01-02"), util.FormatMoney(groupedExpenses[k].amounts[i], ".", ","))
+			fmt.Fprintf(writer, "	[%s] %s€\n", date.Format("2006-01-02"), util.FormatMoney(expense.amounts[i], ".", ","))
 		}
 	}
+
+	fmt.Fprint(writer, "\n")
+
+	fmt.Fprintf(writer, "There are a total of %d uncategorized expenses", total)
 
 	os.Exit(0)
 }

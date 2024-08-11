@@ -20,3 +20,11 @@ type Expense struct {
 	Currency    string
 	Category    string
 }
+
+func (ex Expense) AmountWithSign() int64 {
+	if ex.Type == ChargeType {
+		return -(ex.Amount)
+	}
+
+	return ex.Amount
+}
