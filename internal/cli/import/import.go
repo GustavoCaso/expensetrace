@@ -32,6 +32,10 @@ func NewCommand() cli.Command {
 	return importCommand{}
 }
 
+func (c importCommand) Description() string {
+	return "Imports expenses to the DB"
+}
+
 func (c importCommand) SetFlags(*flag.FlagSet) {
 }
 

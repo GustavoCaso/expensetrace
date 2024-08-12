@@ -8,5 +8,6 @@ import (
 
 type Command interface {
 	SetFlags(fset *flag.FlagSet)
+	Description() string
 	Run(conf *config.Config)
 }

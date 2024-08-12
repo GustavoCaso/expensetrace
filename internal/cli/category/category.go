@@ -26,6 +26,10 @@ var outputLocation string
 type categoryCommand struct {
 }
 
+func (c categoryCommand) Description() string {
+	return "Allows to interact with the expenses category."
+}
+
 func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
 	fs.StringVar(&actionFlag, "a", "inspect", "What action to perform. Supported values are: inspect, reprocess")
 	fs.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")

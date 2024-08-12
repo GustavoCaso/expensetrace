@@ -17,6 +17,10 @@ func NewCommand() cli.Command {
 	return deleteCommand{}
 }
 
+func (c deleteCommand) Description() string {
+	return "Delete the expenses DB"
+}
+
 func (c deleteCommand) SetFlags(*flag.FlagSet) {
 }
 

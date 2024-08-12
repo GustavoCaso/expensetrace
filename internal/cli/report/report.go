@@ -80,6 +80,10 @@ func NewCommand() cli.Command {
 	return reportCommand{}
 }
 
+func (c reportCommand) Description() string {
+	return "Displays the expenses information for date ranges"
+}
+
 var month int
 var year int
 var verbose bool

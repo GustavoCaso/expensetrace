@@ -2,8 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	"github.com/GustavoCaso/expensetrace/internal/cli/category"
@@ -13,6 +15,8 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/config"
 )
 
+var configPath string
+
 var subcommands = map[string]cli.Command{
 	"delete":   delete.NewCommand(),
 	"category": category.NewCommand(),
@@ -20,21 +24,35 @@ var subcommands = map[string]cli.Command{
 	"report":   report.NewCommand(),
 }
 
+var subcommandsFlagSets = map[string]*flag.FlagSet{
+	"delete":   nil,
+	"category": nil,
+	"import":   nil,
+	"report":   nil,
+}
+
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("subcommand is required")
+		fmt.Printf("subcommand is required\n")
+		printUsage()
+
+		os.Exit(1)
+	}
+
+	for c, cLogic := range subcommands {
+		fset := flag.NewFlagSet(c, flag.ExitOnError)
+		fset.StringVar(&configPath, "c", "expense.toml", "Configuration file")
+
+		cLogic.SetFlags(fset)
+
+		subcommandsFlagSets[c] = fset
 	}
 
 	commandName := os.Args[1]
 	command, ok := subcommands[commandName]
 	if ok {
-		var configPath string
 
-		fset := flag.NewFlagSet(commandName, flag.ExitOnError)
-		fset.StringVar(&configPath, "c", "expense.toml", "Configuration file")
-
-		command.SetFlags(fset)
-		fset.Parse(os.Args[2:])
+		subcommandsFlagSets[commandName].Parse(os.Args[2:])
 
 		conf, err := config.Parse(configPath)
 
@@ -44,6 +62,26 @@ func main() {
 
 		command.Run(conf)
 	} else {
-		log.Fatalf("unsupported comand %s", commandName)
+		if strings.Contains(commandName, "help") {
+			printHelp()
+
+			os.Exit(0)
+		}
+		log.Fatalf("unsupported comand %s. \nUse 'help' command to print information about supported commands\n", commandName)
 	}
+}
+
+func printHelp() {
+	printUsage()
+
+	for c, cLogic := range subcommands {
+		fmt.Printf("subcommmand <%s>: %s\n", c, cLogic.Description())
+		subcommandsFlagSets[c].PrintDefaults()
+		fmt.Println()
+		fmt.Println()
+	}
+}
+
+func printUsage() {
+	fmt.Printf("usage: expensetrace <subcommand> [flags]\n\n")
 }
