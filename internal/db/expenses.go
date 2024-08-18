@@ -20,6 +20,20 @@ import (
 //go:embed templates/*
 var content embed.FS
 
+var createTableStatement = `
+CREATE TABLE IF NOT EXISTS expenses
+(
+ id INTEGER PRIMARY KEY,
+ amount INTEGER NOT NULL,
+ description TEXT NOT NULL,
+ expense_type INTEGER NOT NULL,
+ date INTEGER NOT NULL,
+ currency TEXT NOT NULL,
+ category TEXT NOT NULL,
+ UNIQUE(date, description, amount) ON CONFLICT FAIL
+) STRICT;
+`
+
 func GetOrCreateExpenseDB(dbsource string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", dbsource)
 	if err != nil {
@@ -27,7 +41,7 @@ func GetOrCreateExpenseDB(dbsource string) (*sql.DB, error) {
 	}
 
 	// Create table
-	statement, err := db.Prepare("CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY, amount INTEGER NOT NULL,  description TEXT NOT NULL, expense_type INTEGER NOT NULL, date INTEGER NOT NULL, currency TEXT NOT NULL, category TEXT NOT NULL) STRICT;")
+	statement, err := db.Prepare(createTableStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -62,21 +76,36 @@ func DeleteExpenseDB(dbsource string) error {
 	return nil
 }
 
-func InsertExpenses(db *sql.DB, expenses []expense.Expense) error {
+type ErrInsert struct {
+	expense expense.Expense
+	err     error
+}
+
+func (e ErrInsert) Error() string {
+	return fmt.Sprintf("error when trying to insert expense\n expense: %+v\n err: %v", e.expense, e.err)
+}
+
+func InsertExpenses(db *sql.DB, expenses []expense.Expense) []error {
 	// Insert records
 	insertStmt, err := db.Prepare("INSERT INTO expenses(amount, description, expense_type, date, currency, category) values(?, ?, ?, ?, ?, ?)")
 
+	errors := []error{}
+
 	if err != nil {
-		return err
+		errors = append(errors, err)
+		return errors
 	}
 	for _, expense := range expenses {
 		_, err := insertStmt.Exec(expense.Amount, expense.Description, expense.Type, expense.Date.Unix(), expense.Currency, expense.Category)
 		if err != nil {
-			return err
+			errors = append(errors, ErrInsert{
+				expense: expense,
+				err:     err,
+			})
 		}
 	}
 
-	return nil
+	return errors
 }
 
 func UpdateExpenses(db *sql.DB, expenses []expense.Expense) (int64, error) {
@@ -88,7 +117,7 @@ func UpdateExpenses(db *sql.DB, expenses []expense.Expense) (int64, error) {
 		Length   int
 		Expenses []expense.Expense
 	}{
-		// Insde the template we itarte over expenses, the index starts at 0
+		// Inside the template we itarte over expenses, the index starts at 0
 		Length:   len(expenses) - 1,
 		Expenses: expenses,
 	})
