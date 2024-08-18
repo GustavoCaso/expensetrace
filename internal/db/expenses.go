@@ -108,6 +108,36 @@ func InsertExpenses(db *sql.DB, expenses []expense.Expense) []error {
 	return errors
 }
 
+func GetExpenses(db *sql.DB) ([]expense.Expense, error) {
+	rows, err := db.Query("SELECT * FROM expenses")
+	if err != nil {
+		return []expense.Expense{}, err
+	}
+
+	defer rows.Close()
+
+	expenses := []expense.Expense{}
+
+	for rows.Next() {
+		var ex expense.Expense
+		var id int
+		var date int64
+		var expenseType int
+
+		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.Category); err != nil {
+			log.Fatal(err)
+		}
+
+		ex.ID = id
+		ex.Type = expense.ExpenseType(expenseType)
+		ex.Date = time.Unix(date, 0).UTC()
+
+		expenses = append(expenses, ex)
+	}
+
+	return expenses, nil
+}
+
 func UpdateExpenses(db *sql.DB, expenses []expense.Expense) (int64, error) {
 	// Update records
 	query := "INSERT OR REPLACE INTO expenses(id, amount, description, expense_type, date, currency, category) VALUES %s;"

@@ -31,7 +31,7 @@ func (c categoryCommand) Description() string {
 }
 
 func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
-	fs.StringVar(&actionFlag, "a", "inspect", "What action to perform. Supported values are: inspect, reprocess")
+	fs.StringVar(&actionFlag, "a", "inspect", "What action to perform. Supported values are: inspect, recategorize, migrate")
 	fs.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")
 }
 
@@ -44,7 +44,12 @@ func (c categoryCommand) Run(conf *config.Config) {
 
 	defer db.Close()
 
-	expenses, err := expenseDB.GetExpensesWithoutCategory(db)
+	var expenses []expense.Expense
+	if actionFlag == "migrate" {
+		expenses, err = expenseDB.GetExpenses(db)
+	} else {
+		expenses, err = expenseDB.GetExpensesWithoutCategory(db)
+	}
 	if err != nil {
 		log.Fatalf("Unable to get expenses: %s", err.Error())
 		os.Exit(1)
@@ -65,10 +70,10 @@ func (c categoryCommand) Run(conf *config.Config) {
 			defer f.Close()
 		}
 		inspect(output, expenses)
-	case "reprocess":
+	case "recategorize", "migrate":
 		categoryMatcher := category.New(conf.Categories)
 
-		reprocess(db, categoryMatcher, expenses)
+		recategorize(db, categoryMatcher, expenses)
 	default:
 		log.Fatalf("Unsupported action: %s", actionFlag)
 	}
@@ -137,7 +142,7 @@ func inspect(writer io.Writer, expenses []expense.Expense) {
 	os.Exit(0)
 }
 
-func reprocess(db *sql.DB, categoryMatcher category.Category, expenses []expense.Expense) {
+func recategorize(db *sql.DB, categoryMatcher category.Category, expenses []expense.Expense) {
 	expensesToUpdate := []expense.Expense{}
 	for _, ex := range expenses {
 		c := categoryMatcher.Match(ex.Description)
