@@ -36,25 +36,20 @@ func (c importCommand) Description() string {
 	return "Imports expenses to the DB"
 }
 
-func (c importCommand) SetFlags(*flag.FlagSet) {
+var importFile string
+
+func (c importCommand) SetFlags(fs *flag.FlagSet) {
+	fs.StringVar(&importFile, "f", "", "file to import")
 }
 
 func (c importCommand) Run(conf *config.Config) {
-	argsLength := len(os.Args)
-
-	if argsLength != 2 {
-		panic("must provide a CSV file with your expenseses")
-	}
-
 	categoryMatcher := category.New(conf.Categories)
 
-	expenseFile := os.Args[1]
-
-	fileFormat := path.Ext(expenseFile)
+	fileFormat := path.Ext(importFile)
 	expenses := []expense.Expense{}
 	switch fileFormat {
 	case ".csv":
-		file, err := os.Open(expenseFile)
+		file, err := os.Open(importFile)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -130,9 +125,13 @@ func (c importCommand) Run(conf *config.Config) {
 
 	defer db.Close()
 
-	err = expenseDB.InsertExpenses(db, expenses)
-	if err != nil {
-		log.Fatalf("Unable to import expenses: %s", err.Error())
+	errors := expenseDB.InsertExpenses(db, expenses)
+	if len(errors) > 0 {
+		log.Println("Unable to import expenses, errors:")
+		for _, err := range errors {
+			log.Println(err.Error())
+		}
+
 		os.Exit(1)
 	}
 
