@@ -12,6 +12,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/cli/delete"
 	importCmd "github.com/GustavoCaso/expensetrace/internal/cli/import"
 	"github.com/GustavoCaso/expensetrace/internal/cli/report"
+	"github.com/GustavoCaso/expensetrace/internal/cli/search"
 	"github.com/GustavoCaso/expensetrace/internal/config"
 )
 
@@ -22,6 +23,7 @@ var subcommands = map[string]cli.Command{
 	"category": category.NewCommand(),
 	"import":   importCmd.NewCommand(),
 	"report":   report.NewCommand(),
+	"search":   search.NewCommand(),
 }
 
 var subcommandsFlagSets = map[string]*flag.FlagSet{
@@ -29,6 +31,7 @@ var subcommandsFlagSets = map[string]*flag.FlagSet{
 	"category": nil,
 	"import":   nil,
 	"report":   nil,
+	"search":   nil,
 }
 
 func main() {
