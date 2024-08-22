@@ -18,20 +18,27 @@ import (
 
 var configPath string
 
-var subcommands = map[string]cli.Command{
-	"delete":   delete.NewCommand(),
-	"category": category.NewCommand(),
-	"import":   importCmd.NewCommand(),
-	"report":   report.NewCommand(),
-	"search":   search.NewCommand(),
+type command struct {
+	c       cli.Command
+	flagSet *flag.FlagSet
 }
 
-var subcommandsFlagSets = map[string]*flag.FlagSet{
-	"delete":   nil,
-	"category": nil,
-	"import":   nil,
-	"report":   nil,
-	"search":   nil,
+var subcommands = map[string]*command{
+	"delete": {
+		c: delete.NewCommand(),
+	},
+	"category": {
+		c: category.NewCommand(),
+	},
+	"import": {
+		c: importCmd.NewCommand(),
+	},
+	"report": {
+		c: report.NewCommand(),
+	},
+	"search": {
+		c: search.NewCommand(),
+	},
 }
 
 func main() {
@@ -42,20 +49,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	for c, cLogic := range subcommands {
-		fset := flag.NewFlagSet(c, flag.ExitOnError)
-		fset.StringVar(&configPath, "c", "expense.toml", "Configuration file")
-
-		cLogic.SetFlags(fset)
-
-		subcommandsFlagSets[c] = fset
-	}
+	initFlagSets()
 
 	commandName := os.Args[1]
 	command, ok := subcommands[commandName]
 	if ok {
-
-		subcommandsFlagSets[commandName].Parse(os.Args[2:])
+		command.flagSet.Parse(os.Args[2:])
 
 		conf, err := config.Parse(configPath)
 
@@ -63,7 +62,7 @@ func main() {
 			log.Fatalf("Unable to parse the configuration: %s", err.Error())
 		}
 
-		command.Run(conf)
+		command.c.Run(conf)
 	} else {
 		if strings.Contains(commandName, "help") {
 			printHelp()
@@ -77,9 +76,9 @@ func main() {
 func printHelp() {
 	printUsage()
 
-	for c, cLogic := range subcommands {
-		fmt.Printf("subcommmand <%s>: %s\n", c, cLogic.Description())
-		subcommandsFlagSets[c].PrintDefaults()
+	for commandName, cliCommand := range subcommands {
+		fmt.Printf("subcommmand <%s>: %s\n", commandName, cliCommand.c.Description())
+		cliCommand.flagSet.PrintDefaults()
 		fmt.Println()
 		fmt.Println()
 	}
@@ -87,4 +86,14 @@ func printHelp() {
 
 func printUsage() {
 	fmt.Printf("usage: expensetrace <subcommand> [flags]\n\n")
+}
+
+func initFlagSets() {
+	for commandName, cliCommand := range subcommands {
+		fset := flag.NewFlagSet(commandName, flag.ExitOnError)
+		fset.StringVar(&configPath, "c", "expense.toml", "Configuration file")
+
+		cliCommand.c.SetFlags(fset)
+		cliCommand.flagSet = fset
+	}
 }
