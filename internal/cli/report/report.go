@@ -70,6 +70,7 @@ type Report struct {
 	EarningsPerDay        int64
 	AverageSpendingPerDay int64
 	Categories            []category
+	Duplicates            []string
 	Verbose               bool
 }
 
@@ -128,10 +129,19 @@ func generateReport(startDate, endDate time.Time, expenses []expense.Expense, re
 	var income int64
 	var spending int64
 	categories := make(map[string]category)
+	seen := map[string]bool{}
+	duplicates := []string{}
 
 	for _, ex := range expenses {
 		if ex.Category == pkgCategory.Exclude {
 			continue
+		}
+
+		_, ok := seen[ex.Description]
+		if !ok {
+			seen[ex.Description] = true
+		} else {
+			duplicates = append(duplicates, ex.Description)
 		}
 
 		switch ex.Type {
@@ -153,6 +163,7 @@ func generateReport(startDate, endDate time.Time, expenses []expense.Expense, re
 	numberOfDaysPerMonth := calendarDays(startDate, endDate)
 	report.AverageSpendingPerDay = spending / int64(numberOfDaysPerMonth)
 	report.EarningsPerDay = income / int64(numberOfDaysPerMonth)
+	report.Duplicates = duplicates
 
 	categoriesSlice := maps.Values(categories)
 

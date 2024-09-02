@@ -16,6 +16,14 @@ Savings:                  {{formatMoney .Savings "." ","}}€
 Earnings Per Day:         {{formatMoney .EarningsPerDay "." ","}}€ 
 Average Spending Per Day: {{formatMoney .AverageSpendingPerDay "." "," }}€ 
 
+{{if gt (len .Duplicates) 0}}
+⚠️ Possible duplicate movements ⚠️
+----------------------------
+{{range $duplicate := .Duplicates}}
+- {{$duplicate}}
+{{- end}}
+{{end}}
+
 Categorized 
 -----------------------
 {{range $category := .Categories}}
