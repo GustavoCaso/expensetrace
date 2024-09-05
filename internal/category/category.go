@@ -2,6 +2,8 @@ package category
 
 import (
 	"regexp"
+
+	"github.com/GustavoCaso/expensetrace/internal/config"
 )
 
 var Exclude = "exclude"
@@ -15,13 +17,13 @@ type Category struct {
 	matchers []matcher
 }
 
-func New(categories map[string]string) Category {
+func New(categories []config.Category) Category {
 	matchers := []matcher{}
 
-	for key, matchString := range categories {
+	for _, category := range categories {
 		m := matcher{
-			re:       regexp.MustCompile(matchString),
-			category: key,
+			re:       regexp.MustCompile(category.Pattern),
+			category: category.Name,
 		}
 		matchers = append(matchers, m)
 	}

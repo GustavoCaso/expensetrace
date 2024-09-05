@@ -91,7 +91,7 @@ func printUsage() {
 func initFlagSets() {
 	for commandName, cliCommand := range subcommands {
 		fset := flag.NewFlagSet(commandName, flag.ExitOnError)
-		fset.StringVar(&configPath, "c", "expense.toml", "Configuration file")
+		fset.StringVar(&configPath, "c", "expense.yaml", "Configuration file")
 
 		cliCommand.c.SetFlags(fset)
 		cliCommand.flagSet = fset

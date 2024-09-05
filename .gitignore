@@ -2,3 +2,5 @@
 *.csv
 *.toml
 *.txt
+*.yaml
+*.yml

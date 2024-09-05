@@ -3,12 +3,17 @@ package config
 import (
 	"os"
 
-	"github.com/BurntSushi/toml"
+	"gopkg.in/yaml.v3"
 )
+
+type Category struct {
+	Name    string
+	Pattern string
+}
 
 type Config struct {
 	DB         string
-	Categories map[string]string
+	Categories []Category
 }
 
 func Parse(file string) (*Config, error) {
@@ -18,7 +23,7 @@ func Parse(file string) (*Config, error) {
 	}
 
 	var conf Config
-	err = toml.Unmarshal(bytes, &conf)
+	err = yaml.Unmarshal(bytes, &conf)
 	if err != nil {
 		return nil, err
 	}
