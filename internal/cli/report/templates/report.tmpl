@@ -26,6 +26,15 @@ Average Spending Per Day: {{formatMoney .AverageSpendingPerDay "." "," }}€
 
 Categorized 
 -----------------------
-{{range $category := .Categories}}
-{{$category.Display $.Verbose}}
-{{- end}}
+{{ range $category := .Categories }}
+{{- if gt $category.Amount 0 }}
+{{- $category.Name}}: {{colorOutput (formatMoney $category.Amount "." ",") "green" "bold" -}}€
+{{ else }}
+{{- $category.Name}}: {{colorOutput (formatMoney $category.Amount "." ",") "red" "underline" -}}€
+{{ end -}}
+{{- if $.Verbose -}}
+{{- range $expense := $category.Expenses -}}
+{{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} {{formatMoney $expense.Amount "." "," }}€
+{{ end }}
+{{ end -}}
+{{- end -}}
