@@ -88,6 +88,7 @@ func importHanlder(db *sql.DB, conf *config.Config, w http.ResponseWriter, r *ht
 	r.ParseMultipartForm(32 << 20)
 
 	file, header, err := r.FormFile("file")
+
 	if err != nil {
 		var errorMessage string
 		if err == http.ErrMissingFile {
@@ -95,6 +96,7 @@ func importHanlder(db *sql.DB, conf *config.Config, w http.ResponseWriter, r *ht
 		} else {
 			errorMessage = "Error retrieving the file"
 		}
+		w.WriteHeader(400)
 		fmt.Fprint(w, errorMessage)
 		return
 	}
@@ -115,10 +117,12 @@ func importHanlder(db *sql.DB, conf *config.Config, w http.ResponseWriter, r *ht
 		}
 		errorMessage := strings.Join(errorStrings, "\n")
 		log.Printf("Errors importing file: %s. %s", header.Filename, errorMessage)
+		w.WriteHeader(400)
 		fmt.Fprint(w, errorMessage)
 		return
 	}
 
+	w.WriteHeader(201)
 	fmt.Fprint(w, "Imported")
 }
 
