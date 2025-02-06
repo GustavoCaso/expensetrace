@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -102,13 +101,12 @@ func importHanlder(db *sql.DB, conf *config.Config, w http.ResponseWriter, r *ht
 	}
 	defer file.Close()
 
-	extension := path.Ext(header.Filename)
 	// Copy the file data to my buffer
 	var buf bytes.Buffer
 	io.Copy(&buf, file)
-	log.Printf("Uploaded File name %s. Size %dKB\n", header.Filename, buf.Len())
+	log.Printf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len())
 	categoryMatcher := category.New(conf.Categories)
-	errors := importUtil.Import(extension, &buf, db, categoryMatcher)
+	errors := importUtil.Import(header.Filename, &buf, db, categoryMatcher)
 
 	if len(errors) > 0 {
 		errorStrings := make([]string, len(errors))

@@ -4,7 +4,6 @@ import (
 	"flag"
 	"log"
 	"os"
-	"path"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
@@ -31,7 +30,6 @@ func (c importCommand) SetFlags(fs *flag.FlagSet) {
 }
 
 func (c importCommand) Run(conf *config.Config) {
-	fileFormat := path.Ext(importFile)
 	file, err := os.Open(importFile)
 	if err != nil {
 		log.Fatal(err)
@@ -47,7 +45,7 @@ func (c importCommand) Run(conf *config.Config) {
 
 	defer db.Close()
 
-	errors := importUtil.Import(fileFormat, file, db, categoryMatcher)
+	errors := importUtil.Import(importFile, file, db, categoryMatcher)
 
 	if len(errors) > 0 {
 		log.Println("Unable to import expenses, errors:")

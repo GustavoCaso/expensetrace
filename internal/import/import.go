@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,11 +22,13 @@ var chargeIndex = re.SubexpIndex("charge")
 var amountIndex = re.SubexpIndex("amount")
 var decimalIndex = re.SubexpIndex("decimal")
 
-func Import(extension string, reader io.Reader, db *sql.DB, categoryMatcher category.Category) []error {
+func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher category.Category) []error {
 	errors := []error{}
 	expenses := []expense.Expense{}
 
-	switch extension {
+	fileFormat := path.Ext(filename)
+
+	switch fileFormat {
 	case ".csv":
 		r := csv.NewReader(reader)
 		for {
