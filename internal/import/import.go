@@ -95,7 +95,7 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher categ
 		}
 
 	default:
-		errors = append(errors, fmt.Errorf("unsupported file format: %s", extension))
+		errors = append(errors, fmt.Errorf("unsupported file format: %s", fileFormat))
 		return errors
 	}
 

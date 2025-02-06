@@ -22,6 +22,36 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
+// Template handling shortcuts
+var indexTemplate *template.Template
+var importTemplate *template.Template
+var templateError error
+
+var templateFuncs = template.FuncMap{
+	"formatMoney": util.FormatMoney,
+}
+
+func init() {
+	indexTemplate, templateError = template.New("").Funcs(templateFuncs).ParseFiles([]string{
+		"./templates/home.html",
+		"./templates/partials/nav.html",
+		"./templates/pages/index.html",
+	}...)
+	if templateError != nil {
+		log.Fatal("Error parsing index templates:" + templateError.Error())
+	}
+
+	importTemplate, templateError = template.New("").Funcs(templateFuncs).ParseFiles([]string{
+		"./templates/home.html",
+		"./templates/partials/nav.html",
+		"./templates/pages/import.html",
+	}...)
+
+	if templateError != nil {
+		log.Fatal("Error parsing import templates:" + templateError.Error())
+	}
+}
+
 type webCommand struct {
 }
 
@@ -63,6 +93,14 @@ func newRouter(db *sql.DB, conf *config.Config) router {
 		homeHandler(db, w, r)
 	})
 
+	r.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
+		err := importTemplate.ExecuteTemplate(w, "base", nil)
+		if err != nil {
+			log.Print(err.Error())
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
+	})
+
 	r.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
 		importHanlder(db, conf, w, r)
 	})
@@ -79,10 +117,6 @@ type homeData struct {
 	Error  error
 }
 
-var templateFuncs = template.FuncMap{
-	"formatMoney": util.FormatMoney,
-}
-
 func importHanlder(db *sql.DB, conf *config.Config, w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(32 << 20)
 
@@ -95,7 +129,6 @@ func importHanlder(db *sql.DB, conf *config.Config, w http.ResponseWriter, r *ht
 		} else {
 			errorMessage = "Error retrieving the file"
 		}
-		w.WriteHeader(400)
 		fmt.Fprint(w, errorMessage)
 		return
 	}
@@ -115,75 +148,14 @@ func importHanlder(db *sql.DB, conf *config.Config, w http.ResponseWriter, r *ht
 		}
 		errorMessage := strings.Join(errorStrings, "\n")
 		log.Printf("Errors importing file: %s. %s", header.Filename, errorMessage)
-		w.WriteHeader(400)
 		fmt.Fprint(w, errorMessage)
 		return
 	}
 
-	w.WriteHeader(201)
 	fmt.Fprint(w, "Imported")
 }
 
-func homeHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.New("home").Funcs(templateFuncs).Parse(`
-		<!DOCTYPE html>
-		<html>
-			<head>
-				<title>Expense Tracker</title>
-				<script src="https://unpkg.com/htmx.org@1.6.1"></script>
-			</head>
-			<body>
-				<h1>Expense Tracker</h1>
-				
-				<form id='form'>
-        	<input type='file' name='file' required>
-        	 <button 
-						hx-post="/import" 
-						hx-encoding="multipart/form-data" 
-						hx-target="#form-results" 
-						type="submit">Import</button>
-    		</form>
-				<div id='form-results'>
-
-				<hr>
-				
-				{{ if eq .Error nil }}
-					<!-- List of Expenses -->
-					{{with .Report }}
-						<h2>{{.Title}}</h2>
-						<ul id="summary">
-							<li style="color:green;"><b>Income: {{formatMoney .Income "." ","}}</b>€</li>
-							<li style="color:crimson;"><u>Spending:  {{formatMoney .Spending "." ","}}€</u></li>
-
-							{{if gt .Savings 0}}
-								<li style="color:green;">Savings: {{formatMoney .Savings "." ","}}€ <b>{{printf "%.2f%%" .SavingsPercentage}}</b></li>
-							{{else}}
-								<li style="color:crimson;"> Savings: {{formatMoney .Savings "." ","}}€ <u>{{printf "%.2f%%" .SavingsPercentage}}</u></li>
-							{{end}}
-						</ul>
-					
-						<p> Breakdown by category </p>
-						<ul id="categories">
-							{{range $category := .Categories}}
-								{{if gt $category.Amount 0}}
-									<li>{{$category.Name}}: <span style="color:green;"><b>{{formatMoney $category.Amount "." ","}}</b></span></li>
-								{{else}}
-									<li>{{$category.Name}}: <span style="color:crimson;"><u>{{formatMoney $category.Amount "." ","}}</u></span></li>
-								{{end}}
-							{{end}}
-						</ul>
-					{{end}}
-				{{ else }}
-				 	<h2>There was an error: {{.Error}}</h2>
-				{{ end }}
-			</body>
-		</html>
-	`)
-
-	if err != nil {
-		log.Fatalf("error parsing home template %v", err)
-	}
-
+func homeHandler(db *sql.DB, w http.ResponseWriter, _ *http.Request) {
 	// Fetch expenses from last month
 	now := time.Now()
 
@@ -205,5 +177,9 @@ func homeHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tmpl.Execute(w, data)
+	err = indexTemplate.ExecuteTemplate(w, "base", data)
+	if err != nil {
+		log.Print(err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
 }

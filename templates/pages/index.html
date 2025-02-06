@@ -1,0 +1,34 @@
+{{define "title"}}Report{{end}}
+
+{{define "main"}}
+  {{ if eq .Error nil }}
+    <!-- List of Expenses -->
+    {{with .Report }}
+      <h2>{{.Title}}</h2>
+      <ul id="summary">
+        <li style="color:green;"><b>Income: {{formatMoney .Income "." ","}}</b>€</li>
+        <li style="color:crimson;"><u>Spending:  {{formatMoney .Spending "." ","}}€</u></li>
+
+        {{if gt .Savings 0}}
+          <li style="color:green;">Savings: {{formatMoney .Savings "." ","}}€ <b>{{printf "%.2f%%" .SavingsPercentage}}</b></li>
+        {{else}}
+          <li style="color:crimson;"> Savings: {{formatMoney .Savings "." ","}}€ <u>{{printf "%.2f%%" .SavingsPercentage}}</u></li>
+        {{end}}
+      </ul>
+    
+      <p> Breakdown by category </p>
+      <ul id="categories">
+        {{range $category := .Categories}}
+          {{if gt $category.Amount 0}}
+            <li>{{$category.Name}}: <span style="color:green;"><b>{{formatMoney $category.Amount "." ","}}</b></span></li>
+          {{else}}
+            <li>{{$category.Name}}: <span style="color:crimson;"><u>{{formatMoney $category.Amount "." ","}}</u></span></li>
+          {{end}}
+        {{end}}
+      </ul>
+    {{end}}
+  {{ else }}
+    <h2>There was an error: {{.Error}}</h2>
+  {{ end }}
+{{end}}
+ 
