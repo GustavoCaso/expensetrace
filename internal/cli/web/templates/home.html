@@ -2,15 +2,17 @@
 <!doctype html>
 <html lang='en'>
     <head>
-      <title>{{template "title" .}}</title>
-      <script src="https://unpkg.com/htmx.org@1.6.1"></script>
+        <title>{{template "title" .}}</title>
+        <script src="https://unpkg.com/htmx.org@1.6.1"></script>
     </head>
     <body>
         <!-- Invoke the navigation template -->
         {{template "nav" .}}
-        <main>
+        {{template "search" .}}
+        
+        <div id="expenses">
             {{template "main" .}}
-        </main>
+        </div>
     </body>
 </html>
 {{end}}

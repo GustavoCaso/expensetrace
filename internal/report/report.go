@@ -33,6 +33,36 @@ type Report struct {
 func Generate(startDate, endDate time.Time, expenses []expense.Expense, reportType string) Report {
 	var report Report
 
+	categories, duplicates, income, spending := Categories(expenses)
+
+	report.Income = income
+	report.Spending = spending
+	savings := income - spending
+	report.Savings = savings
+	report.SavingsPercentage = (float32(savings) / float32(income)) * 100
+	numberOfDaysPerMonth := calendarDays(startDate, endDate)
+	report.AverageSpendingPerDay = spending / int64(numberOfDaysPerMonth)
+	report.EarningsPerDay = income / int64(numberOfDaysPerMonth)
+	report.Duplicates = duplicates
+
+	categoriesSlice := maps.Values(categories)
+
+	sort.Slice(categoriesSlice, func(i, j int) bool {
+		return categoriesSlice[i].Amount > categoriesSlice[j].Amount
+	})
+
+	report.Categories = categoriesSlice
+
+	if reportType == "monthly" {
+		report.Title = fmt.Sprintf("%s %d", startDate.Month().String(), startDate.Year())
+	} else {
+		report.Title = fmt.Sprintf("%d", startDate.Year())
+	}
+
+	return report
+}
+
+func Categories(expenses []expense.Expense) (map[string]Category, []string, int64, int64) {
 	var income int64
 	var spending int64
 	categories := make(map[string]Category)
@@ -61,31 +91,7 @@ func Generate(startDate, endDate time.Time, expenses []expense.Expense, reportTy
 		}
 	}
 
-	report.Income = income
-	report.Spending = spending
-	savings := income - spending
-	report.Savings = savings
-	report.SavingsPercentage = (float32(savings) / float32(income)) * 100
-	numberOfDaysPerMonth := calendarDays(startDate, endDate)
-	report.AverageSpendingPerDay = spending / int64(numberOfDaysPerMonth)
-	report.EarningsPerDay = income / int64(numberOfDaysPerMonth)
-	report.Duplicates = duplicates
-
-	categoriesSlice := maps.Values(categories)
-
-	sort.Slice(categoriesSlice, func(i, j int) bool {
-		return categoriesSlice[i].Amount > categoriesSlice[j].Amount
-	})
-
-	report.Categories = categoriesSlice
-
-	if reportType == "monthly" {
-		report.Title = fmt.Sprintf("%s %d", startDate.Month().String(), startDate.Year())
-	} else {
-		report.Title = fmt.Sprintf("%d", startDate.Year())
-	}
-
-	return report
+	return categories, duplicates, income, spending
 }
 
 func addExpenseToCategory(categories map[string]Category, ex expense.Expense) {

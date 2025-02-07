@@ -16,6 +16,7 @@ var templatesFS embed.FS
 var baseTempl *template.Template
 var indexTempl *template.Template
 var importTempl *template.Template
+var searchResultsTempl *template.Template
 
 var templateFuncs = template.FuncMap{
 	"formatMoney": util.FormatMoney,
@@ -25,6 +26,7 @@ func parseTemplates() {
 	baseTempl = template.Must(template.New("base").Funcs(templateFuncs).ParseFS(templatesFS, []string{
 		"templates/home.html",
 		"templates/partials/nav.html",
+		"templates/partials/search.html",
 	}...))
 
 	indexTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
@@ -34,4 +36,8 @@ func parseTemplates() {
 	importTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
 		"templates/pages/import.html",
 	}...))
+
+	searchResultsTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS,
+		"templates/partials/searchResults.html"),
+	)
 }

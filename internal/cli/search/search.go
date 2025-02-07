@@ -92,6 +92,7 @@ func (c searchCommand) Run(conf *config.Config) {
 	}
 
 	defer db.Close()
+
 	expenses, err := expenseDB.SearchExpenses(db, keyword)
 	if err != nil {
 		log.Fatalf("Enable to search the expenses DB: %v", err)

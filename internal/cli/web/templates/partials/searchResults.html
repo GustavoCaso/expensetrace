@@ -1,0 +1,16 @@
+<h2> Results for {{.Query}} </h2>
+
+<ul id="categories">
+  {{range $category := .Categories}}
+    {{if gt $category.Amount 0}}
+      <li>{{$category.Name}}: <span style="color:green;"><b>{{formatMoney $category.Amount "." ","}}€</b></span></li>
+    {{else}}
+      <li>{{$category.Name}}: <span style="color:crimson;"><u>{{formatMoney $category.Amount "." ","}}€</u></span></li>
+    {{end}}
+    <ul>
+      {{range $expense := $category.Expenses -}}
+        <li>{{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} {{formatMoney $expense.Amount "." "," }}€</li>
+      {{ end }}
+    </ul>
+  {{end}}
+</ul>
