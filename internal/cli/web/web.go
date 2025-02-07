@@ -48,16 +48,10 @@ func (c webCommand) Run(conf *config.Config) {
 	}
 	router := newRouter(db, conf)
 	log.Printf("Open report on http://localhost:%s\n", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), router.r))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), router))
 }
 
-type router struct {
-	db   *sql.DB
-	conf *config.Config
-	r    *http.ServeMux
-}
-
-func newRouter(db *sql.DB, conf *config.Config) router {
+func newRouter(db *sql.DB, conf *config.Config) *http.ServeMux {
 	r := &http.ServeMux{}
 	// Routes
 	r.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
@@ -76,11 +70,7 @@ func newRouter(db *sql.DB, conf *config.Config) router {
 		importHanlder(db, conf, w, r)
 	})
 
-	return router{
-		db:   db,
-		r:    r,
-		conf: conf,
-	}
+	return r
 }
 
 type homeData struct {
