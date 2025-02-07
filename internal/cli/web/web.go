@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -21,36 +20,6 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
-
-// Template handling shortcuts
-var indexTemplate *template.Template
-var importTemplate *template.Template
-var templateError error
-
-var templateFuncs = template.FuncMap{
-	"formatMoney": util.FormatMoney,
-}
-
-func init() {
-	indexTemplate, templateError = template.New("").Funcs(templateFuncs).ParseFiles([]string{
-		"./templates/home.html",
-		"./templates/partials/nav.html",
-		"./templates/pages/index.html",
-	}...)
-	if templateError != nil {
-		log.Fatal("Error parsing index templates:" + templateError.Error())
-	}
-
-	importTemplate, templateError = template.New("").Funcs(templateFuncs).ParseFiles([]string{
-		"./templates/home.html",
-		"./templates/partials/nav.html",
-		"./templates/pages/import.html",
-	}...)
-
-	if templateError != nil {
-		log.Fatal("Error parsing import templates:" + templateError.Error())
-	}
-}
 
 type webCommand struct {
 }
@@ -70,6 +39,8 @@ func (c webCommand) SetFlags(fs *flag.FlagSet) {
 }
 
 func (c webCommand) Run(conf *config.Config) {
+	parseTemplates()
+
 	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
 	if err != nil {
 		log.Fatalf("Unable to get expenses DB: %s", err.Error())
@@ -94,7 +65,7 @@ func newRouter(db *sql.DB, conf *config.Config) router {
 	})
 
 	r.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
-		err := importTemplate.ExecuteTemplate(w, "base", nil)
+		err := importTempl.Execute(w, nil)
 		if err != nil {
 			log.Print(err.Error())
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -177,7 +148,7 @@ func homeHandler(db *sql.DB, w http.ResponseWriter, _ *http.Request) {
 		}
 	}
 
-	err = indexTemplate.ExecuteTemplate(w, "base", data)
+	err = indexTempl.Execute(w, data)
 	if err != nil {
 		log.Print(err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
