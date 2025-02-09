@@ -1,0 +1,19 @@
+{{define "title"}}Expeses{{end}}
+
+{{define "main"}}
+  {{ if eq .Error nil }}
+    <!-- List of Expenses -->
+    <ul>
+      {{range $expense := .Expenses}}
+        {{if gt $expense.Type 0}}
+          <li>{{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} <span style="color:green;"><b>{{formatMoney $expense.Amount "." ","}}€</b></span> {{$expense.Category}} </li>
+        {{else}}
+          <li> {{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} <span style="color:crimson;"><u>{{formatMoney $expense.Amount "." ","}}€</u></span> {{$expense.Category}} </li>
+        {{end}}
+      {{end}}
+    </ul>
+  {{ else }}
+    <h2>There was an error: {{.Error}}</h2>
+  {{ end }}
+{{end}}
+ 

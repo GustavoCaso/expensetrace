@@ -17,6 +17,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	"github.com/GustavoCaso/expensetrace/internal/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/expense"
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
@@ -57,6 +58,10 @@ func newRouter(db *sql.DB, conf *config.Config) *http.ServeMux {
 	// Routes
 	r.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		homeHandler(db, w, r)
+	})
+
+	r.HandleFunc("GET /expenses", func(w http.ResponseWriter, _ *http.Request) {
+		expensesHandler(db, w)
 	})
 
 	r.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
@@ -185,4 +190,40 @@ func searchHanlder(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 
+}
+
+func expensesHandler(db *sql.DB, w http.ResponseWriter) {
+	expenses, err := expenseDB.GetExpenses(db)
+	if err != nil {
+		data := struct {
+			Error error
+		}{
+			Error: err,
+		}
+		err = expensesTempl.Execute(w, data)
+		if err != nil {
+			log.Print(err.Error())
+			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
+			w.Write([]byte(errorMessage))
+			return
+		}
+	}
+
+	sort.Slice(expenses, func(i, j int) bool {
+		return expenses[i].Date.Unix() > expenses[j].Date.Unix()
+	})
+
+	data := struct {
+		Expenses []expense.Expense
+		Error    error
+	}{
+		Expenses: expenses,
+	}
+
+	err = expensesTempl.Execute(w, data)
+	if err != nil {
+		log.Print(err.Error())
+		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
+		w.Write([]byte(errorMessage))
+	}
 }
