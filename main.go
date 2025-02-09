@@ -15,6 +15,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/cli/search"
 	"github.com/GustavoCaso/expensetrace/internal/cli/web"
 	"github.com/GustavoCaso/expensetrace/internal/config"
+	"github.com/GustavoCaso/expensetrace/internal/db"
 )
 
 var configPath string
@@ -66,7 +67,12 @@ func main() {
 			log.Fatalf("Unable to parse the configuration: %s", err.Error())
 		}
 
-		command.c.Run(conf)
+		expenseDB, err := db.GetOrCreateExpenseDB(conf.DB)
+		if err != nil {
+			log.Fatalf("Unable to get or create expense DB: %s", err.Error())
+		}
+
+		command.c.Run(conf, expenseDB)
 	} else {
 		if strings.Contains(commandName, "help") {
 			printHelp()

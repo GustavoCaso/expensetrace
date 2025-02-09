@@ -35,16 +35,11 @@ func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
 	fs.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")
 }
 
-func (c categoryCommand) Run(conf *config.Config) {
-	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
-	if err != nil {
-		log.Fatalf("Unable to get expenses DB: %s", err.Error())
-		os.Exit(1)
-	}
-
+func (c categoryCommand) Run(conf *config.Config, db *sql.DB) {
 	defer db.Close()
 
 	var expenses []expense.Expense
+	var err error
 	if actionFlag == "migrate" {
 		expenses, err = expenseDB.GetExpenses(db)
 	} else {

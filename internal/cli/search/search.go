@@ -2,6 +2,7 @@ package search
 
 import (
 	"bytes"
+	"database/sql"
 	"embed"
 	"flag"
 	"fmt"
@@ -81,17 +82,11 @@ func (c searchCommand) SetFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&verbose, "v", false, "show verbose report output")
 }
 
-func (c searchCommand) Run(conf *config.Config) {
+func (c searchCommand) Run(conf *config.Config, db *sql.DB) {
+	defer db.Close()
 	if keyword == "" {
 		log.Fatal("You must provide a keyword to use for the search")
 	}
-
-	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
-	if err != nil {
-		log.Fatalf("Enable to get the expenses DB: %v", err)
-	}
-
-	defer db.Close()
 
 	expenses, err := expenseDB.SearchExpenses(db, keyword)
 	if err != nil {

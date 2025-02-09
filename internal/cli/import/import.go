@@ -1,6 +1,7 @@
 package importCmd
 
 import (
+	"database/sql"
 	"flag"
 	"log"
 	"os"
@@ -8,7 +9,6 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	"github.com/GustavoCaso/expensetrace/internal/config"
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
 )
 
@@ -29,19 +29,13 @@ func (c importCommand) SetFlags(fs *flag.FlagSet) {
 	fs.StringVar(&importFile, "f", "", "file to import")
 }
 
-func (c importCommand) Run(conf *config.Config) {
+func (c importCommand) Run(conf *config.Config, db *sql.DB) {
 	file, err := os.Open(importFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
 	categoryMatcher := category.New(conf.Categories)
-
-	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
-	if err != nil {
-		log.Fatalf("Unable to get expenses DB: %s", err.Error())
-		os.Exit(1)
-	}
 
 	defer db.Close()
 

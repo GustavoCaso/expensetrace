@@ -1,6 +1,7 @@
 package delete
 
 import (
+	"database/sql"
 	"flag"
 	"log"
 	"os"
@@ -24,7 +25,7 @@ func (c deleteCommand) Description() string {
 func (c deleteCommand) SetFlags(*flag.FlagSet) {
 }
 
-func (c deleteCommand) Run(conf *config.Config) {
+func (c deleteCommand) Run(conf *config.Config, _ *sql.DB) {
 	err := expenseDB.DeleteExpenseDB(conf.DB)
 	if err != nil {
 		log.Fatalf("Unable to delete expense table: %s", err.Error())

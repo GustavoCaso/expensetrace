@@ -1,6 +1,7 @@
 package report
 
 import (
+	"database/sql"
 	"embed"
 	"flag"
 	"io"
@@ -44,7 +45,9 @@ func (c reportCommand) SetFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&verbose, "v", false, "show verbose report output")
 }
 
-func (c reportCommand) Run(conf *config.Config) {
+func (c reportCommand) Run(conf *config.Config, db *sql.DB) {
+	defer db.Close()
+
 	now := time.Now()
 	var startDate, endDate time.Time
 	var reportType string
@@ -66,7 +69,7 @@ func (c reportCommand) Run(conf *config.Config) {
 		}
 	}
 
-	expenses, err := getExpenses(startDate, endDate, conf)
+	expenses, err := getExpenses(startDate, endDate, db)
 	if err != nil {
 		log.Fatalf("Unable to fetch expenses: %v", err.Error())
 	}
@@ -82,13 +85,7 @@ func (c reportCommand) Run(conf *config.Config) {
 	os.Exit(0)
 }
 
-func getExpenses(startDate, endDate time.Time, conf *config.Config) ([]expense.Expense, error) {
-	db, err := expenseDB.GetOrCreateExpenseDB(conf.DB)
-	if err != nil {
-		return []expense.Expense{}, err
-	}
-
-	defer db.Close()
+func getExpenses(startDate, endDate time.Time, db *sql.DB) ([]expense.Expense, error) {
 	expenses, err := expenseDB.GetExpensesFromDateRange(db, startDate, endDate)
 	if err != nil {
 		return []expense.Expense{}, err
