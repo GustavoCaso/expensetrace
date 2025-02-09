@@ -73,11 +73,11 @@ func newRouter(db *sql.DB, conf *config.Config) *http.ServeMux {
 	})
 
 	r.HandleFunc("POST /search", func(w http.ResponseWriter, r *http.Request) {
-		searchHanlder(db, w, r)
+		searchHandler(db, w, r)
 	})
 
 	r.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
-		importHanlder(db, conf, w, r)
+		importHandler(db, conf, w, r)
 	})
 
 	return r
@@ -88,7 +88,7 @@ type homeData struct {
 	Error  error
 }
 
-func importHanlder(db *sql.DB, conf *config.Config, w http.ResponseWriter, r *http.Request) {
+func importHandler(db *sql.DB, conf *config.Config, w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(32 << 20)
 
 	file, header, err := r.FormFile("file")
@@ -155,7 +155,7 @@ func homeHandler(db *sql.DB, w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func searchHanlder(db *sql.DB, w http.ResponseWriter, r *http.Request) {
+func searchHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	query := r.FormValue("q")
