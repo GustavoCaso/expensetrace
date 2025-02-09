@@ -13,6 +13,7 @@ import (
 	importCmd "github.com/GustavoCaso/expensetrace/internal/cli/import"
 	"github.com/GustavoCaso/expensetrace/internal/cli/report"
 	"github.com/GustavoCaso/expensetrace/internal/cli/search"
+	"github.com/GustavoCaso/expensetrace/internal/cli/web"
 	"github.com/GustavoCaso/expensetrace/internal/config"
 )
 
@@ -38,6 +39,9 @@ var subcommands = map[string]*command{
 	},
 	"search": {
 		c: search.NewCommand(),
+	},
+	"web": {
+		c: web.NewCommand(),
 	},
 }
 
