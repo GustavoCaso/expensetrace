@@ -1,4 +1,4 @@
-package web
+package router
 
 import (
 	"embed"
