@@ -14,9 +14,7 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
-	"github.com/GustavoCaso/expensetrace/internal/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
-	"github.com/GustavoCaso/expensetrace/internal/expense"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
@@ -35,10 +33,10 @@ func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
 	fs.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")
 }
 
-func (c categoryCommand) Run(conf *config.Config, db *sql.DB) {
+func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) {
 	defer db.Close()
 
-	var expenses []expense.Expense
+	var expenses []expenseDB.Expense
 	var err error
 	if actionFlag == "migrate" {
 		expenses, err = expenseDB.GetExpenses(db)
@@ -66,9 +64,7 @@ func (c categoryCommand) Run(conf *config.Config, db *sql.DB) {
 		}
 		inspect(output, expenses)
 	case "recategorize", "migrate":
-		categoryMatcher := category.New(conf.Categories)
-
-		recategorize(db, categoryMatcher, expenses)
+		recategorize(db, matcher, expenses)
 	default:
 		log.Fatalf("Unsupported action: %s", actionFlag)
 	}
@@ -84,7 +80,7 @@ type reportExpense struct {
 	amounts []int64
 }
 
-func inspect(writer io.Writer, expenses []expense.Expense) {
+func inspect(writer io.Writer, expenses []expenseDB.Expense) {
 	if len(expenses) == 0 {
 		log.Println("No expenses without category 🎉")
 		os.Exit(0)
@@ -137,13 +133,13 @@ func inspect(writer io.Writer, expenses []expense.Expense) {
 	os.Exit(0)
 }
 
-func recategorize(db *sql.DB, categoryMatcher category.Category, expenses []expense.Expense) {
-	expensesToUpdate := []expense.Expense{}
+func recategorize(db *sql.DB, categoryMatcher *category.Matcher, expenses []expenseDB.Expense) {
+	expensesToUpdate := []expenseDB.Expense{}
 	for _, ex := range expenses {
-		c := categoryMatcher.Match(ex.Description)
+		id, c := categoryMatcher.Match(ex.Description)
 
-		if c != "" {
-			ex.Category = c
+		if id > 0 && c != "" {
+			ex.CategoryID = id
 			expensesToUpdate = append(expensesToUpdate, ex)
 		}
 	}

@@ -8,7 +8,6 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
-	"github.com/GustavoCaso/expensetrace/internal/config"
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
 )
 
@@ -29,17 +28,16 @@ func (c importCommand) SetFlags(fs *flag.FlagSet) {
 	fs.StringVar(&importFile, "f", "", "file to import")
 }
 
-func (c importCommand) Run(conf *config.Config, db *sql.DB) {
+func (c importCommand) Run(db *sql.DB, matcher *category.Matcher) {
 	file, err := os.Open(importFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
-	categoryMatcher := category.New(conf.Categories)
 
 	defer db.Close()
 
-	errors := importUtil.Import(importFile, file, db, categoryMatcher)
+	errors := importUtil.Import(importFile, file, db, matcher)
 
 	if len(errors) > 0 {
 		log.Println("Unable to import expenses, errors:")

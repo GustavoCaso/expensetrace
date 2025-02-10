@@ -11,10 +11,9 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
-	"github.com/GustavoCaso/expensetrace/internal/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
-	"github.com/GustavoCaso/expensetrace/internal/expense"
 	internalReport "github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
@@ -45,7 +44,7 @@ func (c reportCommand) SetFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&verbose, "v", false, "show verbose report output")
 }
 
-func (c reportCommand) Run(conf *config.Config, db *sql.DB) {
+func (c reportCommand) Run(db *sql.DB, matcher *category.Matcher) {
 	defer db.Close()
 
 	now := time.Now()
@@ -85,10 +84,10 @@ func (c reportCommand) Run(conf *config.Config, db *sql.DB) {
 	os.Exit(0)
 }
 
-func getExpenses(startDate, endDate time.Time, db *sql.DB) ([]expense.Expense, error) {
+func getExpenses(startDate, endDate time.Time, db *sql.DB) ([]expenseDB.Expense, error) {
 	expenses, err := expenseDB.GetExpensesFromDateRange(db, startDate, endDate)
 	if err != nil {
-		return []expense.Expense{}, err
+		return []expenseDB.Expense{}, err
 	}
 
 	return expenses, nil

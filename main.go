@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	categoryPkg "github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	"github.com/GustavoCaso/expensetrace/internal/cli/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli/delete"
@@ -67,12 +68,36 @@ func main() {
 			log.Fatalf("Unable to parse the configuration: %s", err.Error())
 		}
 
-		expenseDB, err := db.GetOrCreateExpenseDB(conf.DB)
+		dbInstance, err := db.GetDB(conf.DB)
 		if err != nil {
-			log.Fatalf("Unable to get or create expense DB: %s", err.Error())
+			log.Fatalf("Unable to get DB: %s", err.Error())
 		}
 
-		command.c.Run(conf, expenseDB)
+		err = db.CreateExpenseTable(dbInstance)
+		if err != nil {
+			log.Fatalf("Unable to get create expenses table: %s", err.Error())
+		}
+		err = db.CreateCategoriesTable(dbInstance)
+		if err != nil {
+			log.Fatalf("Unable to get create categories table: %s", err.Error())
+		}
+
+		errors := db.PopulateCategoriesFromConfig(dbInstance, conf)
+
+		if len(errors) > 0 {
+			for _, error := range errors {
+				log.Printf("error inserting category. err: %v\n", error.Error())
+			}
+		}
+
+		categories, err := db.GetCategories(dbInstance)
+		if err != nil {
+			log.Fatalf("Unable to get categories: %s", err.Error())
+		}
+
+		matcher := categoryPkg.NewMatcher(categories)
+
+		command.c.Run(dbInstance, matcher)
 	} else {
 		if strings.Contains(commandName, "help") {
 			printHelp()

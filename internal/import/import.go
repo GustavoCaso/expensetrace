@@ -14,7 +14,6 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
-	"github.com/GustavoCaso/expensetrace/internal/expense"
 )
 
 var re = regexp.MustCompile(`(?P<charge>-)?(?P<amount>\d+)\.?(?P<decimal>\d*)`)
@@ -22,9 +21,9 @@ var chargeIndex = re.SubexpIndex("charge")
 var amountIndex = re.SubexpIndex("amount")
 var decimalIndex = re.SubexpIndex("decimal")
 
-func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher category.Category) []error {
+func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *category.Matcher) []error {
 	errors := []error{}
-	expenses := []expense.Expense{}
+	expenses := []expenseDB.Expense{}
 
 	fileFormat := path.Ext(filename)
 
@@ -59,11 +58,11 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher categ
 
 			}
 
-			var et expense.ExpenseType
+			var et expenseDB.ExpenseType
 			if matches[chargeIndex] == "-" {
-				et = expense.ChargeType
+				et = expenseDB.ChargeType
 			} else {
-				et = expense.IncomeType
+				et = expenseDB.IncomeType
 			}
 
 			amount := matches[amountIndex]
@@ -76,19 +75,19 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher categ
 			}
 
 			description := strings.ToLower(record[2])
-			c := categoryMatcher.Match(description)
+			id, category := categoryMatcher.Match(description)
 
-			if c == "" {
+			if category == "" {
 				log.Printf("expense without category. Description: %s\n", description)
 			}
 
-			expense := expense.Expense{
+			expense := expenseDB.Expense{
 				Date:        t,
 				Description: description,
 				Amount:      parsedAmount,
 				Type:        et,
 				Currency:    record[4],
-				Category:    c,
+				CategoryID:  id,
 			}
 
 			expenses = append(expenses, expense)

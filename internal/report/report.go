@@ -8,13 +8,13 @@ import (
 	"golang.org/x/exp/maps"
 
 	pkgCategory "github.com/GustavoCaso/expensetrace/internal/category"
-	"github.com/GustavoCaso/expensetrace/internal/expense"
+	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 )
 
 type Category struct {
 	Name     string
 	Amount   int64
-	Expenses []expense.Expense
+	Expenses []expenseDB.Expense
 }
 
 type Report struct {
@@ -30,7 +30,7 @@ type Report struct {
 	Verbose               bool
 }
 
-func Generate(startDate, endDate time.Time, expenses []expense.Expense, reportType string) Report {
+func Generate(startDate, endDate time.Time, expenses []expenseDB.Expense, reportType string) Report {
 	var report Report
 
 	categories, duplicates, income, spending := Categories(expenses)
@@ -62,7 +62,7 @@ func Generate(startDate, endDate time.Time, expenses []expense.Expense, reportTy
 	return report
 }
 
-func Categories(expenses []expense.Expense) (map[string]Category, []string, int64, int64) {
+func Categories(expenses []expenseDB.Expense) (map[string]Category, []string, int64, int64) {
 	var income int64
 	var spending int64
 	categories := make(map[string]Category)
@@ -70,7 +70,12 @@ func Categories(expenses []expense.Expense) (map[string]Category, []string, int6
 	duplicates := []string{}
 
 	for _, ex := range expenses {
-		if ex.Category == pkgCategory.Exclude {
+		category, err := ex.Category()
+		if err != nil {
+			fmt.Printf("error fetching category: %+v\n", err.Error())
+		}
+
+		if category == pkgCategory.Exclude {
 			continue
 		}
 
@@ -82,10 +87,10 @@ func Categories(expenses []expense.Expense) (map[string]Category, []string, int6
 		}
 
 		switch ex.Type {
-		case expense.ChargeType:
+		case expenseDB.ChargeType:
 			spending += ex.Amount
 			addExpenseToCategory(categories, ex)
-		case expense.IncomeType:
+		case expenseDB.IncomeType:
 			income += ex.Amount
 			addExpenseToCategory(categories, ex)
 		}
@@ -94,12 +99,12 @@ func Categories(expenses []expense.Expense) (map[string]Category, []string, int6
 	return categories, duplicates, income, spending
 }
 
-func addExpenseToCategory(categories map[string]Category, ex expense.Expense) {
+func addExpenseToCategory(categories map[string]Category, ex expenseDB.Expense) {
 	categoryName := expeseCategory(ex)
 
 	c, ok := categories[categoryName]
 	if ok {
-		if ex.Type == expense.ChargeType {
+		if ex.Type == expenseDB.ChargeType {
 			c.Amount -= ex.Amount
 		} else {
 			c.Amount += ex.Amount
@@ -108,7 +113,7 @@ func addExpenseToCategory(categories map[string]Category, ex expense.Expense) {
 		categories[categoryName] = c
 	} else {
 		var amount int64
-		if ex.Type == expense.ChargeType {
+		if ex.Type == expenseDB.ChargeType {
 			amount = -(ex.Amount)
 		} else {
 			amount = ex.Amount
@@ -116,7 +121,7 @@ func addExpenseToCategory(categories map[string]Category, ex expense.Expense) {
 		c := Category{
 			Amount: amount,
 			Name:   categoryName,
-			Expenses: []expense.Expense{
+			Expenses: []expenseDB.Expense{
 				ex,
 			},
 		}
@@ -124,15 +129,21 @@ func addExpenseToCategory(categories map[string]Category, ex expense.Expense) {
 	}
 }
 
-func expeseCategory(ex expense.Expense) string {
-	if ex.Category == "" {
-		if ex.Type == expense.IncomeType {
+func expeseCategory(ex expenseDB.Expense) string {
+	category, err := ex.Category()
+	if err != nil {
+		fmt.Printf("error fetching the category: %+v\n", err.Error())
+		return ""
+	}
+
+	if category == "" {
+		if ex.Type == expenseDB.IncomeType {
 			return "uncategorized income"
 		} else {
 			return "uncategorized charge"
 		}
 	}
-	return ex.Category
+	return category
 }
 
 // calendarDays returns the calendar difference between times (t2 - t1) as days.

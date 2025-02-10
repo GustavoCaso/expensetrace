@@ -13,10 +13,9 @@ import (
 	"path"
 	"sort"
 
+	categoryPkg "github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
-	"github.com/GustavoCaso/expensetrace/internal/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
-	"github.com/GustavoCaso/expensetrace/internal/expense"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 	"github.com/fatih/color"
 )
@@ -34,14 +33,14 @@ type report struct {
 type category struct {
 	name         string
 	amount       int64
-	categoryType expense.ExpenseType
-	expenses     []expense.Expense
+	categoryType expenseDB.ExpenseType
+	expenses     []expenseDB.Expense
 }
 
 func (c category) Display(verbose bool) string {
 	value := c.amount
 
-	if c.categoryType == expense.ChargeType {
+	if c.categoryType == expenseDB.ChargeType {
 		value = -(value)
 	}
 
@@ -82,7 +81,7 @@ func (c searchCommand) SetFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&verbose, "v", false, "show verbose report output")
 }
 
-func (c searchCommand) Run(conf *config.Config, db *sql.DB) {
+func (c searchCommand) Run(db *sql.DB, matcher *categoryPkg.Matcher) {
 	defer db.Close()
 	if keyword == "" {
 		log.Fatal("You must provide a keyword to use for the search")
@@ -112,7 +111,7 @@ func (c searchCommand) Run(conf *config.Config, db *sql.DB) {
 				amount:       ex.Amount,
 				name:         categoryName,
 				categoryType: ex.Type,
-				expenses: []expense.Expense{
+				expenses: []expenseDB.Expense{
 					ex,
 				},
 			}
@@ -131,15 +130,15 @@ func (c searchCommand) Run(conf *config.Config, db *sql.DB) {
 	os.Exit(0)
 }
 
-func expeseCategory(ex expense.Expense) string {
-	if ex.Category == "" {
-		if ex.Type == expense.IncomeType {
+func expeseCategory(ex expenseDB.Expense) string {
+	if ex.CategoryID == 0 {
+		if ex.Type == expenseDB.IncomeType {
 			return "uncategorized income"
 		} else {
 			return "uncategorized charge"
 		}
 	}
-	return ex.Category
+	return "Needs to fix this"
 }
 
 var colorsOptions = map[string]color.Attribute{

@@ -11,9 +11,49 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/expense"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+type ExpenseType int
+
+const (
+	ChargeType ExpenseType = iota
+	IncomeType
+)
+
+type Expense struct {
+	ID          int
+	Date        time.Time
+	Description string
+	Amount      int64
+	Type        ExpenseType
+	Currency    string
+	CategoryID  int
+
+	db *sql.DB
+}
+
+func (ex Expense) AmountWithSign() int64 {
+	if ex.Type == ChargeType {
+		return -(ex.Amount)
+	}
+
+	return ex.Amount
+}
+
+func (e Expense) Category() (string, error) {
+	if e.CategoryID != 0 {
+
+		c, err := GetCategory(e.db, e.CategoryID)
+		if err != nil {
+			return "", err
+		}
+
+		return c.Name, nil
+	}
+
+	return "", nil
+}
 
 // content holds our static content.
 //
@@ -29,38 +69,24 @@ CREATE TABLE IF NOT EXISTS expenses
  expense_type INTEGER NOT NULL,
  date INTEGER NOT NULL,
  currency TEXT NOT NULL,
- category TEXT NOT NULL,
+ category_id INTEGER,
  UNIQUE(date, description, amount) ON CONFLICT FAIL
 ) STRICT;
 `
 
-func GetOrCreateExpenseDB(dbsource string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", dbsource)
-	if err != nil {
-		return nil, err
-	}
-
+func CreateExpenseTable(db *sql.DB) error {
 	// Create table
 	statement, err := db.Prepare(createTableStatement)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = statement.Exec()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
-}
-
-func DeleteExpenseDB(dbsource string) error {
-	db, err := sql.Open("sqlite3", dbsource)
 	if err != nil {
 		return err
 	}
 
+	_, err = statement.Exec()
+
+	return err
+}
+
+func DeleteExpenseDB(db *sql.DB) error {
 	// drop table
 	statement, err := db.Prepare("DROP TABLE IF EXISTS expenses;")
 	if err != nil {
@@ -77,17 +103,16 @@ func DeleteExpenseDB(dbsource string) error {
 }
 
 type ErrInsert struct {
-	expense expense.Expense
-	err     error
+	err error
 }
 
 func (e ErrInsert) Error() string {
-	return fmt.Sprintf("error when trying to insert expense\n expense: %+v\n err: %v", e.expense, e.err)
+	return fmt.Sprintf("error when trying to insert record on table. err: %v", e.err)
 }
 
-func InsertExpenses(db *sql.DB, expenses []expense.Expense) []error {
+func InsertExpenses(db *sql.DB, expenses []Expense) []error {
 	// Insert records
-	insertStmt, err := db.Prepare("INSERT INTO expenses(amount, description, expense_type, date, currency, category) values(?, ?, ?, ?, ?, ?)")
+	insertStmt, err := db.Prepare("INSERT INTO expenses(amount, description, expense_type, date, currency, category_id) values(?, ?, ?, ?, ?, ?)")
 
 	errors := []error{}
 
@@ -96,11 +121,10 @@ func InsertExpenses(db *sql.DB, expenses []expense.Expense) []error {
 		return errors
 	}
 	for _, expense := range expenses {
-		_, err := insertStmt.Exec(expense.Amount, expense.Description, expense.Type, expense.Date.Unix(), expense.Currency, expense.Category)
+		_, err := insertStmt.Exec(expense.Amount, expense.Description, expense.Type, expense.Date.Unix(), expense.Currency, expense.CategoryID)
 		if err != nil {
 			errors = append(errors, ErrInsert{
-				expense: expense,
-				err:     err,
+				err: err,
 			})
 		}
 	}
@@ -108,29 +132,30 @@ func InsertExpenses(db *sql.DB, expenses []expense.Expense) []error {
 	return errors
 }
 
-func GetExpenses(db *sql.DB) ([]expense.Expense, error) {
+func GetExpenses(db *sql.DB) ([]Expense, error) {
 	rows, err := db.Query("SELECT * FROM expenses")
 	if err != nil {
-		return []expense.Expense{}, err
+		return []Expense{}, err
 	}
 
 	defer rows.Close()
 
-	expenses := []expense.Expense{}
+	expenses := []Expense{}
 
 	for rows.Next() {
-		var ex expense.Expense
+		var ex Expense
 		var id int
 		var date int64
 		var expenseType int
 
-		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.Category); err != nil {
+		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
 			log.Fatal(err)
 		}
 
 		ex.ID = id
-		ex.Type = expense.ExpenseType(expenseType)
+		ex.Type = ExpenseType(expenseType)
 		ex.Date = time.Unix(date, 0).UTC()
+		ex.db = db
 
 		expenses = append(expenses, ex)
 	}
@@ -138,14 +163,14 @@ func GetExpenses(db *sql.DB) ([]expense.Expense, error) {
 	return expenses, nil
 }
 
-func UpdateExpenses(db *sql.DB, expenses []expense.Expense) (int64, error) {
+func UpdateExpenses(db *sql.DB, expenses []Expense) (int64, error) {
 	// Update records
 	query := "INSERT OR REPLACE INTO expenses(id, amount, description, expense_type, date, currency, category) VALUES %s;"
 	var buffer = bytes.Buffer{}
 
 	err := renderTemplate(&buffer, "values.tmpl", struct {
 		Length   int
-		Expenses []expense.Expense
+		Expenses []Expense
 	}{
 		// Inside the template we itarte over expenses, the index starts at 0
 		Length:   len(expenses) - 1,
@@ -168,29 +193,30 @@ func UpdateExpenses(db *sql.DB, expenses []expense.Expense) (int64, error) {
 	return count, nil
 }
 
-func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]expense.Expense, error) {
+func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]Expense, error) {
 	rows, err := db.Query("SELECT * FROM expenses WHERE date BETWEEN ? and ?", start.Unix(), end.Unix())
 	if err != nil {
-		return []expense.Expense{}, err
+		return []Expense{}, err
 	}
 
 	defer rows.Close()
 
-	expenses := []expense.Expense{}
+	expenses := []Expense{}
 
 	for rows.Next() {
-		var ex expense.Expense
+		var ex Expense
 		var id int
 		var date int64
 		var expenseType int
 
-		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.Category); err != nil {
+		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
 			log.Fatal(err)
 		}
 
 		ex.ID = id
-		ex.Type = expense.ExpenseType(expenseType)
+		ex.Type = ExpenseType(expenseType)
 		ex.Date = time.Unix(date, 0).UTC()
+		ex.db = db
 
 		expenses = append(expenses, ex)
 	}
@@ -198,29 +224,30 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]exp
 	return expenses, nil
 }
 
-func GetExpensesWithoutCategory(db *sql.DB) ([]expense.Expense, error) {
-	rows, err := db.Query("SELECT * FROM expenses WHERE category == \"\"")
+func GetExpensesWithoutCategory(db *sql.DB) ([]Expense, error) {
+	rows, err := db.Query("SELECT * FROM expenses WHERE category_id == 0")
 	if err != nil {
-		return []expense.Expense{}, err
+		return []Expense{}, err
 	}
 
 	defer rows.Close()
 
-	expenses := []expense.Expense{}
+	expenses := []Expense{}
 
 	for rows.Next() {
-		var ex expense.Expense
+		var ex Expense
 		var id int
 		var date int64
 		var expenseType int
 
-		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.Category); err != nil {
+		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
 			log.Fatal(err)
 		}
 
 		ex.ID = id
-		ex.Type = expense.ExpenseType(expenseType)
+		ex.Type = ExpenseType(expenseType)
 		ex.Date = time.Unix(date, 0).UTC()
+		ex.db = db
 
 		expenses = append(expenses, ex)
 	}
@@ -228,29 +255,29 @@ func GetExpensesWithoutCategory(db *sql.DB) ([]expense.Expense, error) {
 	return expenses, nil
 }
 
-func SearchExpenses(db *sql.DB, keyword string) ([]expense.Expense, error) {
+func SearchExpenses(db *sql.DB, keyword string) ([]Expense, error) {
 	// search records
 	rows, err := db.Query(fmt.Sprintf("SELECT * FROM expenses WHERE description LIKE \"%%%s%%\"", keyword))
 	if err != nil {
-		return []expense.Expense{}, err
+		return []Expense{}, err
 	}
 
 	defer rows.Close()
 
-	expenses := []expense.Expense{}
+	expenses := []Expense{}
 
 	for rows.Next() {
-		var ex expense.Expense
+		var ex Expense
 		var id int
 		var date int64
 		var expenseType int
 
-		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.Category); err != nil {
+		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
 			log.Fatal(err)
 		}
 
 		ex.ID = id
-		ex.Type = expense.ExpenseType(expenseType)
+		ex.Type = ExpenseType(expenseType)
 		ex.Date = time.Unix(date, 0).UTC()
 
 		expenses = append(expenses, ex)

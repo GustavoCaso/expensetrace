@@ -12,15 +12,13 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
-	"github.com/GustavoCaso/expensetrace/internal/config"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
-	"github.com/GustavoCaso/expensetrace/internal/expense"
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
-func New(db *sql.DB, conf *config.Config) *http.ServeMux {
+func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
 	parseTemplates()
 
 	r := &http.ServeMux{}
@@ -46,7 +44,7 @@ func New(db *sql.DB, conf *config.Config) *http.ServeMux {
 	})
 
 	r.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
-		importHandler(db, conf, w, r)
+		importHandler(db, matcher, w, r)
 	})
 
 	return r
@@ -57,7 +55,7 @@ type homeData struct {
 	Error  error
 }
 
-func importHandler(db *sql.DB, conf *config.Config, w http.ResponseWriter, r *http.Request) {
+func importHandler(db *sql.DB, matcher *category.Matcher, w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(32 << 20)
 
 	file, header, err := r.FormFile("file")
@@ -78,8 +76,7 @@ func importHandler(db *sql.DB, conf *config.Config, w http.ResponseWriter, r *ht
 	var buf bytes.Buffer
 	io.Copy(&buf, file)
 	log.Printf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len())
-	categoryMatcher := category.New(conf.Categories)
-	errors := importUtil.Import(header.Filename, &buf, db, categoryMatcher)
+	errors := importUtil.Import(header.Filename, &buf, db, matcher)
 
 	if len(errors) > 0 {
 		errorStrings := make([]string, len(errors))
@@ -183,7 +180,7 @@ func expensesHandler(db *sql.DB, w http.ResponseWriter) {
 	})
 
 	data := struct {
-		Expenses []expense.Expense
+		Expenses []expenseDB.Expense
 		Error    error
 	}{
 		Expenses: expenses,
