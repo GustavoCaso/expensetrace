@@ -10,8 +10,6 @@ import (
 	"path"
 	"text/template"
 	"time"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type ExpenseType int
@@ -43,6 +41,10 @@ func (ex Expense) AmountWithSign() int64 {
 
 func (e Expense) Category() (string, error) {
 	if e.CategoryID != 0 {
+		if e.db == nil {
+			fmt.Println("missing db instance on expense instance")
+			return "", nil
+		}
 
 		c, err := GetCategory(e.db, e.CategoryID)
 		if err != nil {
@@ -279,6 +281,7 @@ func SearchExpenses(db *sql.DB, keyword string) ([]Expense, error) {
 		ex.ID = id
 		ex.Type = ExpenseType(expenseType)
 		ex.Date = time.Unix(date, 0).UTC()
+		ex.db = db
 
 		expenses = append(expenses, ex)
 	}
