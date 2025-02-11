@@ -82,12 +82,10 @@ func main() {
 			log.Fatalf("Unable to get create categories table: %s", err.Error())
 		}
 
-		errors := db.PopulateCategoriesFromConfig(dbInstance, conf)
+		err = db.PopulateCategoriesFromConfig(dbInstance, conf)
 
-		if len(errors) > 0 {
-			for _, error := range errors {
-				log.Printf("error inserting category. err: %v\n", error.Error())
-			}
+		if err != nil {
+			log.Printf("error inserting category. err: %v\n", err.Error())
 		}
 
 		categories, err := db.GetCategories(dbInstance)

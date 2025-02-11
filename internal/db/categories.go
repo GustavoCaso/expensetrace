@@ -2,9 +2,12 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 
 	"github.com/GustavoCaso/expensetrace/internal/config"
+
+	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
 var createCategoriesTableStatement = `
@@ -36,26 +39,30 @@ func CreateCategoriesTable(db *sql.DB) error {
 	return err
 }
 
-func PopulateCategoriesFromConfig(db *sql.DB, conf *config.Config) []error {
+func PopulateCategoriesFromConfig(db *sql.DB, conf *config.Config) error {
 	// Insert records
 	insertStmt, err := db.Prepare("INSERT INTO categories(name, pattern) values(?, ?)")
 
-	errors := []error{}
+	var e error
 
 	if err != nil {
-		errors = append(errors, err)
-		return errors
+		return err
 	}
 	for _, category := range conf.Categories {
 		_, err := insertStmt.Exec(category.Name, category.Pattern)
+
 		if err != nil {
-			errors = append(errors, ErrInsert{
-				err: err,
-			})
+			if sqliteError, ok := err.(sqlite3.Error); ok {
+				if !(sqliteError.Code == sqlite3.ErrConstraint) {
+					e = errors.Join(e, ErrInsert{
+						err: err,
+					})
+				}
+			}
 		}
 	}
 
-	return errors
+	return e
 }
 
 func GetCategories(db *sql.DB) ([]Category, error) {
