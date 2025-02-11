@@ -1,0 +1,15 @@
+{{define "title"}}Categories{{end}}
+
+{{define "main"}}
+  {{ if eq .Error nil }}
+    <!-- List of Categories -->
+    <ul>
+      {{range $category := .Categories}}
+        <li>{{$category.Name}} Total: {{$category.Total}}</li>
+      {{end}}
+    </ul>
+  {{ else }}
+    <h2>There was an error: {{.Error}}</h2>
+  {{ end }}
+{{end}}
+ 

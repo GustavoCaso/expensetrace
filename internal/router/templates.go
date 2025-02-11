@@ -18,6 +18,7 @@ var indexTempl *template.Template
 var importTempl *template.Template
 var searchResultsTempl *template.Template
 var expensesTempl *template.Template
+var categoriesTempl *template.Template
 
 var templateFuncs = template.FuncMap{
 	"formatMoney": util.FormatMoney,
@@ -40,6 +41,10 @@ func parseTemplates() {
 
 	expensesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
 		"templates/pages/expenses.html",
+	}...))
+
+	categoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
+		"templates/pages/categories.html",
 	}...))
 
 	searchResultsTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS,

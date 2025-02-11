@@ -39,6 +39,10 @@ func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
 		}
 	})
 
+	r.HandleFunc("GET /categories", func(w http.ResponseWriter, _ *http.Request) {
+		categoriesHandler(db, w)
+	})
+
 	r.HandleFunc("POST /search", func(w http.ResponseWriter, r *http.Request) {
 		searchHandler(db, w, r)
 	})
@@ -187,6 +191,34 @@ func expensesHandler(db *sql.DB, w http.ResponseWriter) {
 	}
 
 	err = expensesTempl.Execute(w, data)
+	if err != nil {
+		log.Print(err.Error())
+		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
+		w.Write([]byte(errorMessage))
+	}
+}
+
+func categoriesHandler(db *sql.DB, w http.ResponseWriter) {
+	categoriesWithTotalExpenses, err := expenseDB.GetCategoriesAndTotalExpenses(db)
+	var data interface{}
+	if err != nil {
+		log.Print(err.Error())
+		data = struct {
+			Error error
+		}{
+			Error: fmt.Errorf("error fetch categories: %v", err.Error()),
+		}
+	} else {
+		data = struct {
+			Categories []expenseDB.Category
+			Error      error
+		}{
+			Categories: categoriesWithTotalExpenses,
+			Error:      nil,
+		}
+	}
+
+	err = categoriesTempl.Execute(w, data)
 	if err != nil {
 		log.Print(err.Error())
 		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
