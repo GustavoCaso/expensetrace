@@ -1,0 +1,23 @@
+{{ if eq .Error nil }}
+  <div id="categories">
+    <ul>
+      {{range $key := .Keys}}
+        {{$expense := index $.GroupedExpenses $key}}
+        
+        <li>{{$key}} - {{$expense.Count}}</li>
+        <ul>
+            {{range $index, $date := $expense.Dates}}
+              {{$amount := index $expense.Amounts $index}}
+              {{if gt $amount 0}}
+                <li> {{$date.Format "2006-01-02"}} - <span style="color:green;"><b>{{formatMoney $amount "." ","}}€</b></span></li>
+              {{else}}
+                <li> {{$date.Format "2006-01-02"}} - <span style="color:crimson;"><u>{{formatMoney $amount "." ","}}€</u></span></li>
+              {{end}}
+            {{end}}
+        </ul>
+      {{end}}
+    </ul>
+  </div>
+{{ else }}
+  <h2>There was an error: {{.Error}}</h2>
+{{ end }}

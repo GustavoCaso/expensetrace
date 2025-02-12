@@ -1,13 +1,19 @@
 {{define "title"}}Categories{{end}}
 
 {{define "main"}}
+  <nav>
+    <a hx-get="/uncategorized" hx-target="#categories" 
+    hx-swap="innerHTML">Uncategorized</a>
+  </nav>
+
   {{ if eq .Error nil }}
-    <!-- List of Categories -->
-    <ul>
-      {{range $category := .Categories}}
-        <li>{{$category.Name}} Total: {{$category.Total}}</li>
-      {{end}}
-    </ul>
+    <div id="categories">
+      <ul>
+        {{range $category := .Categories}}
+          <li>{{$category.Name}} - {{$category.Total}} expenses</li>
+        {{end}}
+      </ul>
+    </div>
   {{ else }}
     <h2>There was an error: {{.Error}}</h2>
   {{ end }}

@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
@@ -41,6 +43,10 @@ func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
 
 	r.HandleFunc("GET /categories", func(w http.ResponseWriter, _ *http.Request) {
 		categoriesHandler(db, w)
+	})
+
+	r.HandleFunc("GET /uncategorized", func(w http.ResponseWriter, _ *http.Request) {
+		uncategorizedHandler(db, w)
 	})
 
 	r.HandleFunc("POST /search", func(w http.ResponseWriter, r *http.Request) {
@@ -223,5 +229,73 @@ func categoriesHandler(db *sql.DB, w http.ResponseWriter) {
 		log.Print(err.Error())
 		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
 		w.Write([]byte(errorMessage))
+	}
+}
+
+type reportExpense struct {
+	Count   int
+	Dates   []time.Time
+	Amounts []int64
+}
+
+func uncategorizedHandler(db *sql.DB, w http.ResponseWriter) {
+	expenses, err := expenseDB.GetExpensesWithoutCategory(db)
+	if err != nil {
+		data := struct {
+			Error error
+		}{
+			Error: err,
+		}
+		err = uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
+		if err != nil {
+			log.Print(err.Error())
+			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
+			w.Write([]byte(errorMessage))
+			return
+		}
+	}
+
+	groupedExpenses := map[string]reportExpense{}
+
+	for _, ex := range expenses {
+		if r, ok := groupedExpenses[ex.Description]; ok {
+			r.Count++
+			r.Dates = append(r.Dates, ex.Date)
+			r.Amounts = append(r.Amounts, ex.AmountWithSign())
+			groupedExpenses[ex.Description] = r
+		} else {
+			groupedExpenses[ex.Description] = reportExpense{
+				Count: 1,
+				Dates: []time.Time{
+					ex.Date,
+				},
+				Amounts: []int64{
+					ex.AmountWithSign(),
+				},
+			}
+		}
+	}
+
+	keys := maps.Keys(groupedExpenses)
+
+	sort.SliceStable(keys, func(i, j int) bool {
+		return groupedExpenses[keys[i]].Count > groupedExpenses[keys[j]].Count
+	})
+
+	data := struct {
+		Keys            []string
+		GroupedExpenses map[string]reportExpense
+		Error           error
+	}{
+		Keys:            keys,
+		GroupedExpenses: groupedExpenses,
+		Error:           nil,
+	}
+	err = uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
+	if err != nil {
+		log.Print(err.Error())
+		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
+		w.Write([]byte(errorMessage))
+		return
 	}
 }
