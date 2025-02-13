@@ -46,7 +46,7 @@ func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
 	})
 
 	r.HandleFunc("GET /uncategorized", func(w http.ResponseWriter, _ *http.Request) {
-		uncategorizedHandler(db, w)
+		uncategorizedHandler(db, matcher, w)
 	})
 
 	r.HandleFunc("POST /search", func(w http.ResponseWriter, r *http.Request) {
@@ -238,7 +238,7 @@ type reportExpense struct {
 	Amounts []int64
 }
 
-func uncategorizedHandler(db *sql.DB, w http.ResponseWriter) {
+func uncategorizedHandler(db *sql.DB, matcher *category.Matcher, w http.ResponseWriter) {
 	expenses, err := expenseDB.GetExpensesWithoutCategory(db)
 	if err != nil {
 		data := struct {
@@ -285,10 +285,12 @@ func uncategorizedHandler(db *sql.DB, w http.ResponseWriter) {
 	data := struct {
 		Keys            []string
 		GroupedExpenses map[string]reportExpense
+		Categories      []expenseDB.Category
 		Error           error
 	}{
 		Keys:            keys,
 		GroupedExpenses: groupedExpenses,
+		Categories:      matcher.Categories(),
 		Error:           nil,
 	}
 	err = uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)

@@ -15,7 +15,8 @@ type matcher struct {
 }
 
 type Matcher struct {
-	matchers []matcher
+	matchers   []matcher
+	categories []db.Category
 }
 
 func NewMatcher(categories []db.Category) *Matcher {
@@ -31,8 +32,13 @@ func NewMatcher(categories []db.Category) *Matcher {
 	}
 
 	return &Matcher{
-		matchers: matchers,
+		matchers:   matchers,
+		categories: categories,
 	}
+}
+
+func (c Matcher) Categories() []db.Category {
+	return c.categories
 }
 
 func (c Matcher) Match(s string) (int, string) {
