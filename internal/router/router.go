@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -20,44 +21,55 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
+type router struct {
+	reload bool
+	mux    *http.ServeMux
+}
+
 func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
-	parseTemplates()
+	reload := os.Getenv("LIVERELOAD") == "true"
 
-	r := &http.ServeMux{}
+	r := router{
+		reload: reload,
+		mux:    &http.ServeMux{},
+	}
+
+	r.parseTemplates()
+
 	// Routes
-	r.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+	r.mux.Handle("GET /", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		homeHandler(db, w, r)
-	})
+	})))
 
-	r.HandleFunc("GET /expenses", func(w http.ResponseWriter, _ *http.Request) {
+	r.mux.Handle("GET /expenses", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		expensesHandler(db, w)
-	})
+	})))
 
-	r.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
+	r.mux.Handle("GET /import", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		err := importTempl.Execute(w, nil)
 		if err != nil {
 			log.Print(err.Error())
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
-	})
+	})))
 
-	r.HandleFunc("GET /categories", func(w http.ResponseWriter, _ *http.Request) {
+	r.mux.Handle("GET /categories", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		categoriesHandler(db, w)
-	})
+	})))
 
-	r.HandleFunc("GET /uncategorized", func(w http.ResponseWriter, _ *http.Request) {
+	r.mux.Handle("GET /uncategorized", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		uncategorizedHandler(db, matcher, w)
-	})
+	})))
 
-	r.HandleFunc("POST /search", func(w http.ResponseWriter, r *http.Request) {
+	r.mux.Handle("POST /search", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		searchHandler(db, w, r)
-	})
+	})))
 
-	r.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
+	r.mux.Handle("POST /import", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		importHandler(db, matcher, w, r)
-	})
+	})))
 
-	return r
+	return r.mux
 }
 
 type homeData struct {

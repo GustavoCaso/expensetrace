@@ -3,6 +3,10 @@ package router
 import (
 	"embed"
 	"html/template"
+	"log"
+	"net/http"
+	"path/filepath"
+	"runtime"
 
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
@@ -25,7 +29,7 @@ var templateFuncs = template.FuncMap{
 	"formatMoney": util.FormatMoney,
 }
 
-func parseTemplates() {
+func parseFSTemplates() {
 	baseTempl = template.Must(template.New("base").Funcs(templateFuncs).ParseFS(templatesFS, []string{
 		"templates/home.html",
 		"templates/partials/nav.html",
@@ -55,4 +59,59 @@ func parseTemplates() {
 	uncategoriesTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS,
 		"templates/partials/categories/uncategorized.html"),
 	)
+}
+
+func parseLocalTemplates() {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		log.Printf("enable to get current directory %s. defaulting to embedded templates\n", filename)
+		parseFSTemplates()
+	}
+
+	baseTempl = template.Must(template.New("base").Funcs(templateFuncs).ParseFiles([]string{
+		filepath.Join(filename, "../templates/home.html"),
+		filepath.Join(filename, "../templates/partials/nav.html"),
+		filepath.Join(filename, "../templates/partials/search.html"),
+	}...))
+
+	indexTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
+		filepath.Join(filename, "../templates/pages/index.html"),
+	}...))
+
+	importTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
+		filepath.Join(filename, "../templates/pages/import.html"),
+	}...))
+
+	expensesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
+		filepath.Join(filename, "../templates/pages/expenses.html"),
+	}...))
+
+	categoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
+		filepath.Join(filename, "../templates/pages/categories.html"),
+	}...))
+
+	searchResultsTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFiles(
+		filepath.Join(filename, "../templates/partials/searchResults.html")),
+	)
+
+	uncategoriesTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFiles(
+		filepath.Join(filename, "../templates/partials/categories/uncategorized.html")),
+	)
+}
+
+func (router *router) parseTemplates() {
+	if router.reload {
+		parseLocalTemplates()
+	} else {
+		parseFSTemplates()
+	}
+}
+
+func (router *router) liveReloadTemplatesMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if router.reload {
+			router.parseTemplates()
+		}
+		next.ServeHTTP(w, r)
+	})
 }
