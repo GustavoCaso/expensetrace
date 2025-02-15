@@ -19,6 +19,7 @@ var templatesFS embed.FS
 // Templates
 var baseTempl *template.Template
 var indexTempl *template.Template
+var reportTempl *template.Template
 var importTempl *template.Template
 var searchResultsTempl *template.Template
 var expensesTempl *template.Template
@@ -51,6 +52,10 @@ func parseFSTemplates() {
 	categoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
 		"templates/pages/categories.html",
 	}...))
+
+	reportTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS,
+		"templates/partials/reports/report.html",
+	))
 
 	searchResultsTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS,
 		"templates/partials/search/results.html"),
@@ -89,6 +94,10 @@ func parseLocalTemplates() {
 	categoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
 		filepath.Join(filename, "../templates/pages/categories.html"),
 	}...))
+
+	reportTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFiles(
+		filepath.Join(filename, "../templates/partials/reports/report.html")),
+	)
 
 	searchResultsTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFiles(
 		filepath.Join(filename, "../templates/partials/search/results.html")),

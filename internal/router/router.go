@@ -2,9 +2,11 @@ package router
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
@@ -19,10 +21,8 @@ type router struct {
 }
 
 func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
-	reload := os.Getenv("LIVERELOAD") == "true"
-
 	r := router{
-		reload: reload,
+		reload: os.Getenv("LIVERELOAD") == "true",
 		mux:    &http.ServeMux{},
 	}
 
@@ -68,16 +68,50 @@ func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
 	return r.mux
 }
 
+type link struct {
+	Name string
+	URL  string
+}
+
 type homeData struct {
 	Report report.Report
+	Links  []link
 	Error  error
 }
 
-func homeHandler(db *sql.DB, w http.ResponseWriter, _ *http.Request) {
-	// Fetch expenses from last month
+func homeHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
+	var month int
+	var year int
+	var err error
+	useReportTemplate := false
 
-	firstDay, lastDay := util.GetMonthDates(int(now.Month()-1), now.Year())
+	monthQuery := r.URL.Query().Get("month")
+	if monthQuery != "" {
+		if month, err = strconv.Atoi(monthQuery); err != nil {
+			fmt.Println("error strconv.Atoi ", err.Error())
+			month = int(now.Month() - 1)
+		}
+		useReportTemplate = true
+	} else {
+		month = int(now.Month() - 1)
+	}
+	yearQuery := r.URL.Query().Get("year")
+	if yearQuery != "" {
+		if year, err = strconv.Atoi(yearQuery); err != nil {
+			fmt.Println("error strconv.Atoi ", err.Error())
+			year = now.Year()
+		}
+		useReportTemplate = true
+	} else {
+		year = now.Year()
+	}
+
+	firstDay, lastDay := util.GetMonthDates(month, year)
+	var links []link
+	if !useReportTemplate {
+		links = generateLinks(time.Month(month), year)
+	}
 
 	var data homeData
 	expenses, err := expenseDB.GetExpensesFromDateRange(db, firstDay, lastDay)
@@ -91,13 +125,46 @@ func homeHandler(db *sql.DB, w http.ResponseWriter, _ *http.Request) {
 
 		data = homeData{
 			Report: result,
+			Links:  links,
 			Error:  nil,
 		}
 	}
 
-	err = indexTempl.Execute(w, data)
+	if useReportTemplate {
+		err = reportTempl.ExecuteTemplate(w, "report.html", data)
+	} else {
+		err = indexTempl.Execute(w, data)
+	}
+
 	if err != nil {
 		log.Print(err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
+}
+
+func generateLinks(month time.Month, year int) []link {
+	links := []link{}
+	skipYear := false
+	timeMonth := time.Month(month)
+	for year > 2021 {
+		if timeMonth == time.January {
+			skipYear = true
+		}
+
+		links = append(links, link{
+			Name: fmt.Sprintf("%s %d", timeMonth, year),
+			URL:  fmt.Sprintf("/?month=%d&year=%d", int(timeMonth), year),
+		})
+
+		if skipYear {
+			year = year - 1
+			timeMonth = time.December
+			skipYear = false
+			continue
+		}
+
+		timeMonth = timeMonth - 1
+	}
+
+	return links
 }
