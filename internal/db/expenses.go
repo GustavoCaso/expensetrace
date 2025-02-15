@@ -112,7 +112,7 @@ func (e ErrInsert) Error() string {
 	return fmt.Sprintf("error when trying to insert record on table. err: %v", e.err)
 }
 
-func InsertExpenses(db *sql.DB, expenses []Expense) []error {
+func InsertExpenses(db *sql.DB, expenses []*Expense) []error {
 	// Insert records
 	insertStmt, err := db.Prepare("INSERT INTO expenses(amount, description, expense_type, date, currency, category_id) values(?, ?, ?, ?, ?, ?)")
 
@@ -134,18 +134,18 @@ func InsertExpenses(db *sql.DB, expenses []Expense) []error {
 	return errors
 }
 
-func GetExpenses(db *sql.DB) ([]Expense, error) {
+func GetExpenses(db *sql.DB) ([]*Expense, error) {
 	rows, err := db.Query("SELECT * FROM expenses")
 	if err != nil {
-		return []Expense{}, err
+		return []*Expense{}, err
 	}
 
 	defer rows.Close()
 
-	expenses := []Expense{}
+	expenses := []*Expense{}
 
 	for rows.Next() {
-		var ex Expense
+		ex := &Expense{}
 		var id int
 		var date int64
 		var expenseType int
@@ -165,14 +165,14 @@ func GetExpenses(db *sql.DB) ([]Expense, error) {
 	return expenses, nil
 }
 
-func UpdateExpenses(db *sql.DB, expenses []Expense) (int64, error) {
+func UpdateExpenses(db *sql.DB, expenses []*Expense) (int64, error) {
 	// Update records
-	query := "INSERT OR REPLACE INTO expenses(id, amount, description, expense_type, date, currency, category) VALUES %s;"
+	query := "INSERT OR REPLACE INTO expenses(id, amount, description, expense_type, date, currency, category_id) VALUES %s;"
 	var buffer = bytes.Buffer{}
 
 	err := renderTemplate(&buffer, "values.tmpl", struct {
 		Length   int
-		Expenses []Expense
+		Expenses []*Expense
 	}{
 		// Inside the template we itarte over expenses, the index starts at 0
 		Length:   len(expenses) - 1,
@@ -195,18 +195,18 @@ func UpdateExpenses(db *sql.DB, expenses []Expense) (int64, error) {
 	return count, nil
 }
 
-func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]Expense, error) {
+func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]*Expense, error) {
 	rows, err := db.Query("SELECT * FROM expenses WHERE date BETWEEN ? and ?", start.Unix(), end.Unix())
 	if err != nil {
-		return []Expense{}, err
+		return []*Expense{}, err
 	}
 
 	defer rows.Close()
 
-	expenses := []Expense{}
+	expenses := []*Expense{}
 
 	for rows.Next() {
-		var ex Expense
+		ex := &Expense{}
 		var id int
 		var date int64
 		var expenseType int
@@ -226,18 +226,18 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]Exp
 	return expenses, nil
 }
 
-func GetExpensesWithoutCategory(db *sql.DB) ([]Expense, error) {
+func GetExpensesWithoutCategory(db *sql.DB) ([]*Expense, error) {
 	rows, err := db.Query("SELECT * FROM expenses WHERE category_id == 0")
 	if err != nil {
-		return []Expense{}, err
+		return []*Expense{}, err
 	}
 
 	defer rows.Close()
 
-	expenses := []Expense{}
+	expenses := []*Expense{}
 
 	for rows.Next() {
-		var ex Expense
+		ex := &Expense{}
 		var id int
 		var date int64
 		var expenseType int
@@ -257,19 +257,51 @@ func GetExpensesWithoutCategory(db *sql.DB) ([]Expense, error) {
 	return expenses, nil
 }
 
-func SearchExpenses(db *sql.DB, keyword string) ([]Expense, error) {
+func SearchExpenses(db *sql.DB, keyword string) ([]*Expense, error) {
 	// search records
 	rows, err := db.Query(fmt.Sprintf("SELECT * FROM expenses WHERE description LIKE \"%%%s%%\"", keyword))
 	if err != nil {
-		return []Expense{}, err
+		return []*Expense{}, err
 	}
 
 	defer rows.Close()
 
-	expenses := []Expense{}
+	expenses := []*Expense{}
 
 	for rows.Next() {
-		var ex Expense
+		ex := &Expense{}
+		var id int
+		var date int64
+		var expenseType int
+
+		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
+			log.Fatal(err)
+		}
+
+		ex.ID = id
+		ex.Type = ExpenseType(expenseType)
+		ex.Date = time.Unix(date, 0).UTC()
+		ex.db = db
+
+		expenses = append(expenses, ex)
+	}
+
+	return expenses, nil
+}
+
+func SearchExpensesByDescription(db *sql.DB, description string) ([]*Expense, error) {
+	// search records
+	rows, err := db.Query(fmt.Sprintf("SELECT * FROM expenses WHERE description == \"%s\"", description))
+	if err != nil {
+		return []*Expense{}, err
+	}
+
+	defer rows.Close()
+
+	expenses := []*Expense{}
+
+	for rows.Next() {
+		ex := &Expense{}
 		var id int
 		var date int64
 		var expenseType int

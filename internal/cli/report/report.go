@@ -68,7 +68,7 @@ func (c reportCommand) Run(db *sql.DB, matcher *category.Matcher) {
 		}
 	}
 
-	expenses, err := getExpenses(startDate, endDate, db)
+	expenses, err := expenseDB.GetExpensesFromDateRange(db, startDate, endDate)
 	if err != nil {
 		log.Fatalf("Unable to fetch expenses: %v", err.Error())
 	}
@@ -82,15 +82,6 @@ func (c reportCommand) Run(db *sql.DB, matcher *category.Matcher) {
 	}
 
 	os.Exit(0)
-}
-
-func getExpenses(startDate, endDate time.Time, db *sql.DB) ([]expenseDB.Expense, error) {
-	expenses, err := expenseDB.GetExpensesFromDateRange(db, startDate, endDate)
-	if err != nil {
-		return []expenseDB.Expense{}, err
-	}
-
-	return expenses, nil
 }
 
 var templateFuncs = template.FuncMap{

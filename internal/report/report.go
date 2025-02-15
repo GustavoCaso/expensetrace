@@ -14,7 +14,7 @@ import (
 type Category struct {
 	Name     string
 	Amount   int64
-	Expenses []expenseDB.Expense
+	Expenses []*expenseDB.Expense
 }
 
 type Report struct {
@@ -30,7 +30,7 @@ type Report struct {
 	Verbose               bool
 }
 
-func Generate(startDate, endDate time.Time, expenses []expenseDB.Expense, reportType string) Report {
+func Generate(startDate, endDate time.Time, expenses []*expenseDB.Expense, reportType string) Report {
 	var report Report
 
 	categories, duplicates, income, spending := Categories(expenses)
@@ -62,7 +62,7 @@ func Generate(startDate, endDate time.Time, expenses []expenseDB.Expense, report
 	return report
 }
 
-func Categories(expenses []expenseDB.Expense) (map[string]Category, []string, int64, int64) {
+func Categories(expenses []*expenseDB.Expense) (map[string]Category, []string, int64, int64) {
 	var income int64
 	var spending int64
 	categories := make(map[string]Category)
@@ -99,7 +99,7 @@ func Categories(expenses []expenseDB.Expense) (map[string]Category, []string, in
 	return categories, duplicates, income, spending
 }
 
-func addExpenseToCategory(categories map[string]Category, ex expenseDB.Expense) {
+func addExpenseToCategory(categories map[string]Category, ex *expenseDB.Expense) {
 	categoryName := expeseCategory(ex)
 
 	c, ok := categories[categoryName]
@@ -121,7 +121,7 @@ func addExpenseToCategory(categories map[string]Category, ex expenseDB.Expense) 
 		c := Category{
 			Amount: amount,
 			Name:   categoryName,
-			Expenses: []expenseDB.Expense{
+			Expenses: []*expenseDB.Expense{
 				ex,
 			},
 		}
@@ -129,7 +129,7 @@ func addExpenseToCategory(categories map[string]Category, ex expenseDB.Expense) 
 	}
 }
 
-func expeseCategory(ex expenseDB.Expense) string {
+func expeseCategory(ex *expenseDB.Expense) string {
 	category, err := ex.Category()
 	if err != nil {
 		fmt.Printf("error fetching the category: %+v\n", err.Error())

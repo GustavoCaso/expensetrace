@@ -9,7 +9,11 @@
         <div>
           <form id='searchform'>
             <input name="description" value={{$key}} type="hidden">
-            <select name="categoryID" hx-post="/category">
+            <select 
+              name="categoryID" 
+              hx-post="/category" 
+              hx-target="#categories" 
+              hx-swap="innerHTML">
               {{ range $category := $.Categories }}
                 <option value={{$category.ID}}>{{$category.Name}}</option>
               {{ end }}

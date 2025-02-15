@@ -34,7 +34,7 @@ type category struct {
 	name         string
 	amount       int64
 	categoryType expenseDB.ExpenseType
-	expenses     []expenseDB.Expense
+	expenses     []*expenseDB.Expense
 }
 
 func (c category) Display(verbose bool) string {
@@ -111,7 +111,7 @@ func (c searchCommand) Run(db *sql.DB, matcher *categoryPkg.Matcher) {
 				amount:       ex.Amount,
 				name:         categoryName,
 				categoryType: ex.Type,
-				expenses: []expenseDB.Expense{
+				expenses: []*expenseDB.Expense{
 					ex,
 				},
 			}
@@ -130,7 +130,7 @@ func (c searchCommand) Run(db *sql.DB, matcher *categoryPkg.Matcher) {
 	os.Exit(0)
 }
 
-func expeseCategory(ex expenseDB.Expense) string {
+func expeseCategory(ex *expenseDB.Expense) string {
 	if ex.CategoryID == 0 {
 		if ex.Type == expenseDB.IncomeType {
 			return "uncategorized income"
