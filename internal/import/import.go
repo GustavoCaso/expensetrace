@@ -23,7 +23,7 @@ var decimalIndex = re.SubexpIndex("decimal")
 
 func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *category.Matcher) []error {
 	errors := []error{}
-	expenses := []expenseDB.Expense{}
+	expenses := []*expenseDB.Expense{}
 
 	fileFormat := path.Ext(filename)
 
@@ -81,7 +81,7 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 				log.Printf("expense without category. Description: %s\n", description)
 			}
 
-			expense := expenseDB.Expense{
+			expense := &expenseDB.Expense{
 				Date:        t,
 				Description: description,
 				Amount:      parsedAmount,

@@ -36,7 +36,7 @@ func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
 func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) {
 	defer db.Close()
 
-	var expenses []expenseDB.Expense
+	var expenses []*expenseDB.Expense
 	var err error
 	if actionFlag == "migrate" {
 		expenses, err = expenseDB.GetExpenses(db)
@@ -80,7 +80,7 @@ type reportExpense struct {
 	amounts []int64
 }
 
-func inspect(writer io.Writer, expenses []expenseDB.Expense) {
+func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
 	if len(expenses) == 0 {
 		log.Println("No expenses without category 🎉")
 		os.Exit(0)
@@ -133,8 +133,8 @@ func inspect(writer io.Writer, expenses []expenseDB.Expense) {
 	os.Exit(0)
 }
 
-func recategorize(db *sql.DB, categoryMatcher *category.Matcher, expenses []expenseDB.Expense) {
-	expensesToUpdate := []expenseDB.Expense{}
+func recategorize(db *sql.DB, categoryMatcher *category.Matcher, expenses []*expenseDB.Expense) {
+	expensesToUpdate := []*expenseDB.Expense{}
 	for _, ex := range expenses {
 		id, c := categoryMatcher.Match(ex.Description)
 

@@ -1,10 +1,25 @@
+
 {{ if eq .Error nil }}
   <div id="categories">
     <ul>
       {{range $key := .Keys}}
         {{$expense := index $.GroupedExpenses $key}}
         
-        <li>{{$key}} - {{$expense.Count}}</li>
+        <li>{{$key}} - {{$expense.Count}}</li> 
+        <div>
+          <form id='searchform'>
+            <input name="description" value={{$key}} type="hidden">
+            <select 
+              name="categoryID" 
+              hx-post="/category" 
+              hx-target="#categories" 
+              hx-swap="innerHTML">
+              {{ range $category := $.Categories }}
+                <option value={{$category.ID}}>{{$category.Name}}</option>
+              {{ end }}
+            </select>
+          </form>
+        </div>
         <ul>
             {{range $index, $date := $expense.Dates}}
               {{$amount := index $expense.Amounts $index}}
