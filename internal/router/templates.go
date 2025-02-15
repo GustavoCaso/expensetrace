@@ -33,7 +33,7 @@ func parseFSTemplates() {
 	baseTempl = template.Must(template.New("base").Funcs(templateFuncs).ParseFS(templatesFS, []string{
 		"templates/home.html",
 		"templates/partials/nav.html",
-		"templates/partials/search.html",
+		"templates/partials/search/form.html",
 	}...))
 
 	indexTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
@@ -53,7 +53,7 @@ func parseFSTemplates() {
 	}...))
 
 	searchResultsTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS,
-		"templates/partials/searchResults.html"),
+		"templates/partials/search/results.html"),
 	)
 
 	uncategoriesTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS,
@@ -71,7 +71,7 @@ func parseLocalTemplates() {
 	baseTempl = template.Must(template.New("base").Funcs(templateFuncs).ParseFiles([]string{
 		filepath.Join(filename, "../templates/home.html"),
 		filepath.Join(filename, "../templates/partials/nav.html"),
-		filepath.Join(filename, "../templates/partials/search.html"),
+		filepath.Join(filename, "../templates/partials/search/form.html"),
 	}...))
 
 	indexTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
@@ -91,7 +91,7 @@ func parseLocalTemplates() {
 	}...))
 
 	searchResultsTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFiles(
-		filepath.Join(filename, "../templates/partials/searchResults.html")),
+		filepath.Join(filename, "../templates/partials/search/results.html")),
 	)
 
 	uncategoriesTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFiles(
