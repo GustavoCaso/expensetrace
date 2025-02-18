@@ -22,7 +22,7 @@ type router struct {
 	db      *sql.DB
 }
 
-func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
+func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 	router := &router{
 		reload:  os.Getenv("LIVERELOAD") == "true",
 		mux:     &http.ServeMux{},
@@ -33,59 +33,62 @@ func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
 	router.parseTemplates()
 
 	// Routes
-	router.mux.Handle("GET /", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		router.homeHandler(w, r)
-	})))
+	})
 
-	router.mux.Handle("GET /expenses", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	router.mux.HandleFunc("GET /expenses", func(w http.ResponseWriter, _ *http.Request) {
 		router.expensesHandler(w)
-	})))
+	})
 
-	router.mux.Handle("GET /import", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	router.mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
 		err := importTempl.Execute(w, nil)
 		if err != nil {
 			log.Print(err.Error())
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
-	})))
+	})
 
-	router.mux.Handle("GET /categories", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	router.mux.HandleFunc("GET /categories", func(w http.ResponseWriter, _ *http.Request) {
 		router.categoriesHandler(w)
-	})))
+	})
 
-	router.mux.Handle("GET /category/uncategorized", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	router.mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, _ *http.Request) {
 		router.uncategorizedHandler(w)
-	})))
+	})
 
-	router.mux.Handle("GET /category/new", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	router.mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
 		err := newCategoriesTempl.Execute(w, nil)
 		if err != nil {
 			log.Print(err.Error())
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
-	})))
+	})
 
-	router.mux.Handle("POST /category/check", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {
 		router.createCategoryHandler(false, w, r)
-	})))
+	})
 
-	router.mux.Handle("POST /category", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.mux.HandleFunc("POST /category", func(w http.ResponseWriter, r *http.Request) {
 		router.createCategoryHandler(true, w, r)
-	})))
+	})
 
-	router.mux.Handle("POST /category/uncategorized/update", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {
 		router.updateCategoryHandler(w, r)
-	}))
+	})
 
-	router.mux.Handle("POST /search", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.mux.HandleFunc("POST /search", func(w http.ResponseWriter, r *http.Request) {
 		router.searchHandler(w, r)
-	})))
+	})
 
-	router.mux.Handle("POST /import", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
 		router.importHandler(w, r)
-	}))
+	})
 
-	return router.mux
+	//wrap entire mux with live reload middleware
+	wrappedMux := newLiveReloadMiddleware(router, router.mux)
+
+	return wrappedMux
 }
 
 type link struct {

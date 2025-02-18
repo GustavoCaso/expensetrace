@@ -135,11 +135,21 @@ func (router *router) parseTemplates() {
 	}
 }
 
-func (router *router) liveReloadTemplatesMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if router.reload {
-			router.parseTemplates()
-		}
-		next.ServeHTTP(w, r)
-	})
+type liveReloadTemplatesMiddleware struct {
+	handler http.Handler
+	router  *router
+}
+
+func (l *liveReloadTemplatesMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if l.router.reload {
+		l.router.parseTemplates()
+	}
+	l.handler.ServeHTTP(w, r)
+}
+
+func newLiveReloadMiddleware(router *router, handlder http.Handler) *liveReloadTemplatesMiddleware {
+	return &liveReloadTemplatesMiddleware{
+		router:  router,
+		handler: handlder,
+	}
 }
