@@ -40,7 +40,7 @@ func searchHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 		Query:      query,
 	}
 
-	err = searchResultsTempl.ExecuteTemplate(w, "searchResults.html", data)
+	err = searchResultsTempl.ExecuteTemplate(w, "results.html", data)
 	if err != nil {
 		log.Print(err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
