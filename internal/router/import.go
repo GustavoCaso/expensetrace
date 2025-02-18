@@ -2,18 +2,16 @@ package router
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strings"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
 )
 
-func importHandler(db *sql.DB, matcher *category.Matcher, w http.ResponseWriter, r *http.Request) {
+func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(32 << 20)
 
 	file, header, err := r.FormFile("file")
@@ -34,7 +32,7 @@ func importHandler(db *sql.DB, matcher *category.Matcher, w http.ResponseWriter,
 	var buf bytes.Buffer
 	io.Copy(&buf, file)
 	log.Printf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len())
-	errors := importUtil.Import(header.Filename, &buf, db, matcher)
+	errors := importUtil.Import(header.Filename, &buf, router.db, router.matcher)
 
 	if len(errors) > 0 {
 		errorStrings := make([]string, len(errors))

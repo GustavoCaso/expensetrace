@@ -1,7 +1,6 @@
 package router
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,8 +15,8 @@ import (
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 )
 
-func categoriesHandler(db *sql.DB, w http.ResponseWriter) {
-	categoriesWithTotalExpenses, err := expenseDB.GetCategoriesAndTotalExpenses(db)
+func (router *router) categoriesHandler(w http.ResponseWriter) {
+	categoriesWithTotalExpenses, err := expenseDB.GetCategoriesAndTotalExpenses(router.db)
 	var data interface{}
 	if err != nil {
 		log.Print(err.Error())
@@ -50,8 +49,8 @@ type reportExpense struct {
 	Amounts []int64
 }
 
-func uncategorizedHandler(db *sql.DB, matcher *category.Matcher, w http.ResponseWriter) {
-	expenses, err := expenseDB.GetExpensesWithoutCategory(db)
+func (router *router) uncategorizedHandler(w http.ResponseWriter) {
+	expenses, err := expenseDB.GetExpensesWithoutCategory(router.db)
 	if err != nil {
 		data := struct {
 			Error error
@@ -102,7 +101,7 @@ func uncategorizedHandler(db *sql.DB, matcher *category.Matcher, w http.Response
 	}{
 		Keys:            keys,
 		GroupedExpenses: groupedExpenses,
-		Categories:      matcher.Categories(),
+		Categories:      router.matcher.Categories(),
 		Error:           nil,
 	}
 	err = uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
@@ -114,7 +113,7 @@ func uncategorizedHandler(db *sql.DB, matcher *category.Matcher, w http.Response
 	}
 }
 
-func updateCategoryHandler(db *sql.DB, matcher *category.Matcher, w http.ResponseWriter, r *http.Request) {
+func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	expenseDescription := r.FormValue("description")
@@ -137,7 +136,7 @@ func updateCategoryHandler(db *sql.DB, matcher *category.Matcher, w http.Respons
 		}
 	}
 
-	expenses, err := expenseDB.SearchExpensesByDescription(db, expenseDescription)
+	expenses, err := expenseDB.SearchExpensesByDescription(router.db, expenseDescription)
 
 	if err != nil {
 		log.Println("error SearchExpensesByDescription ", err.Error())
@@ -161,7 +160,7 @@ func updateCategoryHandler(db *sql.DB, matcher *category.Matcher, w http.Respons
 			ex.CategoryID = categoryID
 		}
 
-		updated, err := expenseDB.UpdateExpenses(db, expenses)
+		updated, err := expenseDB.UpdateExpenses(router.db, expenses)
 		if err != nil {
 			log.Println("error UpdateExpenses ", err.Error())
 
@@ -183,11 +182,11 @@ func updateCategoryHandler(db *sql.DB, matcher *category.Matcher, w http.Respons
 			log.Print("not all expenses updated succesfully")
 		}
 
-		uncategorizedHandler(db, matcher, w)
+		router.uncategorizedHandler(w)
 	}
 }
 
-func createCategoryHandler(db *sql.DB, create bool, w http.ResponseWriter, r *http.Request) {
+func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	name := r.FormValue("name")
@@ -229,7 +228,7 @@ func createCategoryHandler(db *sql.DB, create bool, w http.ResponseWriter, r *ht
 		return
 	}
 
-	expenses, _ := expenseDB.GetExpensesWithoutCategory(db)
+	expenses, _ := expenseDB.GetExpensesWithoutCategory(router.db)
 
 	results := []*expenseDB.Expense{}
 
@@ -242,7 +241,7 @@ func createCategoryHandler(db *sql.DB, create bool, w http.ResponseWriter, r *ht
 	total := len(results)
 
 	if create {
-		categoryID, err := expenseDB.CreateCategory(db, name, pattern)
+		categoryID, err := expenseDB.CreateCategory(router.db, name, pattern)
 
 		if err != nil {
 			data := struct {
@@ -265,7 +264,7 @@ func createCategoryHandler(db *sql.DB, create bool, w http.ResponseWriter, r *ht
 			ex.CategoryID = int(categoryID)
 		}
 
-		updated, err := expenseDB.UpdateExpenses(db, expenses)
+		updated, err := expenseDB.UpdateExpenses(router.db, expenses)
 		if err != nil {
 			data := struct {
 				Error error
@@ -280,6 +279,7 @@ func createCategoryHandler(db *sql.DB, create bool, w http.ResponseWriter, r *ht
 				w.Write([]byte(errorMessage))
 				return
 			}
+			return
 		}
 
 		if int(updated) != total {
@@ -287,6 +287,27 @@ func createCategoryHandler(db *sql.DB, create bool, w http.ResponseWriter, r *ht
 
 			total = int(updated)
 		}
+
+		categories, err := expenseDB.GetCategories(router.db)
+		if err != nil {
+			data := struct {
+				Error error
+			}{
+				Error: err,
+			}
+
+			err = newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+			if err != nil {
+				log.Print(err.Error())
+				errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
+				w.Write([]byte(errorMessage))
+				return
+			}
+			return
+		}
+
+		matcher := category.NewMatcher(categories)
+		router.matcher = matcher
 	}
 
 	data := struct {

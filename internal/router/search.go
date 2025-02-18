@@ -1,7 +1,6 @@
 package router
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,7 +10,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/report"
 )
 
-func searchHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
+func (router *router) searchHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	query := r.FormValue("q")
@@ -21,7 +20,7 @@ func searchHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expenses, err := expenseDB.SearchExpenses(db, query)
+	expenses, err := expenseDB.SearchExpenses(router.db, query)
 	if err != nil {
 		panic(err)
 	}

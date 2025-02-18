@@ -1,7 +1,6 @@
 package router
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,8 +9,8 @@ import (
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 )
 
-func expensesHandler(db *sql.DB, w http.ResponseWriter) {
-	expenses, err := expenseDB.GetExpenses(db)
+func (router *router) expensesHandler(w http.ResponseWriter) {
+	expenses, err := expenseDB.GetExpenses(router.db)
 	if err != nil {
 		data := struct {
 			Error error

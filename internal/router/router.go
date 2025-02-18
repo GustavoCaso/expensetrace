@@ -16,28 +16,32 @@ import (
 )
 
 type router struct {
-	reload bool
-	mux    *http.ServeMux
+	reload  bool
+	mux     *http.ServeMux
+	matcher *category.Matcher
+	db      *sql.DB
 }
 
 func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
-	r := router{
-		reload: os.Getenv("LIVERELOAD") == "true",
-		mux:    &http.ServeMux{},
+	router := &router{
+		reload:  os.Getenv("LIVERELOAD") == "true",
+		mux:     &http.ServeMux{},
+		matcher: matcher,
+		db:      db,
 	}
 
-	r.parseTemplates()
+	router.parseTemplates()
 
 	// Routes
-	r.mux.Handle("GET /", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		homeHandler(db, w, r)
+	router.mux.Handle("GET /", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		router.homeHandler(w, r)
 	})))
 
-	r.mux.Handle("GET /expenses", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		expensesHandler(db, w)
+	router.mux.Handle("GET /expenses", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		router.expensesHandler(w)
 	})))
 
-	r.mux.Handle("GET /import", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	router.mux.Handle("GET /import", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		err := importTempl.Execute(w, nil)
 		if err != nil {
 			log.Print(err.Error())
@@ -45,15 +49,15 @@ func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
 		}
 	})))
 
-	r.mux.Handle("GET /categories", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		categoriesHandler(db, w)
+	router.mux.Handle("GET /categories", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		router.categoriesHandler(w)
 	})))
 
-	r.mux.Handle("GET /category/uncategorized", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		uncategorizedHandler(db, matcher, w)
+	router.mux.Handle("GET /category/uncategorized", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		router.uncategorizedHandler(w)
 	})))
 
-	r.mux.Handle("GET /category/new", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	router.mux.Handle("GET /category/new", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		err := newCategoriesTempl.Execute(w, nil)
 		if err != nil {
 			log.Print(err.Error())
@@ -61,27 +65,27 @@ func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
 		}
 	})))
 
-	r.mux.Handle("POST /category/check", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		createCategoryHandler(db, false, w, r)
+	router.mux.Handle("POST /category/check", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		router.createCategoryHandler(false, w, r)
 	})))
 
-	r.mux.Handle("POST /category", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		createCategoryHandler(db, true, w, r)
+	router.mux.Handle("POST /category", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		router.createCategoryHandler(true, w, r)
 	})))
 
-	r.mux.Handle("POST /category/uncategorized/update", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		updateCategoryHandler(db, matcher, w, r)
+	router.mux.Handle("POST /category/uncategorized/update", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		router.updateCategoryHandler(w, r)
 	}))
 
-	r.mux.Handle("POST /search", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		searchHandler(db, w, r)
+	router.mux.Handle("POST /search", router.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		router.searchHandler(w, r)
 	})))
 
-	r.mux.Handle("POST /import", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		importHandler(db, matcher, w, r)
+	router.mux.Handle("POST /import", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		router.importHandler(w, r)
 	}))
 
-	return r.mux
+	return router.mux
 }
 
 type link struct {
@@ -95,7 +99,7 @@ type homeData struct {
 	Error  error
 }
 
-func homeHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
+func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	var month int
 	var year int
@@ -130,7 +134,7 @@ func homeHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 	}
 
 	var data homeData
-	expenses, err := expenseDB.GetExpensesFromDateRange(db, firstDay, lastDay)
+	expenses, err := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
 
 	if err != nil {
 		data = homeData{
