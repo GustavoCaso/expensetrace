@@ -137,6 +137,16 @@ func GetCategoriesAndTotalExpenses(db *sql.DB) ([]Category, error) {
 	return categories, nil
 }
 
+func CreateCategory(db *sql.DB, name, pattern string) (int64, error) {
+	result, err := db.Exec("INSERT INTO categories(name, pattern) values(?, ?)", name, pattern)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return result.LastInsertId()
+}
+
 func DeleteCategoriesDB(db *sql.DB) error {
 	// drop table
 	statement, err := db.Prepare("DROP TABLE IF EXISTS categories;")

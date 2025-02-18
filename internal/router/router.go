@@ -49,11 +49,27 @@ func New(db *sql.DB, matcher *category.Matcher) *http.ServeMux {
 		categoriesHandler(db, w)
 	})))
 
-	r.mux.Handle("GET /uncategorized", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	r.mux.Handle("GET /category/uncategorized", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		uncategorizedHandler(db, matcher, w)
 	})))
 
-	r.mux.Handle("POST /category", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	r.mux.Handle("GET /category/new", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		err := newCategoriesTempl.Execute(w, nil)
+		if err != nil {
+			log.Print(err.Error())
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
+	})))
+
+	r.mux.Handle("POST /category/check", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		createCategoryHandler(db, false, w, r)
+	})))
+
+	r.mux.Handle("POST /category", r.liveReloadTemplatesMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		createCategoryHandler(db, true, w, r)
+	})))
+
+	r.mux.Handle("POST /category/uncategorized/update", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		updateCategoryHandler(db, matcher, w, r)
 	}))
 

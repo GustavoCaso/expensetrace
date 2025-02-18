@@ -190,9 +190,7 @@ func UpdateExpenses(db *sql.DB, expenses []*Expense) (int64, error) {
 		return 0, err
 	}
 
-	count, _ := result.RowsAffected()
-
-	return count, nil
+	return result.RowsAffected()
 }
 
 func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]*Expense, error) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"time"
@@ -183,5 +184,132 @@ func updateCategoryHandler(db *sql.DB, matcher *category.Matcher, w http.Respons
 		}
 
 		uncategorizedHandler(db, matcher, w)
+	}
+}
+
+func createCategoryHandler(db *sql.DB, create bool, w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	name := r.FormValue("name")
+	pattern := r.FormValue("pattern")
+
+	if name == "" || pattern == "" {
+		data := struct {
+			Error error
+		}{
+			Error: fmt.Errorf("category must include name and a valid regex pattern. Ensure that you populate the name and pattern input"),
+		}
+
+		err := newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+		if err != nil {
+			log.Print(err.Error())
+			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
+			w.Write([]byte(errorMessage))
+			return
+		}
+		return
+	}
+
+	re, err := regexp.Compile(pattern)
+
+	if err != nil {
+		data := struct {
+			Error error
+		}{
+			Error: err,
+		}
+
+		err = newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+		if err != nil {
+			log.Print(err.Error())
+			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
+			w.Write([]byte(errorMessage))
+			return
+		}
+		return
+	}
+
+	expenses, _ := expenseDB.GetExpensesWithoutCategory(db)
+
+	results := []*expenseDB.Expense{}
+
+	for _, ex := range expenses {
+		if re.MatchString(ex.Description) {
+			results = append(results, ex)
+		}
+	}
+
+	total := len(results)
+
+	if create {
+		categoryID, err := expenseDB.CreateCategory(db, name, pattern)
+
+		if err != nil {
+			data := struct {
+				Error error
+			}{
+				Error: err,
+			}
+
+			err = newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+			if err != nil {
+				log.Print(err.Error())
+				errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
+				w.Write([]byte(errorMessage))
+				return
+			}
+			return
+		}
+
+		for _, ex := range expenses {
+			ex.CategoryID = int(categoryID)
+		}
+
+		updated, err := expenseDB.UpdateExpenses(db, expenses)
+		if err != nil {
+			data := struct {
+				Error error
+			}{
+				Error: err,
+			}
+
+			err = newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+			if err != nil {
+				log.Print(err.Error())
+				errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
+				w.Write([]byte(errorMessage))
+				return
+			}
+		}
+
+		if int(updated) != total {
+			fmt.Println("not all categories were updated")
+
+			total = int(updated)
+		}
+	}
+
+	data := struct {
+		Name    string
+		Pattern string
+		Results []*expenseDB.Expense
+		Total   int
+		Error   error
+		Create  bool
+	}{
+		Name:    name,
+		Pattern: pattern,
+		Results: results,
+		Total:   total,
+		Error:   err,
+		Create:  create,
+	}
+
+	err = newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+	if err != nil {
+		log.Print(err.Error())
+		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
+		w.Write([]byte(errorMessage))
+		return
 	}
 }

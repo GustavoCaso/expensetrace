@@ -1,0 +1,26 @@
+{{define "title"}}New Category{{end}}
+
+{{define "main"}}
+  <div id='form-results'></div>
+
+  <form id='category-form'>
+  <div>
+    <label>Name</label>
+    <input type='text' name='name' required>
+  </div>
+  <div>
+    <label>Pattern</label>
+    <input type='text' name='pattern' required>
+  </div>
+  
+  <button 
+    hx-post="/category" 
+    hx-target="#form-results" 
+    type="submit">Create</button>
+    
+  <button 
+    hx-post="/category/check" 
+    hx-target="#form-results" 
+    type="submit">Check</button>
+</form>
+{{end}}

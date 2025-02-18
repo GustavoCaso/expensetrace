@@ -23,8 +23,11 @@ var reportTempl *template.Template
 var importTempl *template.Template
 var searchResultsTempl *template.Template
 var expensesTempl *template.Template
+
 var categoriesTempl *template.Template
 var uncategoriesTempl *template.Template
+var newCategoriesTempl *template.Template
+var newCategoryResult *template.Template
 
 var templateFuncs = template.FuncMap{
 	"formatMoney": util.FormatMoney,
@@ -51,6 +54,14 @@ func parseFSTemplates() {
 
 	categoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
 		"templates/pages/categories.html",
+	}...))
+
+	newCategoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
+		"templates/pages/categories/new.html",
+	}...))
+
+	newCategoryResult = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS, []string{
+		"templates/partials/categories/new_result.html",
 	}...))
 
 	reportTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS,
@@ -93,6 +104,14 @@ func parseLocalTemplates() {
 
 	categoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
 		filepath.Join(filename, "../templates/pages/categories.html"),
+	}...))
+
+	newCategoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
+		filepath.Join(filename, "../templates/pages/categories/new.html"),
+	}...))
+
+	newCategoryResult = template.Must(template.New("").Funcs(templateFuncs).ParseFiles([]string{
+		filepath.Join(filename, "../templates/partials/categories/new_result.html"),
 	}...))
 
 	reportTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFiles(

@@ -2,8 +2,8 @@
 
 {{define "main"}}
   <nav>
-    <a hx-get="/uncategorized" hx-target="#categories" 
-    hx-swap="innerHTML">Uncategorized</a>
+    <a href="/category/uncategorized" hx-get="/category/uncategorized" hx-target="#categories" hx-swap="innerHTML">Uncategorized</a>
+    <a href="/category/new">New</a>
   </nav>
 
   {{ if eq .Error nil }}
