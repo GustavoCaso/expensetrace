@@ -4,16 +4,16 @@
     <ul>
       {{range $key := .Keys}}
         {{$expense := index $.GroupedExpenses $key}}
-        
-        <li>{{$key}} - {{$expense.Count}}</li> 
-        <div>
+        <div style="display:inline-flex;">
+          <li style="padding-right: 1em;">{{$key}} - {{$expense.Count}}</li> 
           <form id='searchform'>
             <input name="description" value={{$key}} type="hidden">
             <select 
               name="categoryID" 
-              hx-post="/category" 
+              hx-post="/category/uncategorized/update" 
               hx-target="#categories" 
               hx-swap="innerHTML">
+              <option value="">-- categorize --</option>
               {{ range $category := $.Categories }}
                 <option value={{$category.ID}}>{{$category.Name}}</option>
               {{ end }}
