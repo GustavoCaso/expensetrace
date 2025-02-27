@@ -3,8 +3,10 @@ package router
 import (
 	"embed"
 	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"runtime"
 
@@ -33,106 +35,79 @@ var templateFuncs = template.FuncMap{
 	"formatMoney": util.FormatMoney,
 }
 
-func parseFSTemplates() {
-	baseTempl = template.Must(template.New("base").Funcs(templateFuncs).ParseFS(templatesFS, []string{
-		"templates/home.html",
-		"templates/partials/nav.html",
-		"templates/partials/search/form.html",
-	}...))
-
-	indexTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
-		"templates/pages/index.html",
-	}...))
-
-	importTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
-		"templates/pages/import.html",
-	}...))
-
-	expensesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
-		"templates/pages/expenses.html",
-	}...))
-
-	categoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
-		"templates/pages/categories.html",
-	}...))
-
-	newCategoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(templatesFS, []string{
-		"templates/pages/categories/new.html",
-	}...))
-
-	newCategoryResult = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS, []string{
-		"templates/partials/categories/new_result.html",
-	}...))
-
-	reportTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS,
-		"templates/partials/reports/report.html",
-	))
-
-	searchResultsTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS,
-		"templates/partials/search/results.html"),
-	)
-
-	uncategoriesTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS,
-		"templates/partials/categories/uncategorized.html"),
-	)
-}
-
-func parseLocalTemplates() {
+func localFSDirectory() fs.FS {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		log.Printf("enable to get current directory %s. defaulting to embedded templates\n", filename)
-		parseFSTemplates()
+		return embeddedFS()
 	}
 
-	baseTempl = template.Must(template.New("base").Funcs(templateFuncs).ParseFiles([]string{
-		filepath.Join(filename, "../templates/home.html"),
-		filepath.Join(filename, "../templates/partials/nav.html"),
-		filepath.Join(filename, "../templates/partials/search/form.html"),
+	return os.DirFS(filepath.Join(filename, "../templates"))
+}
+
+func embeddedFS() fs.FS {
+	subTemplateFS, err := fs.Sub(templatesFS, "templates")
+	if err != nil {
+		panic(err)
+	}
+
+	return subTemplateFS
+}
+
+func parseTemplates(fsDir fs.FS) {
+	baseTempl = template.Must(template.New("base").Funcs(templateFuncs).ParseFS(fsDir, []string{
+		"home.html",
+		"partials/nav.html",
+		"partials/search/form.html",
 	}...))
 
-	indexTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
-		filepath.Join(filename, "../templates/pages/index.html"),
+	indexTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
+		"pages/index.html",
 	}...))
 
-	importTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
-		filepath.Join(filename, "../templates/pages/import.html"),
+	importTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
+		"pages/import.html",
 	}...))
 
-	expensesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
-		filepath.Join(filename, "../templates/pages/expenses.html"),
+	expensesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
+		"pages/expenses.html",
 	}...))
 
-	categoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
-		filepath.Join(filename, "../templates/pages/categories.html"),
+	categoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
+		"pages/categories.html",
 	}...))
 
-	newCategoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFiles([]string{
-		filepath.Join(filename, "../templates/pages/categories/new.html"),
+	newCategoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
+		"pages/categories/new.html",
 	}...))
 
-	newCategoryResult = template.Must(template.New("").Funcs(templateFuncs).ParseFiles([]string{
-		filepath.Join(filename, "../templates/partials/categories/new_result.html"),
+	newCategoryResult = template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir, []string{
+		"partials/categories/new_result.html",
 	}...))
 
-	reportTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFiles(
-		filepath.Join(filename, "../templates/partials/reports/report.html")),
+	reportTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir,
+		"partials/reports/report.html",
+	))
+
+	searchResultsTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir,
+		"partials/search/results.html"),
 	)
 
-	searchResultsTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFiles(
-		filepath.Join(filename, "../templates/partials/search/results.html")),
-	)
-
-	uncategoriesTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFiles(
-		filepath.Join(filename, "../templates/partials/categories/uncategorized.html")),
+	uncategoriesTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir,
+		"partials/categories/uncategorized.html"),
 	)
 }
 
 func (router *router) parseTemplates() {
+	var fs fs.FS
+
 	if router.reload {
-		parseLocalTemplates()
+		fs = localFSDirectory()
 	} else {
-		parseFSTemplates()
+		fs = embeddedFS()
 	}
+
+	parseTemplates(fs)
 }
 
 type liveReloadTemplatesMiddleware struct {
