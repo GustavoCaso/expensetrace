@@ -18,21 +18,21 @@ import (
 //go:embed templates
 var templatesFS embed.FS
 
-// Templates
-var baseTempl *template.Template
-var indexTempl *template.Template
-var reportTempl *template.Template
-var importTempl *template.Template
-var searchResultsTempl *template.Template
-var expensesTempl *template.Template
-
-var categoriesTempl *template.Template
-var uncategoriesTempl *template.Template
-var newCategoriesTempl *template.Template
-var newCategoryResult *template.Template
-
 var templateFuncs = template.FuncMap{
 	"formatMoney": util.FormatMoney,
+}
+
+type templates struct {
+	indexTempl         *template.Template
+	reportTempl        *template.Template
+	importTempl        *template.Template
+	searchResultsTempl *template.Template
+	expensesTempl      *template.Template
+
+	categoriesTempl    *template.Template
+	uncategoriesTempl  *template.Template
+	newCategoriesTempl *template.Template
+	newCategoryResult  *template.Template
 }
 
 func localFSDirectory() fs.FS {
@@ -54,48 +54,60 @@ func embeddedFS() fs.FS {
 	return subTemplateFS
 }
 
-func parseTemplates(fsDir fs.FS) {
-	baseTempl = template.Must(template.New("base").Funcs(templateFuncs).ParseFS(fsDir, []string{
+func parseTemplates(fsDir fs.FS) *templates {
+	baseTempl := template.Must(template.New("base").Funcs(templateFuncs).ParseFS(fsDir, []string{
 		"home.html",
 		"partials/nav.html",
 		"partials/search/form.html",
 	}...))
 
-	indexTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
+	indexTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
 		"pages/index.html",
 	}...))
 
-	importTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
+	importTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
 		"pages/import.html",
 	}...))
 
-	expensesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
+	expensesTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
 		"pages/expenses.html",
 	}...))
 
-	categoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
+	categoriesTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
 		"pages/categories.html",
 	}...))
 
-	newCategoriesTempl = template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
+	newCategoriesTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
 		"pages/categories/new.html",
 	}...))
 
-	newCategoryResult = template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir, []string{
+	newCategoryResult := template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir, []string{
 		"partials/categories/new_result.html",
 	}...))
 
-	reportTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir,
+	reportTempl := template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir,
 		"partials/reports/report.html",
 	))
 
-	searchResultsTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir,
+	searchResultsTempl := template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir,
 		"partials/search/results.html"),
 	)
 
-	uncategoriesTempl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir,
+	uncategoriesTempl := template.Must(template.New("").Funcs(templateFuncs).ParseFS(fsDir,
 		"partials/categories/uncategorized.html"),
 	)
+
+	return &templates{
+		indexTempl:         indexTempl,
+		reportTempl:        reportTempl,
+		importTempl:        importTempl,
+		searchResultsTempl: searchResultsTempl,
+		expensesTempl:      expensesTempl,
+		categoriesTempl:    categoriesTempl,
+		uncategoriesTempl:  uncategoriesTempl,
+		newCategoriesTempl: newCategoriesTempl,
+		newCategoryResult:  newCategoryResult,
+	}
 }
 
 func (router *router) parseTemplates() {
@@ -107,7 +119,7 @@ func (router *router) parseTemplates() {
 		fs = embeddedFS()
 	}
 
-	parseTemplates(fs)
+	router.templates = parseTemplates(fs)
 }
 
 type liveReloadTemplatesMiddleware struct {

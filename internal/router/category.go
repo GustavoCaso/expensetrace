@@ -35,7 +35,7 @@ func (router *router) categoriesHandler(w http.ResponseWriter) {
 		}
 	}
 
-	err = categoriesTempl.Execute(w, data)
+	err = router.templates.categoriesTempl.Execute(w, data)
 	if err != nil {
 		log.Print(err.Error())
 		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -57,7 +57,7 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 		}{
 			Error: err,
 		}
-		err = uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
+		err = router.templates.uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
 		if err != nil {
 			log.Print(err.Error())
 			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -104,7 +104,7 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 		Categories:      router.matcher.Categories(),
 		Error:           nil,
 	}
-	err = uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
+	err = router.templates.uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
 	if err != nil {
 		log.Print(err.Error())
 		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -127,7 +127,7 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		err = uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
+		err = router.templates.uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
 		if err != nil {
 			log.Print(err.Error())
 			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -146,7 +146,7 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		err = uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
+		err = router.templates.uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
 		if err != nil {
 			log.Print(err.Error())
 			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -169,7 +169,7 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 			}{
 				Error: err,
 			}
-			err = uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
+			err = router.templates.uncategoriesTempl.ExecuteTemplate(w, "uncategorized.html", data)
 			if err != nil {
 				log.Print(err.Error())
 				errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -199,7 +199,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			Error: fmt.Errorf("category must include name and a valid regex pattern. Ensure that you populate the name and pattern input"),
 		}
 
-		err := newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+		err := router.templates.newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
 		if err != nil {
 			log.Print(err.Error())
 			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -218,7 +218,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			Error: err,
 		}
 
-		err = newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+		err = router.templates.newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
 		if err != nil {
 			log.Print(err.Error())
 			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -250,7 +250,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 				Error: err,
 			}
 
-			err = newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+			err = router.templates.newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
 			if err != nil {
 				log.Print(err.Error())
 				errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -272,7 +272,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 				Error: err,
 			}
 
-			err = newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+			err = router.templates.newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
 			if err != nil {
 				log.Print(err.Error())
 				errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -296,7 +296,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 				Error: err,
 			}
 
-			err = newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+			err = router.templates.newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
 			if err != nil {
 				log.Print(err.Error())
 				errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -326,7 +326,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 		Create:  create,
 	}
 
-	err = newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
+	err = router.templates.newCategoryResult.ExecuteTemplate(w, "new_result.html", data)
 	if err != nil {
 		log.Print(err.Error())
 		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
