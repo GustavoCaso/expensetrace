@@ -25,23 +25,24 @@ type router struct {
 func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 	router := &router{
 		reload:  os.Getenv("LIVERELOAD") == "true",
-		mux:     &http.ServeMux{},
 		matcher: matcher,
 		db:      db,
 	}
 
+	mux := &http.ServeMux{}
+
 	router.parseTemplates()
 
 	// Routes
-	router.mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		router.homeHandler(w, r)
 	})
 
-	router.mux.HandleFunc("GET /expenses", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /expenses", func(w http.ResponseWriter, _ *http.Request) {
 		router.expensesHandler(w)
 	})
 
-	router.mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
 		err := importTempl.Execute(w, nil)
 		if err != nil {
 			log.Print(err.Error())
@@ -49,15 +50,15 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 		}
 	})
 
-	router.mux.HandleFunc("GET /categories", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /categories", func(w http.ResponseWriter, _ *http.Request) {
 		router.categoriesHandler(w)
 	})
 
-	router.mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, _ *http.Request) {
 		router.uncategorizedHandler(w)
 	})
 
-	router.mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
 		err := newCategoriesTempl.Execute(w, nil)
 		if err != nil {
 			log.Print(err.Error())
@@ -65,28 +66,28 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 		}
 	})
 
-	router.mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {
 		router.createCategoryHandler(false, w, r)
 	})
 
-	router.mux.HandleFunc("POST /category", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /category", func(w http.ResponseWriter, r *http.Request) {
 		router.createCategoryHandler(true, w, r)
 	})
 
-	router.mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {
 		router.updateCategoryHandler(w, r)
 	})
 
-	router.mux.HandleFunc("POST /search", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /search", func(w http.ResponseWriter, r *http.Request) {
 		router.searchHandler(w, r)
 	})
 
-	router.mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
 		router.importHandler(w, r)
 	})
 
 	//wrap entire mux with live reload middleware
-	wrappedMux := newLiveReloadMiddleware(router, router.mux)
+	wrappedMux := newLiveReloadMiddleware(router, mux)
 
 	return wrappedMux
 }
