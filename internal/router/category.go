@@ -35,7 +35,7 @@ func (router *router) categoriesHandler(w http.ResponseWriter) {
 		}
 	}
 
-	err = router.templates.Render(w, "pages/categories.html", data)
+	err = router.templates.Render(w, "pages/categories/index.html", data)
 	if err != nil {
 		log.Print(err.Error())
 		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())

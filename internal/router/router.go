@@ -44,7 +44,7 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 	})
 
 	mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
-		err := router.templates.Render(w, "pages/import.html", nil)
+		err := router.templates.Render(w, "pages/import/index.html", nil)
 		if err != nil {
 			log.Print(err.Error())
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -158,7 +158,7 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 	if useReportTemplate {
 		err = router.templates.Render(w, "partials/reports/report.html", data)
 	} else {
-		err = router.templates.Render(w, "pages/index.html", data)
+		err = router.templates.Render(w, "pages/reports/index.html", data)
 	}
 
 	if err != nil {

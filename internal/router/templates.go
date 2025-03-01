@@ -59,34 +59,34 @@ func parseTemplates(fsDir fs.FS) templates {
 	templates := templates{}
 
 	baseTempl := template.Must(template.New("base").Funcs(templateFuncs).ParseFS(fsDir, []string{
-		"home.html",
+		"layout.html",
 		"partials/nav.html",
 		"partials/search/form.html",
 	}...))
 
 	indexTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
-		"pages/index.html",
+		"pages/reports/index.html",
 	}...))
 
-	templates["pages/index.html"] = indexTempl
+	templates["pages/reports/index.html"] = indexTempl
 
 	importTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
-		"pages/import.html",
+		"pages/import/index.html",
 	}...))
 
-	templates["pages/import.html"] = importTempl
+	templates["pages/import/index.html"] = importTempl
 
 	expensesTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
-		"pages/expenses.html",
+		"pages/expenses/index.html",
 	}...))
 
-	templates["pages/expenses.html"] = expensesTempl
+	templates["pages/expenses/index.html"] = expensesTempl
 
 	categoriesTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
-		"pages/categories.html",
+		"pages/categories/index.html",
 	}...))
 
-	templates["pages/categories.html"] = categoriesTempl
+	templates["pages/categories/index.html"] = categoriesTempl
 
 	newCategoriesTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
 		"pages/categories/new.html",
