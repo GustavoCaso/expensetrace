@@ -2,7 +2,9 @@ package router
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -14,6 +16,10 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
+
+//go:embed templates/static/*
+var static embed.FS
+var staticFS, _ = fs.Sub(static, "templates/static")
 
 type router struct {
 	reload    bool
@@ -86,6 +92,8 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
 		router.importHandler(w, r)
 	})
+
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	//wrap entire mux with live reload middleware
 	wrappedMux := newLiveReloadMiddleware(router, mux)
