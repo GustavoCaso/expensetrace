@@ -20,7 +20,7 @@ type router struct {
 	mux       *http.ServeMux
 	matcher   *category.Matcher
 	db        *sql.DB
-	templates *templates
+	templates templates
 }
 
 func New(db *sql.DB, matcher *category.Matcher) http.Handler {
@@ -44,7 +44,7 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 	})
 
 	mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
-		err := router.templates.importTempl.Execute(w, nil)
+		err := router.templates.Render(w, "pages/import.html", nil)
 		if err != nil {
 			log.Print(err.Error())
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -60,7 +60,7 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 	})
 
 	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
-		err := router.templates.newCategoriesTempl.Execute(w, nil)
+		err := router.templates.Render(w, "pages/categories/new.html", nil)
 		if err != nil {
 			log.Print(err.Error())
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -156,9 +156,9 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if useReportTemplate {
-		err = router.templates.reportTempl.ExecuteTemplate(w, "report.html", data)
+		err = router.templates.Render(w, "partials/reports/report.html", data)
 	} else {
-		err = router.templates.indexTempl.Execute(w, data)
+		err = router.templates.Render(w, "pages/index.html", data)
 	}
 
 	if err != nil {

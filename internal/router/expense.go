@@ -17,7 +17,7 @@ func (router *router) expensesHandler(w http.ResponseWriter) {
 		}{
 			Error: err,
 		}
-		err = router.templates.expensesTempl.Execute(w, data)
+		err = router.templates.Render(w, "pages/expenses.html", data)
 		if err != nil {
 			log.Print(err.Error())
 			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
@@ -37,7 +37,7 @@ func (router *router) expensesHandler(w http.ResponseWriter) {
 		Expenses: expenses,
 	}
 
-	err = router.templates.expensesTempl.Execute(w, data)
+	err = router.templates.Render(w, "pages/expenses.html", data)
 	if err != nil {
 		log.Print(err.Error())
 		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())

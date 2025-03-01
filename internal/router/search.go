@@ -39,7 +39,7 @@ func (router *router) searchHandler(w http.ResponseWriter, r *http.Request) {
 		Query:      query,
 	}
 
-	err = router.templates.searchResultsTempl.ExecuteTemplate(w, "results.html", data)
+	err = router.templates.Render(w, "partials/search/results.html", data)
 	if err != nil {
 		log.Print(err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
