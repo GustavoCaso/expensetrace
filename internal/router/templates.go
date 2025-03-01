@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 
@@ -55,6 +56,40 @@ func embeddedFS() fs.FS {
 	return subTemplateFS
 }
 
+func parsePages(fsDir fs.FS, basetempl *template.Template, templates templates) {
+	fs.WalkDir(fsDir, "pages", func(path string, d fs.DirEntry, err error) error {
+		// If is not a dir, then we can assume that is the final html page template
+		if !d.IsDir() {
+			b, err := fs.ReadFile(fsDir, path)
+			if err != nil {
+				panic(err)
+			}
+
+			t := template.Must(template.Must(basetempl.Clone()).Parse(string(b)))
+			// Store the new created template in the templates map
+			templates[path] = t
+		}
+		return nil
+	})
+}
+
+func parsePartials(fsDir fs.FS, templates templates) {
+	fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, err error) error {
+		if !d.IsDir() {
+			name := path.Base(filepath)
+			b, err := fs.ReadFile(fsDir, filepath)
+			if err != nil {
+				panic(err)
+			}
+
+			t := template.Must(template.New(name).Funcs(templateFuncs).Parse(string(b)))
+
+			templates[filepath] = t
+		}
+		return nil
+	})
+}
+
 func parseTemplates(fsDir fs.FS) templates {
 	templates := templates{}
 
@@ -64,59 +99,9 @@ func parseTemplates(fsDir fs.FS) templates {
 		"partials/search/form.html",
 	}...))
 
-	indexTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
-		"pages/reports/index.html",
-	}...))
+	parsePages(fsDir, baseTempl, templates)
 
-	templates["pages/reports/index.html"] = indexTempl
-
-	importTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
-		"pages/import/index.html",
-	}...))
-
-	templates["pages/import/index.html"] = importTempl
-
-	expensesTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
-		"pages/expenses/index.html",
-	}...))
-
-	templates["pages/expenses/index.html"] = expensesTempl
-
-	categoriesTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
-		"pages/categories/index.html",
-	}...))
-
-	templates["pages/categories/index.html"] = categoriesTempl
-
-	newCategoriesTempl := template.Must(template.Must(baseTempl.Clone()).ParseFS(fsDir, []string{
-		"pages/categories/new.html",
-	}...))
-
-	templates["pages/categories/new.html"] = newCategoriesTempl
-
-	newCategoryResult := template.Must(template.New("new_result.html").Funcs(templateFuncs).ParseFS(fsDir, []string{
-		"partials/categories/new_result.html",
-	}...))
-
-	templates["partials/categories/new_result.html"] = newCategoryResult
-
-	reportTempl := template.Must(template.New("report.html").Funcs(templateFuncs).ParseFS(fsDir,
-		"partials/reports/report.html",
-	))
-
-	templates["partials/reports/report.html"] = reportTempl
-
-	searchResultsTempl := template.Must(template.New("results.html").Funcs(templateFuncs).ParseFS(fsDir,
-		"partials/search/results.html"),
-	)
-
-	templates["partials/search/results.html"] = searchResultsTempl
-
-	uncategoriesTempl := template.Must(template.New("uncategorized.html").Funcs(templateFuncs).ParseFS(fsDir,
-		"partials/categories/uncategorized.html"),
-	)
-
-	templates["partials/categories/uncategorized.html"] = uncategoriesTempl
+	parsePartials(fsDir, templates)
 
 	return templates
 }
