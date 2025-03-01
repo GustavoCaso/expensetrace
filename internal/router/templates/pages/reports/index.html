@@ -3,10 +3,16 @@
 {{define "main"}}
   {{ if eq .Error nil }}
     <!-- List of Expenses -->
-    <nav>
+    <nav class="month-nav">
      {{range $link := .Links}}
-      <a hx-get={{$link.URL}} hx-target="#report" 
-      hx-swap="outerHTML">{{$link.Name}}</a>
+      <a href="{{$link.URL}}" 
+        hx-get={{$link.URL}} 
+        hx-target="#report" 
+        hx-swap="outerHTML" 
+        class="month-link">
+          <span class="month-name">{{$link.Name}}</span>
+          <div class="tooltip"><span class="income">Income: {{formatMoney .Income "." ","}}€</span> <span class="expense">Spending: {{formatMoney .Spending "." ","}}€</span></div>
+      </a>
      {{end}}  
     </nav>
     
