@@ -1,11 +1,11 @@
 <h2> Results for {{.Query}} </h2>
 
-<ul id="categories">
+<ul id="search-results">
   {{range $category := .Categories}}
     {{if gt $category.Amount 0}}
-      <li>{{$category.Name}}: <span style="color:green;"><b>{{formatMoney $category.Amount "." ","}}€</b></span></li>
+      <li>{{$category.Name}}: <span class="income"><b>{{formatMoney $category.Amount "." ","}}€</b></span></li>
     {{else}}
-      <li>{{$category.Name}}: <span style="color:crimson;"><u>{{formatMoney $category.Amount "." ","}}€</u></span></li>
+      <li>{{$category.Name}}: <span class="expense"><u>{{formatMoney $category.Amount "." ","}}€</u></span></li>
     {{end}}
     <ul>
       {{range $expense := $category.Expenses -}}

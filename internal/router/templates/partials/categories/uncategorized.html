@@ -1,36 +1,45 @@
 
 {{ if eq .Error nil }}
-  <div id="categories">
-    <ul>
+  <div id="uncategorized">
+    <ul class="uncategorized-list">
       {{range $key := .Keys}}
         {{$expense := index $.GroupedExpenses $key}}
-        <div style="display:inline-flex;">
-          <li style="padding-right: 1em;">{{$key}} - {{$expense.Count}}</li> 
-          <form id='searchform'>
-            <input name="description" value={{$key}} type="hidden">
-            <select 
-              name="categoryID" 
-              hx-post="/category/uncategorized/update" 
-              hx-target="#categories" 
-              hx-swap="innerHTML">
-              <option value="">-- categorize --</option>
-              {{ range $category := $.Categories }}
-                <option value={{$category.ID}}>{{$category.Name}}</option>
-              {{ end }}
-            </select>
-          </form>
-        </div>
-        <ul>
+          <div class="uncategorized-group">
+            <div class="uncategorized-summary">
+              <p>{{$key}} - Total: {{$expense.Count}}</p> 
+          
+              <form>
+                <input name="description" value={{$key}} type="hidden">
+                <select 
+                  class="category-select"
+                  name="categoryID" 
+                  hx-post="/category/uncategorized/update" 
+                  hx-target="#uncategorized" 
+                  hx-swap="outerHTML">
+                  <option value="">-- categorize --</option>
+                  {{ range $category := $.Categories }}
+                    <option value={{$category.ID}}>{{$category.Name}}</option>
+                  {{ end }}
+                </select>
+              </form>
+            </div>
+
             {{range $index, $date := $expense.Dates}}
               {{$amount := index $expense.Amounts $index}}
               {{if gt $amount 0}}
-                <li> {{$date.Format "2006-01-02"}} - <span style="color:green;"><b>{{formatMoney $amount "." ","}}€</b></span></li>
+                <li class="uncategorized-item">
+                  <span class="uncategorized-date">{{$date.Format "2006-01-02"}}</span>
+                  <span class="income"><b>{{formatMoney $amount "." ","}}€</b></span>
+                </li>
               {{else}}
-                <li> {{$date.Format "2006-01-02"}} - <span style="color:crimson;"><u>{{formatMoney $amount "." ","}}€</u></span></li>
+                <li class="uncategorized-item">
+                  <span class="uncategorized-date">{{$date.Format "2006-01-02"}}</span>
+                  <span class="expense"><b>{{formatMoney $amount "." ","}}€</b></span>
+                </li>
               {{end}}
             {{end}}
-        </ul>
-      {{end}}
+          </div>
+        {{end}}
     </ul>
   </div>
 {{ else }}
