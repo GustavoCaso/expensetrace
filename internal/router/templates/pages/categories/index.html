@@ -2,12 +2,12 @@
 
 {{define "main"}}
   <nav>
-    <a href="/category/uncategorized" hx-get="/category/uncategorized" hx-target="#categories" hx-swap="innerHTML">Uncategorized</a>
+    <a href="/category/uncategorized" hx-get="/category/uncategorized" hx-target="#category-list" hx-swap="outerHTML">Uncategorized</a>
     <a href="/category/new">New</a>
   </nav>
 
   {{ if eq .Error nil }}
-    <div id="categories">
+    <div id="category-list">
       <ul>
         {{range $category := .Categories}}
           <li>{{$category.Name}} - {{$category.Total}} expenses</li>

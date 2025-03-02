@@ -3,10 +3,16 @@
 {{define "main"}}
   {{ if eq .Error nil }}
     <!-- List of Expenses -->
-    <nav>
+    <nav class="month-nav">
      {{range $link := .Links}}
-      <a hx-get={{$link.URL}} hx-target="#report" 
-      hx-swap="innerHTML">{{$link.Name}}</a>
+      <a href="{{$link.URL}}" 
+        hx-get={{$link.URL}} 
+        hx-target="#report" 
+        hx-swap="outerHTML" 
+        class="month-link">
+          <span class="month-name">{{$link.Name}}</span>
+          <div class="tooltip"><span class="income">Income: {{formatMoney .Income "." ","}}€</span> <span class="expense">Spending: {{formatMoney .Spending "." ","}}€</span></div>
+      </a>
      {{end}}  
     </nav>
     
@@ -14,23 +20,23 @@
       <div id="report">
         <h2>{{.Title}}</h2>
         <ul id="summary">
-          <li style="color:green;"><b>Income: {{formatMoney .Income "." ","}}</b>€</li>
-          <li style="color:crimson;"><u>Spending:  {{formatMoney .Spending "." ","}}€</u></li>
+          <li><span class="income"><b>Income: {{formatMoney .Income "." ","}}</b>€</span></li>
+          <li><span class="expense"><u>Spending:  {{formatMoney .Spending "." ","}}€</u></span></li>
 
           {{if gt .Savings 0}}
-            <li style="color:green;">Savings: {{formatMoney .Savings "." ","}}€ <b>{{printf "%.2f%%" .SavingsPercentage}}</b></li>
+            <li>Savings: {{formatMoney .Savings "." ","}}€ <span class="savings-percentage savings"><b>{{printf "%.2f%%" .SavingsPercentage}}</b></span></li>
           {{else}}
-            <li style="color:crimson;"> Savings: {{formatMoney .Savings "." ","}}€ <u>{{printf "%.2f%%" .SavingsPercentage}}</u></li>
+            <li>Savings: {{formatMoney .Savings "." ","}}€ <span class="savings-percentage expenses"><u>{{printf "%.2f%%" .SavingsPercentage}}</u></span></li>
           {{end}}
         </ul>
       
-        <p> Breakdown by category </p>
+        <div class="categories-header">Breakdown by category</div>
         <ul id="categories">
           {{range $category := .Categories}}
             {{if gt $category.Amount 0}}
-              <li>{{$category.Name}}: <span style="color:green;"><b>{{formatMoney $category.Amount "." ","}}</b></span></li>
+              <li>{{$category.Name}}: <span class="income"><b>{{formatMoney $category.Amount "." ","}}</b></span></li>
             {{else}}
-              <li>{{$category.Name}}: <span style="color:crimson;"><u>{{formatMoney $category.Amount "." ","}}</u></span></li>
+              <li>{{$category.Name}}: <span class="expense"><u>{{formatMoney $category.Amount "." ","}}</u></span></li>
             {{end}}
           {{end}}
         </ul>

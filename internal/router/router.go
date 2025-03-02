@@ -2,7 +2,9 @@ package router
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -14,6 +16,10 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
+
+//go:embed templates/static/*
+var static embed.FS
+var staticFS, _ = fs.Sub(static, "templates/static")
 
 type router struct {
 	reload    bool
@@ -87,6 +93,8 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 		router.importHandler(w, r)
 	})
 
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+
 	//wrap entire mux with live reload middleware
 	wrappedMux := newLiveReloadMiddleware(router, mux)
 
@@ -94,8 +102,11 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 }
 
 type link struct {
-	Name string
-	URL  string
+	Name     string
+	URL      string
+	Income   int64
+	Spending int64
+	Savings  int64
 }
 
 type homeData struct {
@@ -135,23 +146,29 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 	firstDay, lastDay := util.GetMonthDates(month, year)
 	var links []link
 	if !useReportTemplate {
-		links = generateLinks(time.Month(month), year)
+		links, err = generateLinks(router.db, time.Month(month), year)
 	}
 
 	var data homeData
-	expenses, err := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
-
 	if err != nil {
 		data = homeData{
 			Error: err,
 		}
 	} else {
-		result := report.Generate(firstDay, lastDay, expenses, "monthly")
+		expenses, err := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
 
-		data = homeData{
-			Report: result,
-			Links:  links,
-			Error:  nil,
+		if err != nil {
+			data = homeData{
+				Error: err,
+			}
+		} else {
+			result := report.Generate(firstDay, lastDay, expenses, "monthly")
+
+			data = homeData{
+				Report: result,
+				Links:  links,
+				Error:  nil,
+			}
 		}
 	}
 
@@ -167,18 +184,31 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func generateLinks(month time.Month, year int) []link {
+func generateLinks(db *sql.DB, month time.Month, year int) ([]link, error) {
 	links := []link{}
 	skipYear := false
 	timeMonth := time.Month(month)
-	for year > 2021 {
+	for year > 2022 {
 		if timeMonth == time.January {
 			skipYear = true
 		}
 
+		firstDay, lastDay := util.GetMonthDates(int(timeMonth), year)
+
+		expenses, err := expenseDB.GetExpensesFromDateRange(db, firstDay, lastDay)
+
+		if err != nil {
+			return []link{}, err
+		}
+
+		result := report.Generate(firstDay, lastDay, expenses, "monthly")
+
 		links = append(links, link{
-			Name: fmt.Sprintf("%s %d", timeMonth, year),
-			URL:  fmt.Sprintf("/?month=%d&year=%d", int(timeMonth), year),
+			Name:     fmt.Sprintf("%s %d", timeMonth, year),
+			URL:      fmt.Sprintf("/?month=%d&year=%d", int(timeMonth), year),
+			Income:   result.Income,
+			Spending: result.Spending,
+			Savings:  result.Savings,
 		})
 
 		if skipYear {
@@ -191,5 +221,5 @@ func generateLinks(month time.Month, year int) []link {
 		timeMonth = timeMonth - 1
 	}
 
-	return links
+	return links, nil
 }

@@ -3,24 +3,26 @@
 {{define "main"}}
   <div id='form-results'></div>
 
-  <form id='category-form'>
-  <div>
-    <label>Name</label>
-    <input type='text' name='name' required>
-  </div>
-  <div>
-    <label>Pattern</label>
-    <input type='text' name='pattern' required>
-  </div>
-  
-  <button 
-    hx-post="/category" 
-    hx-target="#form-results" 
-    type="submit">Create</button>
+  <form id='category-new'>
+    <div class="form-group">
+      <label for="category-name">Name</label>
+      <input id="category-name" type='text' name='name' required>
+    </div>
+    <div class="form-group">
+      <label for="category-pattern">Pattern</label>
+      <input id="category-pattern" type='text' name='pattern' required>
+    </div>
     
-  <button 
-    hx-post="/category/check" 
-    hx-target="#form-results" 
-    type="submit">Check</button>
-</form>
+    <button 
+      hx-post="/category" 
+      hx-target="#form-results" 
+      type="submit">Create
+    </button>
+      
+    <button 
+      hx-post="/category/check" 
+      hx-target="#form-results" 
+      type="submit">Check
+    </button>
+  </form>
 {{end}}

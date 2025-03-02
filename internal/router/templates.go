@@ -96,7 +96,6 @@ func parseTemplates(fsDir fs.FS) templates {
 	baseTempl := template.Must(template.New("base").Funcs(templateFuncs).ParseFS(fsDir, []string{
 		"layout.html",
 		"partials/nav.html",
-		"partials/search/form.html",
 	}...))
 
 	parsePages(fsDir, baseTempl, templates)
