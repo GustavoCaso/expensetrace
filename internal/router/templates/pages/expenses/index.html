@@ -23,36 +23,34 @@
               <h2>{{$year}}</h2>
               <span class="toggle-icon">▼</span>
             </div>
-         
-            {{range $month := $.Months}}
-              {{$expenses := index $.Expenses $year $month}}
-              {{if gt (len $expenses) 0}}
-                <div class="expense-content">
-                  <div class="expense-month">
-                    <div class="month-header">
-                      <h3>{{$month}}</h3>
-                    </div>
+            
+            <div class="expense-content">
+              {{range $month := $.Months}}
+                {{$expenses := index $.Expenses $year $month}}
+                {{if gt (len $expenses) 0}}
+                  <div class="month-header">
+                    <h3>{{$month}}</h3>
                   </div>
-                </div>
                 
-                <ul class="expense-list">
-                  {{range $expense := $expenses}}
-                    <li class="expense-item">
-                      <span class="expense-date">{{$expense.Date.Format "2006-01-02"}}</span>
-                      <div class="expense-description">
-                        {{$expense.Description}}
-                        <span class="expense-category">{{$expense.Category}}</span>
-                      </div>
-                      {{if gt $expense.Type 0}}
-                        <span class="income"><b>{{formatMoney $expense.Amount "." ","}}€</b></span>
-                      {{else}}
-                        <span class="expense"><b>{{formatMoney $expense.Amount "." ","}}€</b></span>
-                      {{end}}
-                    </li>
-                  {{end}}
-                </ul>
+                  <ul class="expense-list">
+                    {{range $expense := $expenses}}
+                      <li class="expense-item">
+                        <span class="expense-date">{{$expense.Date.Format "2006-01-02"}}</span>
+                        <div class="expense-description">
+                          {{$expense.Description}}
+                          <span class="expense-category">{{$expense.Category}}</span>
+                        </div>
+                        {{if gt $expense.Type 0}}
+                          <span class="income"><b>{{formatMoney $expense.Amount "." ","}}€</b></span>
+                        {{else}}
+                          <span class="expense"><b>{{formatMoney $expense.Amount "." ","}}€</b></span>
+                        {{end}}
+                      </li>
+                    {{end}}
+                  </ul>
+                {{end}}
               {{end}}
-            {{end}}
+            </div>
           </div>
         {{end}}
       </ul>

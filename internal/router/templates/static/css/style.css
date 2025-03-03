@@ -459,6 +459,12 @@ form button:hover {
   list-style-type: none;
   padding: 0;
   margin: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.expense-list.collapsed {
+  max-height: 0;
 }
 
 .expense-item {
