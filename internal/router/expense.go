@@ -45,16 +45,21 @@ func (router *router) expensesHandler(w http.ResponseWriter) {
 	}
 
 	groupedExpenses, years := expensesGroupByYearAndMonth(expenses)
+	today := time.Now()
 
 	data := struct {
-		Expenses expensesByYear
-		Years    []int
-		Months   []string
-		Error    error
+		Expenses     expensesByYear
+		Years        []int
+		Months       []string
+		Error        error
+		CurrentYear  int
+		CurrentMonth string
 	}{
-		Expenses: groupedExpenses,
-		Years:    years,
-		Months:   months,
+		Expenses:     groupedExpenses,
+		Years:        years,
+		Months:       months,
+		CurrentYear:  today.Year(),
+		CurrentMonth: today.Month().String(),
 	}
 
 	err = router.templates.Render(w, "pages/expenses/index.html", data)

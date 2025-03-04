@@ -18,21 +18,24 @@
     <!-- List of Expenses -->
     <div id="expenses">
         {{range $year := .Years}}
+          {{$currentYear := (eq $year $.CurrentYear)}}
+        
           <div class="expense-year">
             <div class="year-header">
               <h2>{{$year}}</h2>
               <span class="toggle-icon">▼</span>
             </div>
             
-            <div class="expense-content">
+            <div class="expense-content {{if not $currentYear}}collapsed{{end}}">
               {{range $month := $.Months}}
+                {{$currentMonth := (eq $month $.CurrentMonth)}}
                 {{$expenses := index $.Expenses $year $month}}
                 {{if gt (len $expenses) 0}}
                   <div class="month-header">
                     <h3>{{$month}}</h3>
                   </div>
                 
-                  <ul class="expense-list">
+                  <ul class="expense-list {{if not $currentMonth}}collapsed{{end}}">
                     {{range $expense := $expenses}}
                       <li class="expense-item">
                         <span class="expense-date">{{$expense.Date.Format "2006-01-02"}}</span>

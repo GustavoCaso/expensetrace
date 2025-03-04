@@ -439,28 +439,13 @@ form button:hover {
   font-size: 0.875rem;
 }
 
-.month-income,
-.month-expense {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.month-income {
-  color: #10b981;
-}
-
-.month-expense {
-  color: #ef4444;
-}
-
 /* Expense items list */
 .expense-list {
   list-style-type: none;
   padding: 0;
   margin: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease-out;
+  transition: max-height 0.5s ease-out;
 }
 
 .expense-list.collapsed {
@@ -503,12 +488,6 @@ form button:hover {
   margin-left: 0.5rem;
 }
 
-.expense-amount {
-  flex: 0 0 100px;
-  text-align: right;
-  font-weight: 500;
-}
-
 .amount-expense {
   color: #ef4444;
 }
@@ -527,13 +506,6 @@ form button:hover {
   max-height: 0;
 }
 
-/* Empty state */
-.empty-state {
-  text-align: center;
-  padding: 2rem;
-  color: #9ca3af;
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .expense-item {
@@ -542,13 +514,8 @@ form button:hover {
     padding: 1rem;
   }
 
-  .expense-date,
-  .expense-amount {
+  .expense-date {
     flex: auto;
-  }
-
-  .expense-amount {
-    text-align: left;
   }
 
   .month-total {
