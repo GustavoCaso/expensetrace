@@ -361,3 +361,165 @@ form button:hover {
   justify-content: space-between;
   padding-left: 1.5rem;
 }
+
+
+/* expenses list styling */
+#expenses {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+}
+
+.expense-year {
+  margin-bottom: 2rem;
+}
+
+/* Year header styling */
+.year-header {
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.year-header:hover {
+  background-color: #e5e7eb;
+}
+
+.year-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.toggle-icon {
+  color: #6b7280;
+  font-size: 1.25rem;
+  transition: transform 0.3s;
+}
+
+.collapsed .toggle-icon {
+  transform: rotate(-90deg);
+}
+
+/* Month header styling */
+.month-header {
+  background-color: #f9fafb;
+  border-left: 3px solid #3b82f6;
+  padding: 0.75rem 1rem;
+  margin: 1.5rem 0 1rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 0 6px 6px 0;
+}
+
+.month-header:hover {
+  background-color: #f3f4f6;
+}
+
+.month-header h3 {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #4b5563;
+  margin: 0;
+}
+
+.month-total {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+/* Expense items list */
+.expense-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease-out;
+}
+
+.expense-list.collapsed {
+  max-height: 0;
+}
+
+.expense-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s;
+}
+
+.expense-item:hover {
+  background-color: #f9fafb;
+}
+
+.expense-item:last-child {
+  border-bottom: none;
+}
+
+.expense-date {
+  color: #6b7280;
+  font-size: 0.875rem;
+  flex: 0 0 110px;
+}
+
+.expense-description {
+  flex: 1;
+  margin: 0 1rem;
+}
+
+.expense-category {
+  background-color: #e5e7eb;
+  color: #4b5563;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  margin-left: 0.5rem;
+}
+
+.amount-expense {
+  color: #ef4444;
+}
+
+.amount-income {
+  color: #10b981;
+}
+
+/* Animation for collapsible sections */
+.expense-content {
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.expense-content.collapsed {
+  max-height: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .expense-item {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  .expense-date {
+    flex: auto;
+  }
+
+  .month-total {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
