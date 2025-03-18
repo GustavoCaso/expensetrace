@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
@@ -12,6 +13,7 @@ import (
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -34,12 +36,52 @@ func (c tuiCommand) Description() string {
 
 func (c tuiCommand) SetFlags(*flag.FlagSet) {}
 
+type focusState int
+
+const (
+	focusedMain focusState = iota
+	focusedDetail
+)
+
+type keymap struct {
+	Enter key.Binding
+	Up    key.Binding
+	Down  key.Binding
+	Exit  key.Binding
+}
+
+func defaultKeyMap() keymap {
+	return keymap{
+		Enter: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "explore"),
+		),
+		Exit: key.NewBinding(
+			key.WithKeys("q", "ctrl+c"),
+			key.WithHelp("q/ctrl+c", "exit"),
+		),
+		Up: key.NewBinding(
+			key.WithKeys("up", "k"),
+			key.WithHelp("↑/k", "up"),
+		),
+		Down: key.NewBinding(
+			key.WithKeys("down", "j"),
+			key.WithHelp("↓/j", "down"),
+		),
+	}
+}
+
 type model struct {
-	reports map[int]map[int]wrapper
+	reports []wrapper
 
 	current *wrapper
 
-	table table.Model
+	table       table.Model
+	focusReport focusReport
+
+	keyMap keymap
+
+	focusMode focusState
 
 	width  int
 	height int
@@ -69,40 +111,32 @@ func initialModel(db *sql.DB, width int, height int) model {
 		{Title: "SavingsPercentage", Width: width / 4},
 	}
 
+	sort.SliceStable(reports, func(i, j int) bool {
+		return reports[i].report.StartDate.After(reports[j].report.StartDate)
+	})
+
 	rows := []table.Row{}
 
-	for _, reportsPerYear := range reports {
-		for _, report := range reportsPerYear {
-			rows = append(rows, report.ToRow())
-		}
+	for _, report := range reports {
+		rows = append(rows, report.ToRow())
 	}
 
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(7),
+		table.WithHeight(height),
 	)
 
 	t.SetHeight(height / 2)
 
-	s := table.DefaultStyles()
-	s.Header = s.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true).
-		Bold(false)
-	s.Selected = s.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(false)
-	t.SetStyles(s)
-
 	return model{
 		reports: reports,
-		current: nil,
+		keyMap:  defaultKeyMap(),
+		table:   t,
 
-		table: t,
+		focusReport: newfocusReport(0, 0),
+		focusMode:   focusedMain,
 
 		width:  width,
 		height: height,
@@ -112,11 +146,19 @@ func initialModel(db *sql.DB, width int, height int) model {
 	}
 }
 
-func generateReports(db *sql.DB, month time.Month, year int) (map[int]map[int]wrapper, error) {
-	reports := map[int]map[int]wrapper{}
+func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) {
+	reports := []wrapper{}
 	skipYear := false
 	timeMonth := time.Month(month)
-	for year > 2022 {
+	ex, err := expenseDB.GetFirstExpense(db)
+	if err != nil {
+		return reports, err
+	}
+
+	lastMonth := ex.Date.Month()
+	lastYear := ex.Date.Year()
+
+	for year >= lastYear {
 		if timeMonth == time.January {
 			skipYear = true
 		}
@@ -131,27 +173,19 @@ func generateReports(db *sql.DB, month time.Month, year int) (map[int]map[int]wr
 
 		result := report.Generate(firstDay, lastDay, expenses, "monthly")
 
-		report := wrapper{
+		reports = append(reports, wrapper{
 			report: result,
-		}
-
-		_, ok := reports[year]
-
-		if !ok {
-			r := map[int]wrapper{}
-
-			r[int(timeMonth)] = report
-
-			reports[year] = r
-		} else {
-			reports[year][int(timeMonth)] = report
-		}
+		})
 
 		if skipYear {
 			year = year - 1
 			timeMonth = time.December
 			skipYear = false
 			continue
+		}
+
+		if year == lastYear && timeMonth == lastMonth {
+			break
 		}
 
 		timeMonth = timeMonth - 1
@@ -166,30 +200,56 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc":
-			if m.table.Focused() {
-				m.table.Blur()
-			} else {
-				m.table.Focus()
+		switch {
+		case key.Matches(msg, m.keyMap.Enter):
+			m.focusMode = m.nextFocus()
+		case key.Matches(msg, m.keyMap.Up), key.Matches(msg, m.keyMap.Down):
+			switch m.focusMode {
+			case focusedMain:
+				m.table, _ = m.table.Update(msg)
+				m.focusReport = m.focusReport.UpdateTable(m.reports[m.table.Cursor()], m.width/2, m.height)
+			case focusedDetail:
+				m.focusReport, _ = m.focusReport.Update(msg)
 			}
-		case "q", "ctrl+c":
+		case key.Matches(msg, m.keyMap.Exit):
 			return m, tea.Quit
-		case "enter":
-			return m, tea.Batch(
-				tea.Printf("Let's go to %s!", m.table.SelectedRow()[1]),
-			)
 		}
 	}
-	m.table, cmd = m.table.Update(msg)
-	return m, cmd
+
+	return m, nil
 }
 
 func (m model) View() string {
-	return baseStyle.Render(m.table.View()) + "\n"
+	var main string
+	left := m.table.View()
+
+	switch m.focusMode {
+	case focusedMain:
+		main = left
+	case focusedDetail:
+		borderStyle := baseStyle.Width(m.width / 2)
+		disabledBorderStyle := borderStyle.BorderForeground(lipgloss.Color("241"))
+		left = disabledBorderStyle.Render(left)
+		right := m.focusReport.View()
+		right = borderStyle.Render(right)
+
+		main = lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	}
+
+	return main
+}
+
+func (m model) nextFocus() focusState {
+	switch m.focusMode {
+	case focusedMain:
+		return focusedDetail
+	case focusedDetail:
+		return focusedMain
+	default:
+		panic("invalid focus state")
+	}
 }
 
 func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) {

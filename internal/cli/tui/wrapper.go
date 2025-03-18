@@ -20,3 +20,16 @@ func (w wrapper) ToRow() table.Row {
 		fmt.Sprintf("%.2f%%", w.report.SavingsPercentage),
 	}
 }
+
+func (w wrapper) ToFocusRows() []table.Row {
+	rows := make([]table.Row, len(w.report.Categories))
+
+	for i, category := range w.report.Categories {
+		rows[i] = table.Row{
+			category.Name,
+			fmt.Sprintf("%s€", util.FormatMoney(category.Amount, ".", ",")),
+		}
+	}
+
+	return rows
+}

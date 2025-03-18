@@ -22,6 +22,8 @@ type Report struct {
 	Spending              int64
 	Income                int64
 	Savings               int64
+	StartDate             time.Time
+	EndDate               time.Time
 	SavingsPercentage     float32
 	EarningsPerDay        int64
 	AverageSpendingPerDay int64
@@ -37,6 +39,8 @@ func Generate(startDate, endDate time.Time, expenses []*expenseDB.Expense, repor
 
 	report.Income = income
 	report.Spending = spending
+	report.StartDate = startDate
+	report.EndDate = endDate
 	savings := income - spending
 	report.Savings = savings
 	report.SavingsPercentage = (float32(savings) / float32(income)) * 100

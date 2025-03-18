@@ -319,6 +319,25 @@ func SearchExpensesByDescription(db *sql.DB, description string) ([]*Expense, er
 	return expenses, nil
 }
 
+func GetFirstExpense(db *sql.DB) (*Expense, error) {
+	row := db.QueryRow("SELECT * FROM expenses  ORDER BY date ASC LIMIT 1")
+	ex := &Expense{}
+	var id int
+	var date int64
+	var expenseType int
+
+	if err := row.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
+		log.Fatal(err)
+	}
+
+	ex.ID = id
+	ex.Type = ExpenseType(expenseType)
+	ex.Date = time.Unix(date, 0).UTC()
+	ex.db = db
+
+	return ex, nil
+}
+
 func renderTemplate(out io.Writer, templateName string, value interface{}) error {
 	tmpl, err := content.ReadFile(path.Join("templates", templateName))
 	if err != nil {
