@@ -17,6 +17,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/list"
 	"github.com/charmbracelet/x/term"
 )
 
@@ -223,10 +224,21 @@ func (m model) View() string {
 		main = baseStyle.Width(m.width).Render(main)
 		log.Printf("reports table with border height: %d \n", lipgloss.Height(main))
 	} else {
-		main = m.focusReport.View()
+		reportTable := m.focusReport.View()
+		expenses := m.focusReport.Categories()[m.focusReport.Cursor()].Expenses
+		items := []string{}
+		for _, expense := range expenses {
+			items = append(items, fmt.Sprintf("%s | %s€", expense.Description, util.FormatMoney(expense.AmountWithSign(), ".", ",")))
+		}
+		l := list.New(items)
+		listView := l.String()
+
+		main = lipgloss.JoinHorizontal(lipgloss.Top, reportTable, listView)
+
 		log.Printf("focus report height: %d \n", lipgloss.Height(main))
 
 		main = baseStyle.Width(m.width).Render(main)
+
 		log.Printf("focus report with border height: %d \n", lipgloss.Height(main))
 	}
 

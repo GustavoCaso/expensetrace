@@ -3,6 +3,7 @@ package tui
 import (
 	"log"
 
+	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -11,6 +12,7 @@ type focusReport struct {
 	width  int
 	height int
 	table  table.Model
+	report wrapper
 }
 
 func newfocusReport(width, height int) focusReport {
@@ -42,6 +44,7 @@ func (d focusReport) UpdateTable(report wrapper, width, height int) focusReport 
 		table:  table,
 		width:  width,
 		height: height,
+		report: report,
 	}
 }
 
@@ -55,4 +58,12 @@ func (d focusReport) Update(msg tea.Msg) (focusReport, tea.Cmd) {
 
 func (d focusReport) View() string {
 	return d.table.View()
+}
+
+func (d focusReport) Cursor() int {
+	return d.table.Cursor()
+}
+
+func (d focusReport) Categories() []report.Category {
+	return d.report.Categories()
 }

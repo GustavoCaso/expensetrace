@@ -48,3 +48,7 @@ func (w wrapper) ToFocusRows() []table.Row {
 
 	return rows
 }
+
+func (w wrapper) Categories() []report.Category {
+	return w.report.Categories
+}
