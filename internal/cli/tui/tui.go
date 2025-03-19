@@ -51,14 +51,10 @@ type keymap struct {
 	Exit  key.Binding
 }
 
-// ShortHelp returns keybindings to be shown in the mini help view. It's part
-// of the key.Map interface.
 func (k keymap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Up, k.Down, k.Enter, k.Exit}
 }
 
-// FullHelp returns keybindings for the expanded help view. It's part of the
-// key.Map interface.
 func (k keymap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Enter}, // first column
@@ -114,9 +110,7 @@ func initialModel(db *sql.DB, width int, height int) model {
 		log.Fatalf("Unable to generate reports: %s", err.Error())
 	}
 
-	reportsTable := newReports(reports, width, height)
-
-	log.Printf("initial model created. width: %d height: %d\n", width, height)
+	reportsTable := newReports(reports, width)
 
 	return model{
 		reports:   reports,
@@ -125,7 +119,7 @@ func initialModel(db *sql.DB, width int, height int) model {
 		keyMap: defaultKeyMap(),
 
 		reportsTable: reportsTable,
-		focusReport:  newfocusReport(0, 0),
+		focusReport:  newfocusReport(),
 		help:         help.New(),
 
 		width:  width,
@@ -188,9 +182,11 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		log.Printf("Window change event. width: %d height: %d\n", msg.Width, msg.Height)
+		m.SetWidth(msg.Width)
+		m.SetHeight(msg.Height)
+		m.reportsTable = m.reportsTable.UpdateDimensions(msg.Width, msg.Height/2)
+		m.focusReport = m.focusReport.UpdateDimensions(msg.Width/2, msg.Height/2)
 	case tea.KeyMsg:
-		log.Printf("KeyMsg %s \n", msg.String())
 		switch {
 		case key.Matches(msg, m.keyMap.Enter):
 			var cmd tea.Cmd
@@ -199,10 +195,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keyMap.Up), key.Matches(msg, m.keyMap.Down):
 			if !m.altscreen {
 				m.reportsTable, _ = m.reportsTable.Update(msg)
-				m.focusReport = m.focusReport.UpdateTable(m.reports[m.reportsTable.Cursor()], m.width/2, m.height/2)
+				m.focusReport = m.focusReport.UpdateTable(m.reports[m.reportsTable.Cursor()], m.width/2)
 			} else {
 				m.focusReport, _ = m.focusReport.Update(msg)
 			}
+			m.reportsTable = m.reportsTable.UpdateDimensions(m.width, m.height/2)
+			m.focusReport = m.focusReport.UpdateDimensions(m.width/2, m.height/2)
 		case key.Matches(msg, m.keyMap.Exit):
 			return m, tea.Quit
 		}
@@ -213,18 +211,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	var main string
-	log.Printf("View() width: %d height: %d\n", m.width, m.height)
 	helpView := m.help.View(m.keyMap)
-	log.Printf("help height: %d \n", lipgloss.Height(helpView))
 
 	if !m.altscreen {
 		main = m.reportsTable.View()
-		log.Printf("reports table height: %d \n", lipgloss.Height(main))
 
 		main = baseStyle.Width(m.width).Render(main)
-		log.Printf("reports table with border height: %d \n", lipgloss.Height(main))
 	} else {
-		reportTable := m.focusReport.View()
+		focusReport := m.focusReport.View()
 		expenses := m.focusReport.Categories()[m.focusReport.Cursor()].Expenses
 		items := []string{}
 		for _, expense := range expenses {
@@ -233,17 +227,11 @@ func (m model) View() string {
 		l := list.New(items)
 		listView := l.String()
 
-		main = lipgloss.JoinHorizontal(lipgloss.Top, reportTable, listView)
-
-		log.Printf("focus report height: %d \n", lipgloss.Height(main))
-
+		main = lipgloss.JoinHorizontal(lipgloss.Top, focusReport, listView)
 		main = baseStyle.Width(m.width).Render(main)
-
-		log.Printf("focus report with border height: %d \n", lipgloss.Height(main))
 	}
 
 	main = lipgloss.JoinVertical(lipgloss.Top, main, helpView)
-	log.Printf("main height: %d \n", lipgloss.Height(main))
 
 	return main
 }
@@ -259,21 +247,20 @@ func (m model) altscreenToggle() (bool, tea.Cmd) {
 	return !m.altscreen, cmd
 }
 
+func (m *model) SetHeight(height int) {
+	m.height = height
+}
+
+func (m *model) SetWidth(width int) {
+	m.width = width
+}
+
 func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) {
 	defer db.Close()
 
 	w, h, err := term.GetSize(os.Stdout.Fd())
 	if err != nil {
 		log.Fatalf("failed to get terminal size: %v", err)
-	}
-
-	if len(os.Getenv("DEBUG")) > 0 {
-		f, err := tea.LogToFile("debug.log", "debug")
-		if err != nil {
-			fmt.Println("fatal:", err)
-			os.Exit(1)
-		}
-		defer f.Close()
 	}
 
 	p := tea.NewProgram(initialModel(db, w, h), tea.WithAltScreen())

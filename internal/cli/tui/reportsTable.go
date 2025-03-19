@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"log"
 	"sort"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -14,8 +13,8 @@ type reportsTable struct {
 	table  table.Model
 }
 
-func newReports(reports []wrapper, width, height int) reportsTable {
-	columns := createColumns(width)
+func newReports(reports []wrapper, width int) reportsTable {
+	columns := createReportsColumns(width)
 
 	sort.SliceStable(reports, func(i, j int) bool {
 		return reports[i].report.StartDate.After(reports[j].report.StartDate)
@@ -31,13 +30,10 @@ func newReports(reports []wrapper, width, height int) reportsTable {
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(height/2),
 	)
 
 	return reportsTable{
-		width:  width,
-		height: height,
-		table:  t,
+		table: t,
 	}
 }
 
@@ -47,17 +43,27 @@ func (r reportsTable) Cursor() int {
 
 func (r reportsTable) Update(msg tea.Msg) (reportsTable, tea.Cmd) {
 	var cmd tea.Cmd
-	log.Printf("update reports table. %s\n", msg.(tea.KeyMsg).String())
 	r.table.Focus()
 	r.table, cmd = r.table.Update(msg)
 	return r, cmd
+}
+
+func (r reportsTable) UpdateDimensions(width, height int) reportsTable {
+	t := r.table
+	t.SetColumns(createReportsColumns(width))
+	t.SetWidth(width)
+	t.SetHeight(height)
+
+	return reportsTable{
+		table: t,
+	}
 }
 
 func (r reportsTable) View() string {
 	return r.table.View()
 }
 
-func createColumns(width int) []table.Column {
+func createReportsColumns(width int) []table.Column {
 	w := width / 4
 
 	return []table.Column{
