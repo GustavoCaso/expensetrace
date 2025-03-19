@@ -3,6 +3,7 @@ package tui
 import (
 	"database/sql"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"sort"
@@ -13,6 +14,7 @@ import (
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
@@ -50,11 +52,26 @@ type keymap struct {
 	Exit  key.Binding
 }
 
+// ShortHelp returns keybindings to be shown in the mini help view. It's part
+// of the key.Map interface.
+func (k keymap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Up, k.Down, k.Enter, k.Exit}
+}
+
+// FullHelp returns keybindings for the expanded help view. It's part of the
+// key.Map interface.
+func (k keymap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Up, k.Down, k.Enter}, // first column
+		{k.Exit},                // second column
+	}
+}
+
 func defaultKeyMap() keymap {
 	return keymap{
 		Enter: key.NewBinding(
 			key.WithKeys("enter"),
-			key.WithHelp("enter", "explore"),
+			key.WithHelp("enter", "toggle detail view"),
 		),
 		Exit: key.NewBinding(
 			key.WithKeys("q", "ctrl+c"),
@@ -78,6 +95,7 @@ type model struct {
 
 	table       table.Model
 	focusReport focusReport
+	help        help.Model
 
 	keyMap keymap
 
@@ -86,23 +104,18 @@ type model struct {
 	width  int
 	height int
 
-	cursor int
-	view   string
+	view string
 }
 
 func initialModel(db *sql.DB, width int, height int) model {
-	log.Println("Initializing TUI model...")
-	expenses, err := expenseDB.GetExpenses(db)
-	if err != nil {
-		log.Fatalf("Unable to get expenses: %s", err.Error())
-	}
-	log.Printf("Loaded %d expenses from database", len(expenses))
-
 	now := time.Now()
 	month := now.Month()
 	year := now.Year()
 
 	reports, err := generateReports(db, month, year)
+	if err != nil {
+		log.Fatalf("Unable to generate reports: %s", err.Error())
+	}
 
 	columns := []table.Column{
 		{Title: "Month", Width: width / 4},
@@ -125,24 +138,23 @@ func initialModel(db *sql.DB, width int, height int) model {
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(height),
+		table.WithHeight(height/2),
 	)
 
-	t.SetHeight(height / 2)
-
 	return model{
-		reports: reports,
-		keyMap:  defaultKeyMap(),
-		table:   t,
+		reports:   reports,
+		focusMode: focusedMain,
 
+		keyMap: defaultKeyMap(),
+
+		table:       t,
 		focusReport: newfocusReport(0, 0),
-		focusMode:   focusedMain,
+		help:        help.New(),
 
 		width:  width,
 		height: height,
 
-		cursor: 0,
-		view:   "list",
+		view: "list",
 	}
 }
 
@@ -195,7 +207,6 @@ func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) 
 }
 
 func (m model) Init() tea.Cmd {
-	log.Println("Initializing TUI...")
 	return nil
 }
 
@@ -223,11 +234,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	var main string
+
 	left := m.table.View()
+	helpView := m.help.View(m.keyMap)
 
 	switch m.focusMode {
 	case focusedMain:
-		main = left
+		left = baseStyle.Width(m.width).Render(left)
+		main = lipgloss.JoinVertical(lipgloss.Top, left, helpView)
 	case focusedDetail:
 		borderStyle := baseStyle.Width(m.width / 2)
 		disabledBorderStyle := borderStyle.BorderForeground(lipgloss.Color("241"))
@@ -236,6 +250,7 @@ func (m model) View() string {
 		right = borderStyle.Render(right)
 
 		main = lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+		main = lipgloss.JoinVertical(lipgloss.Top, main, helpView)
 	}
 
 	return main
@@ -253,7 +268,6 @@ func (m model) nextFocus() focusState {
 }
 
 func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) {
-	log.Println("Starting TUI application...")
 	defer db.Close()
 
 	w, h, err := term.GetSize(os.Stdout.Fd())
@@ -261,9 +275,17 @@ func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) {
 		log.Fatalf("failed to get terminal size: %v", err)
 	}
 
+	if len(os.Getenv("DEBUG")) > 0 {
+		f, err := tea.LogToFile("debug.log", "debug")
+		if err != nil {
+			fmt.Println("fatal:", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+	}
+
 	p := tea.NewProgram(initialModel(db, w, h))
 	if _, err := p.Run(); err != nil {
 		log.Fatalf("Error running TUI: %v", err)
 	}
-	log.Println("TUI application terminated successfully")
 }

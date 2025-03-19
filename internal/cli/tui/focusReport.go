@@ -15,7 +15,7 @@ func newfocusReport(width, height int) focusReport {
 	return focusReport{
 		width:  width,
 		height: height,
-		table:  table.New(table.WithHeight(height)),
+		table:  table.New(),
 	}
 }
 
