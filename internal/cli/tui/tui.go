@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sort"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
@@ -16,7 +15,6 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/util"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/term"
@@ -93,18 +91,16 @@ type model struct {
 
 	current *wrapper
 
-	table       table.Model
-	focusReport focusReport
-	help        help.Model
+	reportsTable reportsTable
+	focusReport  focusReport
+	help         help.Model
 
 	keyMap keymap
 
-	focusMode focusState
+	altscreen bool
 
 	width  int
 	height int
-
-	view string
 }
 
 func initialModel(db *sql.DB, width int, height int) model {
@@ -117,44 +113,22 @@ func initialModel(db *sql.DB, width int, height int) model {
 		log.Fatalf("Unable to generate reports: %s", err.Error())
 	}
 
-	columns := []table.Column{
-		{Title: "Month", Width: width / 4},
-		{Title: "Income", Width: width / 4},
-		{Title: "Spending", Width: width / 4},
-		{Title: "SavingsPercentage", Width: width / 4},
-	}
+	reportsTable := newReports(reports, width, height)
 
-	sort.SliceStable(reports, func(i, j int) bool {
-		return reports[i].report.StartDate.After(reports[j].report.StartDate)
-	})
-
-	rows := []table.Row{}
-
-	for _, report := range reports {
-		rows = append(rows, report.ToRow())
-	}
-
-	t := table.New(
-		table.WithColumns(columns),
-		table.WithRows(rows),
-		table.WithFocused(true),
-		table.WithHeight(height/2),
-	)
+	log.Printf("initial model created. width: %d height: %d\n", width, height)
 
 	return model{
 		reports:   reports,
-		focusMode: focusedMain,
+		altscreen: false,
 
 		keyMap: defaultKeyMap(),
 
-		table:       t,
-		focusReport: newfocusReport(0, 0),
-		help:        help.New(),
+		reportsTable: reportsTable,
+		focusReport:  newfocusReport(0, 0),
+		help:         help.New(),
 
 		width:  width,
 		height: height,
-
-		view: "list",
 	}
 }
 
@@ -212,16 +186,20 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		log.Printf("Window change event. width: %d height: %d\n", msg.Width, msg.Height)
 	case tea.KeyMsg:
+		log.Printf("KeyMsg %s \n", msg.String())
 		switch {
 		case key.Matches(msg, m.keyMap.Enter):
-			m.focusMode = m.nextFocus()
+			var cmd tea.Cmd
+			m.altscreen, cmd = m.altscreenToggle()
+			return m, cmd
 		case key.Matches(msg, m.keyMap.Up), key.Matches(msg, m.keyMap.Down):
-			switch m.focusMode {
-			case focusedMain:
-				m.table, _ = m.table.Update(msg)
-				m.focusReport = m.focusReport.UpdateTable(m.reports[m.table.Cursor()], m.width/2, m.height)
-			case focusedDetail:
+			if !m.altscreen {
+				m.reportsTable, _ = m.reportsTable.Update(msg)
+				m.focusReport = m.focusReport.UpdateTable(m.reports[m.reportsTable.Cursor()], m.width/2, m.height/2)
+			} else {
 				m.focusReport, _ = m.focusReport.Update(msg)
 			}
 		case key.Matches(msg, m.keyMap.Exit):
@@ -234,37 +212,39 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	var main string
-
-	left := m.table.View()
+	log.Printf("View() width: %d height: %d\n", m.width, m.height)
 	helpView := m.help.View(m.keyMap)
+	log.Printf("help height: %d \n", lipgloss.Height(helpView))
 
-	switch m.focusMode {
-	case focusedMain:
-		left = baseStyle.Width(m.width).Render(left)
-		main = lipgloss.JoinVertical(lipgloss.Top, left, helpView)
-	case focusedDetail:
-		borderStyle := baseStyle.Width(m.width / 2)
-		disabledBorderStyle := borderStyle.BorderForeground(lipgloss.Color("241"))
-		left = disabledBorderStyle.Render(left)
-		right := m.focusReport.View()
-		right = borderStyle.Render(right)
+	if !m.altscreen {
+		main = m.reportsTable.View()
+		log.Printf("reports table height: %d \n", lipgloss.Height(main))
 
-		main = lipgloss.JoinHorizontal(lipgloss.Top, left, right)
-		main = lipgloss.JoinVertical(lipgloss.Top, main, helpView)
+		main = baseStyle.Width(m.width).Render(main)
+		log.Printf("reports table with border height: %d \n", lipgloss.Height(main))
+	} else {
+		main = m.focusReport.View()
+		log.Printf("focus report height: %d \n", lipgloss.Height(main))
+
+		main = baseStyle.Width(m.width).Render(main)
+		log.Printf("focus report with border height: %d \n", lipgloss.Height(main))
 	}
+
+	main = lipgloss.JoinVertical(lipgloss.Top, main, helpView)
+	log.Printf("main height: %d \n", lipgloss.Height(main))
 
 	return main
 }
 
-func (m model) nextFocus() focusState {
-	switch m.focusMode {
-	case focusedMain:
-		return focusedDetail
-	case focusedDetail:
-		return focusedMain
-	default:
-		panic("invalid focus state")
+func (m model) altscreenToggle() (bool, tea.Cmd) {
+	var cmd tea.Cmd
+	if m.altscreen {
+		cmd = tea.ExitAltScreen
+	} else {
+		cmd = tea.EnterAltScreen
 	}
+
+	return !m.altscreen, cmd
 }
 
 func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) {
@@ -284,7 +264,7 @@ func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) {
 		defer f.Close()
 	}
 
-	p := tea.NewProgram(initialModel(db, w, h))
+	p := tea.NewProgram(initialModel(db, w, h), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		log.Fatalf("Error running TUI: %v", err)
 	}

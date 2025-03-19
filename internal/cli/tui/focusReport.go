@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"log"
+
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -27,10 +29,13 @@ func (d focusReport) UpdateTable(report wrapper, width, height int) focusReport 
 
 	rows := report.ToFocusRows()
 
+	log.Printf("updatetable focus report table. width: %d height: %d \n", width, height)
+
 	table := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithHeight(height),
+		table.WithWidth(width),
 	)
 
 	return focusReport{
@@ -42,6 +47,7 @@ func (d focusReport) UpdateTable(report wrapper, width, height int) focusReport 
 
 func (d focusReport) Update(msg tea.Msg) (focusReport, tea.Cmd) {
 	var cmd tea.Cmd
+	log.Printf("update focus report table. %s\n", msg.(tea.KeyMsg).String())
 	d.table.Focus()
 	d.table, cmd = d.table.Update(msg)
 	return d, cmd
