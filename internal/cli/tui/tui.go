@@ -94,7 +94,7 @@ type model struct {
 
 	keyMap keymap
 
-	altscreen bool
+	focusMode focusState
 
 	width  int
 	height int
@@ -114,7 +114,7 @@ func initialModel(db *sql.DB, width int, height int) model {
 
 	return model{
 		reports:   reports,
-		altscreen: false,
+		focusMode: focusedMain,
 
 		keyMap: defaultKeyMap(),
 
@@ -180,6 +180,8 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.SetWidth(msg.Width)
@@ -189,15 +191,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keyMap.Enter):
-			var cmd tea.Cmd
-			m.altscreen, cmd = m.altscreenToggle()
-			return m, cmd
+			m.focusMode = m.focusModeToggle()
+			return m, nil
 		case key.Matches(msg, m.keyMap.Up), key.Matches(msg, m.keyMap.Down):
-			if !m.altscreen {
-				m.reportsTable, _ = m.reportsTable.Update(msg)
+			if m.focusMode == focusedMain {
+				m.reportsTable, cmd = m.reportsTable.Update(msg)
 				m.focusReport = m.focusReport.UpdateTable(m.reports[m.reportsTable.Cursor()], m.width/2)
 			} else {
-				m.focusReport, _ = m.focusReport.Update(msg)
+				m.focusReport, cmd = m.focusReport.Update(msg)
 			}
 			m.reportsTable = m.reportsTable.UpdateDimensions(m.width, m.height/2)
 			m.focusReport = m.focusReport.UpdateDimensions(m.width/2, m.height/2)
@@ -206,14 +207,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	return m, nil
+	return m, cmd
 }
 
 func (m model) View() string {
 	var main string
 	helpView := m.help.View(m.keyMap)
 
-	if !m.altscreen {
+	if m.focusMode == focusedMain {
 		main = m.reportsTable.View()
 
 		main = baseStyle.Width(m.width).Render(main)
@@ -236,15 +237,15 @@ func (m model) View() string {
 	return main
 }
 
-func (m model) altscreenToggle() (bool, tea.Cmd) {
-	var cmd tea.Cmd
-	if m.altscreen {
-		cmd = tea.ExitAltScreen
-	} else {
-		cmd = tea.EnterAltScreen
+func (m model) focusModeToggle() focusState {
+	switch m.focusMode {
+	case focusedMain:
+		return focusedDetail
+	case focusedDetail:
+		return focusedMain
+	default:
+		panic("invalid focus state")
 	}
-
-	return !m.altscreen, cmd
 }
 
 func (m *model) SetHeight(height int) {
