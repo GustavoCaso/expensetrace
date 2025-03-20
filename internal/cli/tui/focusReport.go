@@ -1,9 +1,14 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/GustavoCaso/expensetrace/internal/report"
+	"github.com/GustavoCaso/expensetrace/internal/util"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/list"
 )
 
 type focusReport struct {
@@ -54,7 +59,16 @@ func (d focusReport) UpdateDimensions(width, height int) focusReport {
 }
 
 func (d focusReport) View() string {
-	return d.table.View()
+	focusReport := d.table.View()
+	expenses := d.Categories()[d.Cursor()].Expenses
+	items := []string{}
+	for _, expense := range expenses {
+		items = append(items, fmt.Sprintf("%s | %s€", expense.Description, util.FormatMoney(expense.AmountWithSign(), ".", ",")))
+	}
+	l := list.New(items)
+	listView := l.String()
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, focusReport, listView)
 }
 
 func (d focusReport) Cursor() int {

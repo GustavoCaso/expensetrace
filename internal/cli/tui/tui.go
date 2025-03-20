@@ -3,7 +3,6 @@ package tui
 import (
 	"database/sql"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -17,7 +16,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/list"
 	"github.com/charmbracelet/x/term"
 )
 
@@ -186,8 +184,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.SetWidth(msg.Width)
 		m.SetHeight(msg.Height)
-		m.reportsTable = m.reportsTable.UpdateDimensions(msg.Width, msg.Height/2)
-		m.focusReport = m.focusReport.UpdateDimensions(msg.Width/2, msg.Height/2)
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keyMap.Enter):
@@ -200,12 +196,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				m.focusReport, cmd = m.focusReport.Update(msg)
 			}
-			m.reportsTable = m.reportsTable.UpdateDimensions(m.width, m.height/2)
-			m.focusReport = m.focusReport.UpdateDimensions(m.width/2, m.height/2)
 		case key.Matches(msg, m.keyMap.Exit):
 			return m, tea.Quit
 		}
 	}
+
+	m.reportsTable = m.reportsTable.UpdateDimensions(m.width, m.height/2)
+	m.focusReport = m.focusReport.UpdateDimensions(m.width/2, m.height/2)
 
 	return m, cmd
 }
@@ -215,21 +212,9 @@ func (m model) View() string {
 	helpView := m.help.View(m.keyMap)
 
 	if m.focusMode == focusedMain {
-		main = m.reportsTable.View()
-
-		main = baseStyle.Width(m.width).Render(main)
+		main = baseStyle.Width(m.width).Render(m.reportsTable.View())
 	} else {
-		focusReport := m.focusReport.View()
-		expenses := m.focusReport.Categories()[m.focusReport.Cursor()].Expenses
-		items := []string{}
-		for _, expense := range expenses {
-			items = append(items, fmt.Sprintf("%s | %s€", expense.Description, util.FormatMoney(expense.AmountWithSign(), ".", ",")))
-		}
-		l := list.New(items)
-		listView := l.String()
-
-		main = lipgloss.JoinHorizontal(lipgloss.Top, focusReport, listView)
-		main = baseStyle.Width(m.width).Render(main)
+		main = baseStyle.Width(m.width).Render(m.focusReport.View())
 	}
 
 	main = lipgloss.JoinVertical(lipgloss.Top, main, helpView)
