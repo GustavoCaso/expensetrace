@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 
+	"github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 	"github.com/charmbracelet/bubbles/table"
@@ -51,4 +52,25 @@ func (w wrapper) ToFocusRows() []table.Row {
 
 func (w wrapper) Categories() []report.Category {
 	return w.report.Categories
+}
+
+func (w wrapper) ExpensesToRow(expenses []*db.Expense) []table.Row {
+	rows := make([]table.Row, len(expenses))
+
+	for i, expense := range expenses {
+		var expenseAmount string
+
+		if expense.Amount < 0 {
+			expenseAmount = util.ColorOutput(fmt.Sprintf("%s€", util.FormatMoney(expense.Amount, ".", ",")), "red", "underline")
+		} else {
+			expenseAmount = util.ColorOutput(fmt.Sprintf("%s€", util.FormatMoney(expense.Amount, ".", ",")), "green")
+		}
+
+		rows[i] = table.Row{
+			expense.Description,
+			expenseAmount,
+		}
+	}
+
+	return rows
 }
