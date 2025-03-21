@@ -6,17 +6,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var modelStyle = lipgloss.NewStyle().
-	Align(lipgloss.Center, lipgloss.Center).
-	BorderStyle(lipgloss.HiddenBorder()).
-	Border(lipgloss.NormalBorder())
-
-var focusedModelStyle = lipgloss.NewStyle().
-	Align(lipgloss.Center, lipgloss.Center).
-	BorderStyle(lipgloss.NormalBorder()).
-	Border(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("69"))
-
 type focusView int
 
 const (
@@ -58,7 +47,7 @@ func (d *focusReport) SetReport(report wrapper) {
 	for i, category := range categories {
 		expensesTables[i] = table.New(
 			table.WithColumns(createExpenseColumns(d.width)),
-			table.WithRows(report.ExpensesToRow(category.Expenses)),
+			table.WithRows(report.ExpensesToRow(category.Expenses, category.Amount < 0)),
 		)
 	}
 

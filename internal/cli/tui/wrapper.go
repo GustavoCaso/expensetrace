@@ -54,13 +54,13 @@ func (w wrapper) Categories() []report.Category {
 	return w.report.Categories
 }
 
-func (w wrapper) ExpensesToRow(expenses []*db.Expense) []table.Row {
+func (w wrapper) ExpensesToRow(expenses []*db.Expense, expending bool) []table.Row {
 	rows := make([]table.Row, len(expenses))
 
 	for i, expense := range expenses {
 		var expenseAmount string
 
-		if expense.Amount < 0 {
+		if expending {
 			expenseAmount = util.ColorOutput(fmt.Sprintf("%s€", util.FormatMoney(expense.Amount, ".", ",")), "red", "underline")
 		} else {
 			expenseAmount = util.ColorOutput(fmt.Sprintf("%s€", util.FormatMoney(expense.Amount, ".", ",")), "green")

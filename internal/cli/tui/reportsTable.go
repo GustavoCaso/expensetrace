@@ -59,7 +59,7 @@ func (r reportsTable) View() string {
 	t.SetWidth(r.width)
 	t.SetHeight(r.height)
 
-	return t.View()
+	return focusedModelStyle.Render(t.View())
 }
 
 func createReportsColumns(width int) []table.Column {

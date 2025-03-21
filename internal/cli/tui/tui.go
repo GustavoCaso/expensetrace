@@ -20,9 +20,16 @@ import (
 	"github.com/charmbracelet/x/term"
 )
 
-var baseStyle = lipgloss.NewStyle().
+var modelStyle = lipgloss.NewStyle().
+	Align(lipgloss.Center, lipgloss.Center).
+	BorderStyle(lipgloss.HiddenBorder()).
+	Border(lipgloss.NormalBorder())
+
+var focusedModelStyle = lipgloss.NewStyle().
+	Align(lipgloss.Center, lipgloss.Center).
 	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("240"))
+	Border(lipgloss.NormalBorder()).
+	BorderForeground(lipgloss.Color("69"))
 
 type tuiCommand struct{}
 
@@ -263,7 +270,7 @@ func (m model) View() string {
 
 	if m.focusMode == focusedMain {
 		helpView = m.help.View(m.reportsKeyMap)
-		main = baseStyle.Width(m.width).Render(m.reportsTable.View())
+		main = m.reportsTable.View()
 	} else {
 		helpView = m.help.View(m.focusKeymap)
 		main = m.focusReport.View()
