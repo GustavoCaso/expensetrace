@@ -1,16 +1,16 @@
 package router
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
-	"github.com/GustavoCaso/expensetrace/internal/util"
+	"golang.org/x/exp/maps"
 )
 
 type link struct {
@@ -55,10 +55,9 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 		year = now.Year()
 	}
 
-	firstDay, lastDay := util.GetMonthDates(month, year)
 	var links []link
 	if !useReportTemplate {
-		links, err = generateLinks(router.db, time.Month(month), year)
+		links = router.generateLinks()
 	}
 
 	var data homeData
@@ -67,17 +66,16 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 			Error: err,
 		}
 	} else {
-		expenses, err := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
+		reportKey := fmt.Sprintf("%d-%d", year, month)
+		report, ok := router.reports[reportKey]
 
-		if err != nil {
+		if !ok {
 			data = homeData{
-				Error: err,
+				Error: fmt.Errorf("No report available. %s", reportKey),
 			}
 		} else {
-			result := report.Generate(firstDay, lastDay, expenses, "monthly")
-
 			data = homeData{
-				Report: result,
+				Report: report,
 				Links:  links,
 				Error:  nil,
 			}
@@ -96,54 +94,41 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func generateLinks(db *sql.DB, month time.Month, year int) ([]link, error) {
-	links := []link{}
-	skipYear := false
-	timeMonth := time.Month(month)
-	ex, err := expenseDB.GetFirstExpense(db)
-	if err != nil {
-		return links, err
+func (router *router) generateLinks() []link {
+	reports := router.reports
+	reportKeys := maps.Keys(reports)
+
+	sort.SliceStable(reportKeys, func(i, j int) bool {
+		s1 := strings.Split(reportKeys[i], "-")
+		s2 := strings.Split(reportKeys[j], "-")
+		year1, _ := strconv.Atoi(s1[0])
+		month1, _ := strconv.Atoi(s1[1])
+
+		year2, _ := strconv.Atoi(s2[0])
+		month2, _ := strconv.Atoi(s2[1])
+
+		if year1 == year2 {
+			return time.Month(month1) > time.Month(month2)
+		}
+
+		return year1 > year2
+	})
+
+	links := make([]link, len(reportKeys))
+
+	for i, reportKey := range reportKeys {
+		s := strings.Split(reportKey, "-")
+		month, _ := strconv.Atoi(s[1])
+
+		r := reports[reportKey]
+		links[i] = link{
+			Name:     fmt.Sprintf("%s %s", time.Month(month), s[0]),
+			URL:      fmt.Sprintf("/?month=%s&year=%s", s[1], s[0]),
+			Income:   r.Income,
+			Spending: r.Spending,
+			Savings:  r.Savings,
+		}
 	}
 
-	lastMonth := ex.Date.Month()
-	lastYear := ex.Date.Year()
-
-	for year >= lastYear {
-		if timeMonth == time.January {
-			skipYear = true
-		}
-
-		firstDay, lastDay := util.GetMonthDates(int(timeMonth), year)
-
-		expenses, err := expenseDB.GetExpensesFromDateRange(db, firstDay, lastDay)
-
-		if err != nil {
-			return links, err
-		}
-
-		result := report.Generate(firstDay, lastDay, expenses, "monthly")
-
-		links = append(links, link{
-			Name:     fmt.Sprintf("%s %d", timeMonth, year),
-			URL:      fmt.Sprintf("/?month=%d&year=%d", int(timeMonth), year),
-			Income:   result.Income,
-			Spending: result.Spending,
-			Savings:  result.Savings,
-		})
-
-		if skipYear {
-			year = year - 1
-			timeMonth = time.December
-			skipYear = false
-			continue
-		}
-
-		if year == lastYear && timeMonth == lastMonth {
-			break
-		}
-
-		timeMonth = timeMonth - 1
-	}
-
-	return links, nil
+	return links
 }
