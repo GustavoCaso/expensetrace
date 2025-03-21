@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/report"
-	"golang.org/x/exp/maps"
 )
 
 type link struct {
@@ -95,32 +93,13 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (router *router) generateLinks() []link {
-	reports := router.reports
-	reportKeys := maps.Keys(reports)
+	links := make([]link, len(router.sortedReportKeys))
 
-	sort.SliceStable(reportKeys, func(i, j int) bool {
-		s1 := strings.Split(reportKeys[i], "-")
-		s2 := strings.Split(reportKeys[j], "-")
-		year1, _ := strconv.Atoi(s1[0])
-		month1, _ := strconv.Atoi(s1[1])
-
-		year2, _ := strconv.Atoi(s2[0])
-		month2, _ := strconv.Atoi(s2[1])
-
-		if year1 == year2 {
-			return time.Month(month1) > time.Month(month2)
-		}
-
-		return year1 > year2
-	})
-
-	links := make([]link, len(reportKeys))
-
-	for i, reportKey := range reportKeys {
+	for i, reportKey := range router.sortedReportKeys {
 		s := strings.Split(reportKey, "-")
 		month, _ := strconv.Atoi(s[1])
 
-		r := reports[reportKey]
+		r := router.reports[reportKey]
 		links[i] = link{
 			Name:     fmt.Sprintf("%s %s", time.Month(month), s[0]),
 			URL:      fmt.Sprintf("/?month=%s&year=%s", s[1], s[0]),

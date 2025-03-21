@@ -8,6 +8,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +18,7 @@ import (
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
+	"golang.org/x/exp/maps"
 )
 
 //go:embed templates/static/*
@@ -22,13 +26,14 @@ var static embed.FS
 var staticFS, _ = fs.Sub(static, "templates/static")
 
 type router struct {
-	reload      bool
-	mux         *http.ServeMux
-	matcher     *category.Matcher
-	db          *sql.DB
-	templates   templates
-	reports     map[string]report.Report
-	reportsOnce sync.Once
+	reload           bool
+	mux              *http.ServeMux
+	matcher          *category.Matcher
+	db               *sql.DB
+	templates        templates
+	reports          map[string]report.Report
+	sortedReportKeys []string
+	reportsOnce      sync.Once
 }
 
 func New(db *sql.DB, matcher *category.Matcher) http.Handler {
@@ -50,6 +55,26 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 			if err != nil {
 				log.Fatal(fmt.Sprintf("generateReports fail %v", err))
 			}
+
+			reportKeys := maps.Keys(router.reports)
+
+			sort.SliceStable(reportKeys, func(i, j int) bool {
+				s1 := strings.Split(reportKeys[i], "-")
+				s2 := strings.Split(reportKeys[j], "-")
+				year1, _ := strconv.Atoi(s1[0])
+				month1, _ := strconv.Atoi(s1[1])
+
+				year2, _ := strconv.Atoi(s2[0])
+				month2, _ := strconv.Atoi(s2[1])
+
+				if year1 == year2 {
+					return time.Month(month1) > time.Month(month2)
+				}
+
+				return year1 > year2
+			})
+
+			router.sortedReportKeys = reportKeys
 		})
 		router.homeHandler(w, r)
 	})
