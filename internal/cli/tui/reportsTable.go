@@ -48,19 +48,18 @@ func (r reportsTable) Update(msg tea.Msg) (reportsTable, tea.Cmd) {
 	return r, cmd
 }
 
-func (r reportsTable) UpdateDimensions(width, height int) reportsTable {
-	t := r.table
-	t.SetColumns(createReportsColumns(width))
-	t.SetWidth(width)
-	t.SetHeight(height)
-
-	return reportsTable{
-		table: t,
-	}
+func (r *reportsTable) UpdateDimensions(width, height int) {
+	r.width = width
+	r.height = height
 }
 
 func (r reportsTable) View() string {
-	return r.table.View()
+	t := r.table
+	t.SetColumns(createReportsColumns(r.width))
+	t.SetWidth(r.width)
+	t.SetHeight(r.height)
+
+	return focusedModelStyle.Render(t.View())
 }
 
 func createReportsColumns(width int) []table.Column {

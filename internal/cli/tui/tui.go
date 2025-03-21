@@ -17,13 +17,19 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/list"
 	"github.com/charmbracelet/x/term"
 )
 
-var baseStyle = lipgloss.NewStyle().
+var modelStyle = lipgloss.NewStyle().
+	Align(lipgloss.Center, lipgloss.Center).
+	BorderStyle(lipgloss.HiddenBorder()).
+	Border(lipgloss.NormalBorder())
+
+var focusedModelStyle = lipgloss.NewStyle().
+	Align(lipgloss.Center, lipgloss.Center).
 	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("240"))
+	Border(lipgloss.NormalBorder()).
+	BorderForeground(lipgloss.Color("69"))
 
 type tuiCommand struct{}
 
@@ -44,26 +50,70 @@ const (
 	focusedDetail
 )
 
-type keymap struct {
+type reportsKeymap struct {
 	Enter key.Binding
 	Up    key.Binding
 	Down  key.Binding
 	Exit  key.Binding
 }
 
-func (k keymap) ShortHelp() []key.Binding {
+func (k reportsKeymap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Up, k.Down, k.Enter, k.Exit}
 }
 
-func (k keymap) FullHelp() [][]key.Binding {
+func (k reportsKeymap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Enter}, // first column
 		{k.Exit},                // second column
 	}
 }
 
-func defaultKeyMap() keymap {
-	return keymap{
+type focusKeymap struct {
+	Enter key.Binding
+	Up    key.Binding
+	Down  key.Binding
+	Tab   key.Binding
+	Exit  key.Binding
+}
+
+func (k focusKeymap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Up, k.Down, k.Enter, k.Tab, k.Exit}
+}
+
+func (k focusKeymap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Up, k.Down, k.Enter, k.Tab}, // first column
+		{k.Exit},                       // second column
+	}
+}
+
+func focusKeyMap() focusKeymap {
+	return focusKeymap{
+		Enter: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "toggle detail view"),
+		),
+		Tab: key.NewBinding(
+			key.WithKeys("tab"),
+			key.WithHelp("tab", "toggle expenses view"),
+		),
+		Exit: key.NewBinding(
+			key.WithKeys("q", "ctrl+c"),
+			key.WithHelp("q/ctrl+c", "exit"),
+		),
+		Up: key.NewBinding(
+			key.WithKeys("up", "k"),
+			key.WithHelp("↑/k", "up"),
+		),
+		Down: key.NewBinding(
+			key.WithKeys("down", "j"),
+			key.WithHelp("↓/j", "down"),
+		),
+	}
+}
+
+func reportsKeyMap() reportsKeymap {
+	return reportsKeymap{
 		Enter: key.NewBinding(
 			key.WithKeys("enter"),
 			key.WithHelp("enter", "toggle detail view"),
@@ -92,7 +142,8 @@ type model struct {
 	focusReport  focusReport
 	help         help.Model
 
-	keyMap keymap
+	reportsKeyMap reportsKeymap
+	focusKeymap   focusKeymap
 
 	focusMode focusState
 
@@ -116,10 +167,11 @@ func initialModel(db *sql.DB, width int, height int) model {
 		reports:   reports,
 		focusMode: focusedMain,
 
-		keyMap: defaultKeyMap(),
+		reportsKeyMap: reportsKeyMap(),
+		focusKeymap:   focusKeyMap(),
 
 		reportsTable: reportsTable,
-		focusReport:  newfocusReport(),
+		focusReport:  newfocusReport(width/2, height/2),
 		help:         help.New(),
 
 		width:  width,
@@ -186,50 +238,42 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.SetWidth(msg.Width)
 		m.SetHeight(msg.Height)
-		m.reportsTable = m.reportsTable.UpdateDimensions(msg.Width, msg.Height/2)
-		m.focusReport = m.focusReport.UpdateDimensions(msg.Width/2, msg.Height/2)
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, m.keyMap.Enter):
+		case key.Matches(msg, m.reportsKeyMap.Enter):
 			m.focusMode = m.focusModeToggle()
 			return m, nil
-		case key.Matches(msg, m.keyMap.Up), key.Matches(msg, m.keyMap.Down):
+		case key.Matches(msg, m.reportsKeyMap.Up), key.Matches(msg, m.reportsKeyMap.Down):
 			if m.focusMode == focusedMain {
 				m.reportsTable, cmd = m.reportsTable.Update(msg)
-				m.focusReport = m.focusReport.UpdateTable(m.reports[m.reportsTable.Cursor()], m.width/2)
+				m.focusReport.SetReport(m.reports[m.reportsTable.Cursor()])
 			} else {
 				m.focusReport, cmd = m.focusReport.Update(msg)
 			}
-			m.reportsTable = m.reportsTable.UpdateDimensions(m.width, m.height/2)
-			m.focusReport = m.focusReport.UpdateDimensions(m.width/2, m.height/2)
-		case key.Matches(msg, m.keyMap.Exit):
+		case key.Matches(msg, m.focusKeymap.Tab):
+			m.focusReport.focusModeToggle()
+			return m, nil
+		case key.Matches(msg, m.reportsKeyMap.Exit):
 			return m, tea.Quit
 		}
 	}
+
+	m.reportsTable.UpdateDimensions(m.width, m.height/2)
+	m.focusReport.UpdateDimensions(m.width/2, m.height/2)
 
 	return m, cmd
 }
 
 func (m model) View() string {
 	var main string
-	helpView := m.help.View(m.keyMap)
+	var helpView string
 
 	if m.focusMode == focusedMain {
+		helpView = m.help.View(m.reportsKeyMap)
 		main = m.reportsTable.View()
-
-		main = baseStyle.Width(m.width).Render(main)
 	} else {
-		focusReport := m.focusReport.View()
-		expenses := m.focusReport.Categories()[m.focusReport.Cursor()].Expenses
-		items := []string{}
-		for _, expense := range expenses {
-			items = append(items, fmt.Sprintf("%s | %s€", expense.Description, util.FormatMoney(expense.AmountWithSign(), ".", ",")))
-		}
-		l := list.New(items)
-		listView := l.String()
-
-		main = lipgloss.JoinHorizontal(lipgloss.Top, focusReport, listView)
-		main = baseStyle.Width(m.width).Render(main)
+		helpView = m.help.View(m.focusKeymap)
+		main = m.focusReport.View()
 	}
 
 	main = lipgloss.JoinVertical(lipgloss.Top, main, helpView)
@@ -262,6 +306,15 @@ func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) {
 	w, h, err := term.GetSize(os.Stdout.Fd())
 	if err != nil {
 		log.Fatalf("failed to get terminal size: %v", err)
+	}
+
+	if len(os.Getenv("DEBUG")) > 0 {
+		f, err := tea.LogToFile("debug.log", "debug")
+		if err != nil {
+			fmt.Println("fatal:", err)
+			os.Exit(1)
+		}
+		defer f.Close()
 	}
 
 	p := tea.NewProgram(initialModel(db, w, h), tea.WithAltScreen())
