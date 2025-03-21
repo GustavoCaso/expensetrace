@@ -8,13 +8,17 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
+	"golang.org/x/exp/maps"
 )
 
 //go:embed templates/static/*
@@ -22,11 +26,14 @@ var static embed.FS
 var staticFS, _ = fs.Sub(static, "templates/static")
 
 type router struct {
-	reload    bool
-	mux       *http.ServeMux
-	matcher   *category.Matcher
-	db        *sql.DB
-	templates templates
+	reload           bool
+	mux              *http.ServeMux
+	matcher          *category.Matcher
+	db               *sql.DB
+	templates        templates
+	reports          map[string]report.Report
+	sortedReportKeys []string
+	reportsOnce      sync.Once
 }
 
 func New(db *sql.DB, matcher *category.Matcher) http.Handler {
@@ -42,6 +49,33 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 
 	// Routes
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		router.reportsOnce.Do(func() {
+			err := router.generateReports()
+
+			if err != nil {
+				log.Fatal(fmt.Sprintf("generateReports fail %v", err))
+			}
+
+			reportKeys := maps.Keys(router.reports)
+
+			sort.SliceStable(reportKeys, func(i, j int) bool {
+				s1 := strings.Split(reportKeys[i], "-")
+				s2 := strings.Split(reportKeys[j], "-")
+				year1, _ := strconv.Atoi(s1[0])
+				month1, _ := strconv.Atoi(s1[1])
+
+				year2, _ := strconv.Atoi(s2[0])
+				month2, _ := strconv.Atoi(s2[1])
+
+				if year1 == year2 {
+					return time.Month(month1) > time.Month(month2)
+				}
+
+				return year1 > year2
+			})
+
+			router.sortedReportKeys = reportKeys
+		})
 		router.homeHandler(w, r)
 	})
 
@@ -101,125 +135,53 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 	return wrappedMux
 }
 
-type link struct {
-	Name     string
-	URL      string
-	Income   int64
-	Spending int64
-	Savings  int64
-}
-
-type homeData struct {
-	Report report.Report
-	Links  []link
-	Error  error
-}
-
-func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
+func (router *router) generateReports() error {
 	now := time.Now()
-	var month int
-	var year int
-	var err error
-	useReportTemplate := false
-
-	monthQuery := r.URL.Query().Get("month")
-	if monthQuery != "" {
-		if month, err = strconv.Atoi(monthQuery); err != nil {
-			fmt.Println("error strconv.Atoi ", err.Error())
-			month = int(now.Month() - 1)
-		}
-		useReportTemplate = true
-	} else {
-		month = int(now.Month() - 1)
-	}
-	yearQuery := r.URL.Query().Get("year")
-	if yearQuery != "" {
-		if year, err = strconv.Atoi(yearQuery); err != nil {
-			fmt.Println("error strconv.Atoi ", err.Error())
-			year = now.Year()
-		}
-		useReportTemplate = true
-	} else {
-		year = now.Year()
-	}
-
-	firstDay, lastDay := util.GetMonthDates(month, year)
-	var links []link
-	if !useReportTemplate {
-		links, err = generateLinks(router.db, time.Month(month), year)
-	}
-
-	var data homeData
-	if err != nil {
-		data = homeData{
-			Error: err,
-		}
-	} else {
-		expenses, err := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
-
-		if err != nil {
-			data = homeData{
-				Error: err,
-			}
-		} else {
-			result := report.Generate(firstDay, lastDay, expenses, "monthly")
-
-			data = homeData{
-				Report: result,
-				Links:  links,
-				Error:  nil,
-			}
-		}
-	}
-
-	if useReportTemplate {
-		err = router.templates.Render(w, "partials/reports/report.html", data)
-	} else {
-		err = router.templates.Render(w, "pages/reports/index.html", data)
-	}
-
-	if err != nil {
-		log.Print(err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
-}
-
-func generateLinks(db *sql.DB, month time.Month, year int) ([]link, error) {
-	links := []link{}
+	month := now.Month()
+	year := now.Year()
 	skipYear := false
-	timeMonth := time.Month(month)
-	for year > 2022 {
-		if timeMonth == time.January {
+	ex, err := expenseDB.GetFirstExpense(router.db)
+	if err != nil {
+		return err
+	}
+
+	lastMonth := ex.Date.Month()
+	lastYear := ex.Date.Year()
+
+	reports := map[string]report.Report{}
+
+	for year >= lastYear {
+		if month == time.January {
 			skipYear = true
 		}
 
-		firstDay, lastDay := util.GetMonthDates(int(timeMonth), year)
+		firstDay, lastDay := util.GetMonthDates(int(month), year)
 
-		expenses, err := expenseDB.GetExpensesFromDateRange(db, firstDay, lastDay)
+		expenses, err := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
 
 		if err != nil {
-			return []link{}, err
+			return err
 		}
 
 		result := report.Generate(firstDay, lastDay, expenses, "monthly")
 
-		links = append(links, link{
-			Name:     fmt.Sprintf("%s %d", timeMonth, year),
-			URL:      fmt.Sprintf("/?month=%d&year=%d", int(timeMonth), year),
-			Income:   result.Income,
-			Spending: result.Spending,
-			Savings:  result.Savings,
-		})
+		reports[fmt.Sprintf("%d-%d", year, month)] = result
 
 		if skipYear {
 			year = year - 1
-			timeMonth = time.December
+			month = time.December
 			skipYear = false
 			continue
 		}
 
-		timeMonth = timeMonth - 1
+		if year == lastYear && month == lastMonth {
+			break
+		}
+
+		month = month - 1
 	}
 
-	return links, nil
+	router.reports = reports
+
+	return nil
 }
