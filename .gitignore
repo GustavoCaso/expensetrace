@@ -2,6 +2,5 @@
 *.csv
 *.toml
 *.txt
-*.yaml
-*.yml
+expense.yaml
 reports/**/*
