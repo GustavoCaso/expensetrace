@@ -52,14 +52,14 @@ var subcommands = map[string]*command{
 }
 
 func main() {
+	initFlagSets()
+
 	if len(os.Args) < 2 {
 		fmt.Printf("subcommand is required\n")
-		printUsage()
+		printHelp()
 
 		os.Exit(1)
 	}
-
-	initFlagSets()
 
 	commandName := os.Args[1]
 	command, ok := subcommands[commandName]
@@ -111,7 +111,7 @@ func main() {
 }
 
 func printHelp() {
-	printUsage()
+	fmt.Printf("usage: expensetrace <subcommand> [flags]\n\n")
 
 	for commandName, cliCommand := range subcommands {
 		fmt.Printf("subcommmand <%s>: %s\n", commandName, cliCommand.c.Description())
@@ -119,10 +119,6 @@ func printHelp() {
 		fmt.Println()
 		fmt.Println()
 	}
-}
-
-func printUsage() {
-	fmt.Printf("usage: expensetrace <subcommand> [flags]\n\n")
 }
 
 func initFlagSets() {

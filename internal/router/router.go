@@ -53,6 +53,8 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 			err := router.generateReports()
 
 			if err != nil {
+				// If we fail to generate reports servers do not start
+				// TODO: fix
 				log.Fatal(fmt.Sprintf("generateReports fail %v", err))
 			}
 

@@ -41,11 +41,11 @@ func Generate(startDate, endDate time.Time, expenses []*expenseDB.Expense, repor
 	report.Spending = spending
 	report.StartDate = startDate
 	report.EndDate = endDate
-	savings := income - spending
+	savings := income - (spending)*-1
 	report.Savings = savings
 	report.SavingsPercentage = (float32(savings) / float32(income)) * 100
 	numberOfDaysPerMonth := calendarDays(startDate, endDate)
-	report.AverageSpendingPerDay = spending / int64(numberOfDaysPerMonth)
+	report.AverageSpendingPerDay = (spending) * -1 / int64(numberOfDaysPerMonth)
 	report.EarningsPerDay = income / int64(numberOfDaysPerMonth)
 	report.Duplicates = duplicates
 
@@ -108,20 +108,11 @@ func addExpenseToCategory(categories map[string]Category, ex *expenseDB.Expense)
 
 	c, ok := categories[categoryName]
 	if ok {
-		if ex.Type == expenseDB.ChargeType {
-			c.Amount -= ex.Amount
-		} else {
-			c.Amount += ex.Amount
-		}
+		c.Amount += ex.Amount
 		c.Expenses = append(c.Expenses, ex)
 		categories[categoryName] = c
 	} else {
-		var amount int64
-		if ex.Type == expenseDB.ChargeType {
-			amount = -(ex.Amount)
-		} else {
-			amount = ex.Amount
-		}
+		amount := ex.Amount
 		c := Category{
 			Amount: amount,
 			Name:   categoryName,
