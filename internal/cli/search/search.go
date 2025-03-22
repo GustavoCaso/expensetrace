@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"log"
 	"os"
 	"path"
 	"sort"
@@ -39,10 +38,6 @@ type category struct {
 
 func (c category) Display(verbose bool) string {
 	value := c.amount
-
-	if c.categoryType == expenseDB.ChargeType {
-		value = -(value)
-	}
 
 	var buffer = bytes.Buffer{}
 
@@ -81,15 +76,14 @@ func (c searchCommand) SetFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&verbose, "v", false, "show verbose report output")
 }
 
-func (c searchCommand) Run(db *sql.DB, matcher *categoryPkg.Matcher) {
-	defer db.Close()
+func (c searchCommand) Run(db *sql.DB, matcher *categoryPkg.Matcher) error {
 	if keyword == "" {
-		log.Fatal("You must provide a keyword to use for the search")
+		return fmt.Errorf("you must provide a keyword to use for the search")
 	}
 
 	expenses, err := expenseDB.SearchExpenses(db, keyword)
 	if err != nil {
-		log.Fatalf("Enable to search the expenses DB: %v", err)
+		return fmt.Errorf("enable to search the expenses DB: %w", err)
 	}
 
 	sort.Slice(expenses, func(i, j int) bool {
@@ -124,10 +118,10 @@ func (c searchCommand) Run(db *sql.DB, matcher *categoryPkg.Matcher) {
 		Verbose:    verbose,
 	})
 	if err != nil {
-		log.Fatalf("Enable to render report: %v", err)
+		return fmt.Errorf("enable to render report: %w", err)
 	}
 
-	os.Exit(0)
+	return nil
 }
 
 func expeseCategory(ex *expenseDB.Expense) string {

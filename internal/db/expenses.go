@@ -6,7 +6,6 @@ import (
 	"embed"
 	"fmt"
 	"io"
-	"log"
 	"path"
 	"text/template"
 	"time"
@@ -30,14 +29,6 @@ type Expense struct {
 	CategoryID  int
 
 	db *sql.DB
-}
-
-func (ex Expense) AmountWithSign() int64 {
-	if ex.Type == ChargeType {
-		return -(ex.Amount)
-	}
-
-	return ex.Amount
 }
 
 func (e Expense) Category() (string, error) {
@@ -243,19 +234,11 @@ func SearchExpenses(db *sql.DB, keyword string) ([]*Expense, error) {
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex := &Expense{}
-		var id int
-		var date int64
-		var expenseType int
+		ex, err := expenseFromRow(db, rows.Scan)
 
-		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
-			log.Fatal(err)
+		if err != nil {
+			return []*Expense{}, err
 		}
-
-		ex.ID = id
-		ex.Type = ExpenseType(expenseType)
-		ex.Date = time.Unix(date, 0).UTC()
-		ex.db = db
 
 		expenses = append(expenses, ex)
 	}

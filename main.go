@@ -99,7 +99,15 @@ func main() {
 
 		matcher := categoryPkg.NewMatcher(categories)
 
-		command.c.Run(dbInstance, matcher)
+		err = command.c.Run(dbInstance, matcher)
+		dbInstance.Close()
+
+		if err != nil {
+			log.Printf("Error: %v", err)
+			os.Exit(1)
+		}
+
+		os.Exit(0)
 	} else {
 		if strings.Contains(commandName, "help") {
 			printHelp()

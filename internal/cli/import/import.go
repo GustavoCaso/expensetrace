@@ -3,7 +3,7 @@ package importCmd
 import (
 	"database/sql"
 	"flag"
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
@@ -28,25 +28,28 @@ func (c importCommand) SetFlags(fs *flag.FlagSet) {
 	fs.StringVar(&importFile, "f", "", "file to import")
 }
 
-func (c importCommand) Run(db *sql.DB, matcher *category.Matcher) {
+func (c importCommand) Run(db *sql.DB, matcher *category.Matcher) error {
+	if importFile == "" {
+		return fmt.Errorf("you must provide a file to import")
+	}
+
 	file, err := os.Open(importFile)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer file.Close()
 
-	defer db.Close()
-
 	errors := importUtil.Import(importFile, file, db, matcher)
-
 	if len(errors) > 0 {
-		log.Println("Unable to import expenses, errors:")
-		for _, err := range errors {
-			log.Println(err.Error())
+		var errMsg string
+		for i, err := range errors {
+			if i > 0 {
+				errMsg += "; "
+			}
+			errMsg += err.Error()
 		}
-
-		os.Exit(1)
+		return fmt.Errorf("unable to import file: %s", errMsg)
 	}
 
-	os.Exit(0)
+	return nil
 }
