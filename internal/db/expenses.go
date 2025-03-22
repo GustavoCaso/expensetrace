@@ -21,6 +21,7 @@ const (
 
 type Expense struct {
 	ID          int
+	Source      string
 	Date        time.Time
 	Description string
 	Amount      int64
@@ -66,13 +67,14 @@ var createTableStatement = `
 CREATE TABLE IF NOT EXISTS expenses
 (
  id INTEGER PRIMARY KEY,
+ source TEXT,
  amount INTEGER NOT NULL,
  description TEXT NOT NULL,
  expense_type INTEGER NOT NULL,
  date INTEGER NOT NULL,
  currency TEXT NOT NULL,
  category_id INTEGER,
- UNIQUE(date, description, amount) ON CONFLICT FAIL
+ UNIQUE(source, date, description, amount) ON CONFLICT FAIL
 ) STRICT;
 `
 
@@ -114,7 +116,7 @@ func (e ErrInsert) Error() string {
 
 func InsertExpenses(db *sql.DB, expenses []*Expense) []error {
 	// Insert records
-	insertStmt, err := db.Prepare("INSERT INTO expenses(amount, description, expense_type, date, currency, category_id) values(?, ?, ?, ?, ?, ?)")
+	insertStmt, err := db.Prepare("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) values(?, ?, ?, ?, ?, ?, ?)")
 
 	errors := []error{}
 
@@ -123,7 +125,7 @@ func InsertExpenses(db *sql.DB, expenses []*Expense) []error {
 		return errors
 	}
 	for _, expense := range expenses {
-		_, err := insertStmt.Exec(expense.Amount, expense.Description, expense.Type, expense.Date.Unix(), expense.Currency, expense.CategoryID)
+		_, err := insertStmt.Exec(expense.Source, expense.Amount, expense.Description, expense.Type, expense.Date.Unix(), expense.Currency, expense.CategoryID)
 		if err != nil {
 			errors = append(errors, ErrInsert{
 				err: err,
@@ -145,19 +147,11 @@ func GetExpenses(db *sql.DB) ([]*Expense, error) {
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex := &Expense{}
-		var id int
-		var date int64
-		var expenseType int
+		ex, err := expenseFromRow(db, rows.Scan)
 
-		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
-			log.Fatal(err)
+		if err != nil {
+			return []*Expense{}, err
 		}
-
-		ex.ID = id
-		ex.Type = ExpenseType(expenseType)
-		ex.Date = time.Unix(date, 0).UTC()
-		ex.db = db
 
 		expenses = append(expenses, ex)
 	}
@@ -167,7 +161,7 @@ func GetExpenses(db *sql.DB) ([]*Expense, error) {
 
 func UpdateExpenses(db *sql.DB, expenses []*Expense) (int64, error) {
 	// Update records
-	query := "INSERT OR REPLACE INTO expenses(id, amount, description, expense_type, date, currency, category_id) VALUES %s;"
+	query := "INSERT OR REPLACE INTO expenses(id, source, amount, description, expense_type, date, currency, category_id) VALUES %s;"
 	var buffer = bytes.Buffer{}
 
 	err := renderTemplate(&buffer, "values.tmpl", struct {
@@ -204,19 +198,11 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]*Ex
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex := &Expense{}
-		var id int
-		var date int64
-		var expenseType int
+		ex, err := expenseFromRow(db, rows.Scan)
 
-		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
-			log.Fatal(err)
+		if err != nil {
+			return []*Expense{}, err
 		}
-
-		ex.ID = id
-		ex.Type = ExpenseType(expenseType)
-		ex.Date = time.Unix(date, 0).UTC()
-		ex.db = db
 
 		expenses = append(expenses, ex)
 	}
@@ -235,20 +221,10 @@ func GetExpensesWithoutCategory(db *sql.DB) ([]*Expense, error) {
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex := &Expense{}
-		var id int
-		var date int64
-		var expenseType int
-
-		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
-			log.Fatal(err)
+		ex, err := expenseFromRow(db, rows.Scan)
+		if err != nil {
+			return []*Expense{}, err
 		}
-
-		ex.ID = id
-		ex.Type = ExpenseType(expenseType)
-		ex.Date = time.Unix(date, 0).UTC()
-		ex.db = db
-
 		expenses = append(expenses, ex)
 	}
 
@@ -299,20 +275,10 @@ func SearchExpensesByDescription(db *sql.DB, description string) ([]*Expense, er
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex := &Expense{}
-		var id int
-		var date int64
-		var expenseType int
-
-		if err := rows.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
-			log.Fatal(err)
+		ex, err := expenseFromRow(db, rows.Scan)
+		if err != nil {
+			return []*Expense{}, err
 		}
-
-		ex.ID = id
-		ex.Type = ExpenseType(expenseType)
-		ex.Date = time.Unix(date, 0).UTC()
-		ex.db = db
-
 		expenses = append(expenses, ex)
 	}
 
@@ -321,19 +287,11 @@ func SearchExpensesByDescription(db *sql.DB, description string) ([]*Expense, er
 
 func GetFirstExpense(db *sql.DB) (*Expense, error) {
 	row := db.QueryRow("SELECT * FROM expenses  ORDER BY date ASC LIMIT 1")
-	ex := &Expense{}
-	var id int
-	var date int64
-	var expenseType int
+	ex, err := expenseFromRow(db, row.Scan)
 
-	if err := row.Scan(&id, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
-		log.Fatal(err)
+	if err != nil {
+		return &Expense{}, err
 	}
-
-	ex.ID = id
-	ex.Type = ExpenseType(expenseType)
-	ex.Date = time.Unix(date, 0).UTC()
-	ex.db = db
 
 	return ex, nil
 }
@@ -350,4 +308,22 @@ func renderTemplate(out io.Writer, templateName string, value interface{}) error
 	}
 
 	return nil
+}
+
+func expenseFromRow(db *sql.DB, scan func(dest ...any) error) (*Expense, error) {
+	ex := &Expense{}
+	var id int
+	var date int64
+	var expenseType int
+
+	if err := scan(&id, &ex.Source, &ex.Amount, &ex.Description, &expenseType, &date, &ex.Currency, &ex.CategoryID); err != nil {
+		return ex, err
+	}
+
+	ex.ID = id
+	ex.Type = ExpenseType(expenseType)
+	ex.Date = time.Unix(date, 0).UTC()
+	ex.db = db
+
+	return ex, nil
 }

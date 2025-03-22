@@ -34,7 +34,7 @@ Categorized
 {{ end -}}
 {{- if $.Verbose -}}
 {{- range $expense := $category.Expenses -}}
-{{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} {{formatMoney $expense.Amount "." "," }}€
+{{$expense.Source}} {{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} {{formatMoney $expense.Amount "." "," }}€
 {{ end }}
 {{ end -}}
 {{- end -}}
