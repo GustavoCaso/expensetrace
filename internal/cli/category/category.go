@@ -33,9 +33,7 @@ func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
 	fs.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")
 }
 
-func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) {
-	defer db.Close()
-
+func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	var expenses []*expenseDB.Expense
 	var err error
 	if actionFlag == "migrate" {
@@ -44,8 +42,7 @@ func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) {
 		expenses, err = expenseDB.GetExpensesWithoutCategory(db)
 	}
 	if err != nil {
-		log.Fatalf("Unable to get expenses: %s", err.Error())
-		os.Exit(1)
+		return fmt.Errorf("unable to get expenses: %w", err)
 	}
 
 	switch actionFlag {
@@ -55,19 +52,25 @@ func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) {
 		if outputLocation != "" {
 			f, err := os.Create(outputLocation)
 			if err != nil {
-				log.Fatalf("Unable to create inspect file output: %s", err.Error())
+				return fmt.Errorf("unable to create inspect file output: %w", err)
 			}
 
 			output = f
 
 			defer f.Close()
 		}
-		inspect(output, expenses)
+		if err := inspect(output, expenses); err != nil {
+			return err
+		}
 	case "recategorize", "migrate":
-		recategorize(db, matcher, expenses)
+		if err := recategorize(db, matcher, expenses); err != nil {
+			return err
+		}
 	default:
-		log.Fatalf("Unsupported action: %s", actionFlag)
+		return fmt.Errorf("unsupported action: %s", actionFlag)
 	}
+
+	return nil
 }
 
 func NewCommand() cli.Command {
@@ -80,10 +83,10 @@ type reportExpense struct {
 	amounts []int64
 }
 
-func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
+func inspect(writer io.Writer, expenses []*expenseDB.Expense) error {
 	if len(expenses) == 0 {
 		log.Println("No expenses without category 🎉")
-		os.Exit(0)
+		return nil
 	}
 
 	groupedExpenses := map[string]reportExpense{}
@@ -92,7 +95,7 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
 		if r, ok := groupedExpenses[ex.Description]; ok {
 			r.count++
 			r.dates = append(r.dates, ex.Date)
-			r.amounts = append(r.amounts, ex.AmountWithSign())
+			r.amounts = append(r.amounts, ex.Amount)
 			groupedExpenses[ex.Description] = r
 		} else {
 			groupedExpenses[ex.Description] = reportExpense{
@@ -101,7 +104,7 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
 					ex.Date,
 				},
 				amounts: []int64{
-					ex.AmountWithSign(),
+					ex.Amount,
 				},
 			}
 		}
@@ -130,10 +133,10 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
 
 	fmt.Fprintf(writer, "There are a total of %d uncategorized expenses", total)
 
-	os.Exit(0)
+	return nil
 }
 
-func recategorize(db *sql.DB, categoryMatcher *category.Matcher, expenses []*expenseDB.Expense) {
+func recategorize(db *sql.DB, categoryMatcher *category.Matcher, expenses []*expenseDB.Expense) error {
 	expensesToUpdate := []*expenseDB.Expense{}
 	for _, ex := range expenses {
 		id, c := categoryMatcher.Match(ex.Description)
@@ -148,7 +151,7 @@ func recategorize(db *sql.DB, categoryMatcher *category.Matcher, expenses []*exp
 		updated, err := expenseDB.UpdateExpenses(db, expensesToUpdate)
 
 		if err != nil {
-			log.Fatalf("Unexpected error updating categories: %v", err)
+			return fmt.Errorf("unexpected error updating categories: %w", err)
 		}
 
 		if updated != int64(len(expensesToUpdate)) {
@@ -160,5 +163,5 @@ func recategorize(db *sql.DB, categoryMatcher *category.Matcher, expenses []*exp
 		log.Println("No expenses that could recategorize")
 	}
 
-	os.Exit(0)
+	return nil
 }

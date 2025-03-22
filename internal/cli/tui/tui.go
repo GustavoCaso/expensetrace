@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -151,14 +150,14 @@ type model struct {
 	height int
 }
 
-func initialModel(db *sql.DB, width int, height int) model {
+func initialModel(db *sql.DB, width int, height int) (model, error) {
 	now := time.Now()
 	month := now.Month()
 	year := now.Year()
 
 	reports, err := generateReports(db, month, year)
 	if err != nil {
-		log.Fatalf("Unable to generate reports: %s", err.Error())
+		return model{}, err
 	}
 
 	reportsTable := newReports(reports, width)
@@ -176,7 +175,7 @@ func initialModel(db *sql.DB, width int, height int) model {
 
 		width:  width,
 		height: height,
-	}
+	}, nil
 }
 
 func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) {
@@ -300,25 +299,30 @@ func (m *model) SetWidth(width int) {
 	m.width = width
 }
 
-func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) {
-	defer db.Close()
-
+func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	w, h, err := term.GetSize(os.Stdout.Fd())
 	if err != nil {
-		log.Fatalf("failed to get terminal size: %v", err)
+		return fmt.Errorf("failed to get terminal size: %w", err)
 	}
 
 	if len(os.Getenv("DEBUG")) > 0 {
 		f, err := tea.LogToFile("debug.log", "debug")
 		if err != nil {
-			fmt.Println("fatal:", err)
-			os.Exit(1)
+			return fmt.Errorf("failed to log to file: %w", err)
 		}
 		defer f.Close()
 	}
 
-	p := tea.NewProgram(initialModel(db, w, h), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		log.Fatalf("Error running TUI: %v", err)
+	model, err := initialModel(db, w, h)
+
+	if err != nil {
+		return fmt.Errorf("failed to create initia model: %w", err)
 	}
+
+	p := tea.NewProgram(model, tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		return fmt.Errorf("Error running TUI: %w", err)
+	}
+
+	return nil
 }

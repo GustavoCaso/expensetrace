@@ -29,9 +29,8 @@ func (c webCommand) SetFlags(fs *flag.FlagSet) {
 	fs.StringVar(&port, "p", "8080", "port")
 }
 
-func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) {
-	defer db.Close()
+func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	router := router.New(db, matcher)
 	log.Printf("Open report on http://localhost:%s\n", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), router))
+	return http.ListenAndServe(fmt.Sprintf(":%s", port), router)
 }

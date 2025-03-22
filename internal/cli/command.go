@@ -10,5 +10,5 @@ import (
 type Command interface {
 	SetFlags(fset *flag.FlagSet)
 	Description() string
-	Run(db *sql.DB, matcher *category.Matcher)
+	Run(db *sql.DB, matcher *category.Matcher) error
 }

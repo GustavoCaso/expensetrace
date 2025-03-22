@@ -3,8 +3,7 @@ package delete
 import (
 	"database/sql"
 	"flag"
-	"log"
-	"os"
+	"fmt"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
@@ -25,16 +24,16 @@ func (c deleteCommand) Description() string {
 func (c deleteCommand) SetFlags(*flag.FlagSet) {
 }
 
-func (c deleteCommand) Run(db *sql.DB, _ *category.Matcher) {
+func (c deleteCommand) Run(db *sql.DB, _ *category.Matcher) error {
 	err := expenseDB.DeleteExpenseDB(db)
 	if err != nil {
-		log.Fatalf("Unable to delete expense table: %s", err.Error())
+		return fmt.Errorf("Unable to delete expense table: %w", err)
 	}
 
 	err = expenseDB.DeleteCategoriesDB(db)
 	if err != nil {
-		log.Fatalf("Unable to delete categories table: %s", err.Error())
+		return fmt.Errorf("Unable to delete categories table: %s", err)
 	}
 
-	os.Exit(0)
+	return nil
 }

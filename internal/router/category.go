@@ -72,7 +72,7 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 		if r, ok := groupedExpenses[ex.Description]; ok {
 			r.Count++
 			r.Dates = append(r.Dates, ex.Date)
-			r.Amounts = append(r.Amounts, ex.AmountWithSign())
+			r.Amounts = append(r.Amounts, ex.Amount)
 			groupedExpenses[ex.Description] = r
 		} else {
 			groupedExpenses[ex.Description] = reportExpense{
@@ -81,7 +81,7 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 					ex.Date,
 				},
 				Amounts: []int64{
-					ex.AmountWithSign(),
+					ex.Amount,
 				},
 			}
 		}

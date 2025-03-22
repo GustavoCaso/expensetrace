@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"embed"
 	"flag"
+	"fmt"
 	"io"
-	"log"
 	"os"
 	"path"
 	"text/template"
@@ -44,9 +44,7 @@ func (c reportCommand) SetFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&verbose, "v", false, "show verbose report output")
 }
 
-func (c reportCommand) Run(db *sql.DB, matcher *category.Matcher) {
-	defer db.Close()
-
+func (c reportCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	now := time.Now()
 	var startDate, endDate time.Time
 	var reportType string
@@ -70,18 +68,17 @@ func (c reportCommand) Run(db *sql.DB, matcher *category.Matcher) {
 
 	expenses, err := expenseDB.GetExpensesFromDateRange(db, startDate, endDate)
 	if err != nil {
-		log.Fatalf("Unable to fetch expenses: %v", err.Error())
+		return fmt.Errorf("unable to fetch expenses: %w", err)
 	}
 	r := internalReport.Generate(startDate, endDate, expenses, reportType)
 	r.Verbose = verbose
 
 	err = renderTemplate(os.Stdout, "report.tmpl", r)
-
 	if err != nil {
-		log.Fatalf("Unable to render report: %v", err.Error())
+		return fmt.Errorf("unable to render report: %w", err)
 	}
 
-	os.Exit(0)
+	return nil
 }
 
 var templateFuncs = template.FuncMap{
