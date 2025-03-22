@@ -2,37 +2,18 @@ package search
 
 import (
 	"bytes"
-	"database/sql"
 	"flag"
 	"testing"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/testutil"
 	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
 
 	categoryPkg "github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 )
-
-func setupTestDB(t *testing.T) *sql.DB {
-	database, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
-	}
-
-	err = db.CreateExpenseTable(database)
-	if err != nil {
-		t.Fatalf("Failed to create expenses table: %v", err)
-	}
-
-	err = db.CreateCategoriesTable(database)
-	if err != nil {
-		t.Fatalf("Failed to create categories table: %v", err)
-	}
-
-	return database
-}
 
 func TestNewCommand(t *testing.T) {
 	cmd := NewCommand()
@@ -230,8 +211,7 @@ func TestRenderTemplate(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	db := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []expenseDB.Category{

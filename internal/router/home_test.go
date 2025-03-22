@@ -9,11 +9,11 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
+	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestHomeHandler(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{
@@ -96,8 +96,7 @@ func TestHomeHandler(t *testing.T) {
 }
 
 func TestGenerateLinks(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{

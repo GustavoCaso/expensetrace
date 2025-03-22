@@ -5,11 +5,11 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestNew(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{

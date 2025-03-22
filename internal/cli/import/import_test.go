@@ -1,7 +1,6 @@
 package importCmd
 
 import (
-	"database/sql"
 	"flag"
 	"os"
 	"path/filepath"
@@ -11,25 +10,6 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/db"
 	_ "github.com/mattn/go-sqlite3"
 )
-
-func setupTestDB(t *testing.T) *sql.DB {
-	database, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
-	}
-
-	err = db.CreateExpenseTable(database)
-	if err != nil {
-		t.Fatalf("Failed to create expenses table: %v", err)
-	}
-
-	err = db.CreateCategoriesTable(database)
-	if err != nil {
-		t.Fatalf("Failed to create categories table: %v", err)
-	}
-
-	return database
-}
 
 func createTestFile(t *testing.T, content string) string {
 	tmpDir := t.TempDir()
@@ -74,8 +54,7 @@ func TestSetFlags(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	// database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{

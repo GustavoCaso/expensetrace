@@ -2,7 +2,6 @@ package category
 
 import (
 	"bytes"
-	"database/sql"
 	"flag"
 	"strings"
 	"testing"
@@ -10,27 +9,9 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/testutil"
 	_ "github.com/mattn/go-sqlite3"
 )
-
-func setupTestDB(t *testing.T) *sql.DB {
-	database, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
-	}
-
-	err = expenseDB.CreateExpenseTable(database)
-	if err != nil {
-		t.Fatalf("Failed to create expenses table: %v", err)
-	}
-
-	err = expenseDB.CreateCategoriesTable(database)
-	if err != nil {
-		t.Fatalf("Failed to create categories table: %v", err)
-	}
-
-	return database
-}
 
 func TestNewCommand(t *testing.T) {
 	cmd := NewCommand()
@@ -131,8 +112,7 @@ func TestInspect(t *testing.T) {
 }
 
 func TestRecategorize(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	db := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []expenseDB.Category{
@@ -201,9 +181,7 @@ func TestRecategorize(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
-
+	db := testutil.SetupTestDB(t)
 	// Create test categories
 	categories := []expenseDB.Category{
 		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},

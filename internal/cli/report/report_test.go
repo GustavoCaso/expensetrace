@@ -1,7 +1,6 @@
 package report
 
 import (
-	"database/sql"
 	"flag"
 	"os"
 	"testing"
@@ -10,24 +9,8 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
+	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
-
-func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("Failed to open database: %v", err)
-	}
-
-	if err := expenseDB.CreateExpenseTable(db); err != nil {
-		t.Fatalf("Failed to create expense table: %v", err)
-	}
-
-	if err := expenseDB.CreateCategoriesTable(db); err != nil {
-		t.Fatalf("Failed to create categories table: %v", err)
-	}
-
-	return db
-}
 
 func TestNewCommand(t *testing.T) {
 	cmd := NewCommand()
@@ -66,8 +49,7 @@ func TestSetFlags(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	db := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []expenseDB.Category{

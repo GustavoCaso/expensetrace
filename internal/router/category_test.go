@@ -9,11 +9,11 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestCategoriesHandler(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{
@@ -40,8 +40,7 @@ func TestCategoriesHandler(t *testing.T) {
 }
 
 func TestUncategorizedHandler(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{
@@ -84,8 +83,7 @@ func TestUncategorizedHandler(t *testing.T) {
 }
 
 func TestCreateCategoryHandler(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{

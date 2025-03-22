@@ -9,6 +9,7 @@ import (
 )
 
 func setupTestExpenseDB(t *testing.T) *sql.DB {
+	t.Helper()
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
@@ -18,6 +19,12 @@ func setupTestExpenseDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("Failed to create expenses table: %v", err)
 	}
+
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close test expenses database: %v", err)
+		}
+	})
 
 	return db
 }

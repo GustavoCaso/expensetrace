@@ -8,7 +8,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func setupTestDB(t *testing.T) *sql.DB {
+func setupTestCategoryDB(t *testing.T) *sql.DB {
+	t.Helper()
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
@@ -19,12 +20,17 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create categories table: %v", err)
 	}
 
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close test categories database: %v", err)
+		}
+	})
+
 	return db
 }
 
 func TestCreateCategoriesTable(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	db := setupTestCategoryDB(t)
 
 	// Verify table exists by trying to insert a record
 	_, err := db.Exec("INSERT INTO categories(name, pattern) VALUES(?, ?)", "Test", "test.*")
@@ -34,8 +40,7 @@ func TestCreateCategoriesTable(t *testing.T) {
 }
 
 func TestPopulateCategoriesFromConfig(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	db := setupTestCategoryDB(t)
 
 	conf := &config.Config{
 		Categories: []config.Category{
@@ -71,8 +76,7 @@ func TestPopulateCategoriesFromConfig(t *testing.T) {
 }
 
 func TestGetCategories(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	db := setupTestCategoryDB(t)
 
 	// Insert test categories
 	testCategories := []struct {
@@ -111,8 +115,7 @@ func TestGetCategories(t *testing.T) {
 }
 
 func TestGetCategory(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	db := setupTestCategoryDB(t)
 
 	// Insert test category
 	_, err := db.Exec("INSERT INTO categories(name, pattern) VALUES(?, ?)", "Test", "test.*")
@@ -141,8 +144,7 @@ func TestGetCategory(t *testing.T) {
 }
 
 func TestCreateCategory(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	db := setupTestCategoryDB(t)
 
 	id, err := CreateCategory(db, "Test", "test.*")
 	if err != nil {
@@ -168,8 +170,7 @@ func TestCreateCategory(t *testing.T) {
 }
 
 func TestDeleteCategoriesDB(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	db := setupTestCategoryDB(t)
 
 	// Insert test category
 	_, err := db.Exec("INSERT INTO categories(name, pattern) VALUES(?, ?)", "Test", "test.*")

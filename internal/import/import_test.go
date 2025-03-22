@@ -1,37 +1,17 @@
 package importUtil
 
 import (
-	"database/sql"
 	"strings"
 	"testing"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/testutil"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func setupTestDB(t *testing.T) *sql.DB {
-	database, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
-	}
-
-	err = db.CreateExpenseTable(database)
-	if err != nil {
-		t.Fatalf("Failed to create expenses table: %v", err)
-	}
-
-	err = db.CreateCategoriesTable(database)
-	if err != nil {
-		t.Fatalf("Failed to create categories table: %v", err)
-	}
-
-	return database
-}
-
 func TestImportCSV(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{
@@ -102,8 +82,7 @@ Test Source,03/01/2024,Salary,500000.00,USD`
 }
 
 func TestImportJSON(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{
@@ -194,8 +173,7 @@ func TestImportJSON(t *testing.T) {
 }
 
 func TestImportInvalidFormat(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{
@@ -215,8 +193,7 @@ func TestImportInvalidFormat(t *testing.T) {
 }
 
 func TestImportInvalidCSV(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{
@@ -235,8 +212,7 @@ func TestImportInvalidCSV(t *testing.T) {
 }
 
 func TestImportInvalidJSON(t *testing.T) {
-	database := setupTestDB(t)
-	defer database.Close()
+	database := testutil.SetupTestDB(t)
 
 	// Create test categories
 	categories := []db.Category{
