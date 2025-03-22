@@ -76,20 +76,27 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 
 			}
 
-			var et expenseDB.ExpenseType
-			if matches[chargeIndex] == "-" {
-				et = expenseDB.ChargeType
-			} else {
-				et = expenseDB.IncomeType
-			}
-
 			amount := matches[amountIndex]
 			decimal := matches[decimalIndex]
+			sign := matches[chargeIndex]
 
-			parsedAmount, err := strconv.ParseInt(fmt.Sprintf("%s%s", amount, decimal), 10, 64)
+			// Parse the full amount string including decimal and sign
+			// If there's no sign, it's a positive number
+			amountStr := fmt.Sprintf("%s%s", amount, decimal)
+			if sign == "-" {
+				amountStr = "-" + amountStr
+			}
+			parsedAmount, err := strconv.ParseInt(amountStr, 10, 64)
 			if err != nil {
 				errors = append(errors, err)
 				return errors
+			}
+
+			var et expenseDB.ExpenseType
+			if parsedAmount < 0 {
+				et = expenseDB.ChargeType
+			} else {
+				et = expenseDB.IncomeType
 			}
 
 			expense := &expenseDB.Expense{

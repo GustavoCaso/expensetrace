@@ -48,8 +48,8 @@ Test Source,03/01/2024,Salary,500000.00,USD`
 	if expenses[0].Description != "restaurant bill" {
 		t.Errorf("Expense[0].Description = %v, want restaurant bill", expenses[0].Description)
 	}
-	if expenses[0].Amount != 123456 {
-		t.Errorf("Expense[0].Amount = %v, want 123456", expenses[0].Amount)
+	if expenses[0].Amount != -123456 {
+		t.Errorf("Expense[0].Amount = %v, want -123456", expenses[0].Amount)
 	}
 	if expenses[0].Type != db.ChargeType {
 		t.Errorf("Expense[0].Type = %v, want ChargeType", expenses[0].Type)
@@ -65,8 +65,8 @@ Test Source,03/01/2024,Salary,500000.00,USD`
 	if expenses[1].Description != "uber ride" {
 		t.Errorf("Expense[1].Description = %v, want uber ride", expenses[1].Description)
 	}
-	if expenses[1].Amount != 500000 {
-		t.Errorf("Expense[1].Amount = %v, want 500000", expenses[1].Amount)
+	if expenses[1].Amount != -500000 {
+		t.Errorf("Expense[1].Amount = %v, want -500000", expenses[1].Amount)
 	}
 	if expenses[1].CategoryID != 2 {
 		t.Errorf("Expense[1].CategoryID = %v, want 2", expenses[1].CategoryID)

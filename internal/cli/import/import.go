@@ -35,7 +35,7 @@ func (c importCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 
 	file, err := os.Open(importFile)
 	if err != nil {
-		return fmt.Errorf("unable to open file: %w", err)
+		return err
 	}
 	defer file.Close()
 
