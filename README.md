@@ -6,7 +6,7 @@ ExpenseTrace is a privacy-focused expense tracking tool that helps you manage yo
 
 In an era where financial data privacy is increasingly important, ExpenseTrace offers a secure alternative to traditional expense tracking apps. Instead of connecting to your bank accounts or sharing sensitive financial information, ExpenseTrace allows you to:
 
-- Manually import your expenses from CSV files
+- Manually import your expenses from CSV or JSON files
 - Categorize transactions based on your own rules
 - Generate detailed reports and insights
 - Access your data through a CLI or web interface
@@ -16,18 +16,25 @@ In an era where financial data privacy is increasingly important, ExpenseTrace o
 
 - 📊 Interactive TUI (Terminal User Interface) for easy navigation
 - 🌐 Web interface for visual data exploration
-- 📝 CSV import functionality
-- 🔍 Smart expense categorization
+- 📝 CSV, JSON import functionality
 - 📈 Detailed financial reports
 - 🔒 Local data storage with SQLite
 - 🎨 Beautiful terminal output with color coding
+
+## Data Privacy
+
+ExpenseTrace is designed with privacy in mind:
+- All data is stored locally in a SQLite database
+- No external API calls or data sharing
+- No bank account connections required
+- Full control over your financial data
 
 ## Installation
 
 ### Prerequisites
 
 - Go 1.22 or later
-- SQLite3
+- SQLite
 
 ### Building from Source
 
@@ -52,6 +59,12 @@ categories:
     pattern: "UBER|TAXI|METRO"
 ```
 
+### Configuration
+
+The `expense.yaml` file allows you to:
+- Set the database location
+- Define expense categories and their matching patterns
+
 ## Usage
 
 ExpenseTrace provides several commands to help you manage your expenses:
@@ -66,11 +79,10 @@ expensetrace tui
 The TUI provides a split view showing categories on the left and expenses on the right. Use Tab to switch between views and arrow keys to navigate.
 
 #### `import`
-Import expenses from a CSV file:
+Import expenses from a file:
 ```bash
 expensetrace import -f expenses.csv
 ```
-The CSV should have columns for date, description, amount, and type (income/charge).
 
 #### `report`
 Generate expense reports:
@@ -114,21 +126,6 @@ Reset the database:
 expensetrace delete
 ```
 ⚠️ Warning: This will delete all your expense data!
-
-### Configuration
-
-The `expense.yaml` file allows you to:
-- Set the database location
-- Define expense categories and their matching patterns
-- Configure import settings
-
-## Data Privacy
-
-ExpenseTrace is designed with privacy in mind:
-- All data is stored locally in a SQLite database
-- No external API calls or data sharing
-- No bank account connections required
-- Full control over your financial data
 
 ## Contributing
 
