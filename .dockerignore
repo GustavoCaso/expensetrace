@@ -2,6 +2,5 @@
 *.csv
 *.toml
 *.txt
-expense*.yml
+expense.yaml
 reports/**/*
-docker-compose.yml
