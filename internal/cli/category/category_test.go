@@ -3,6 +3,7 @@ package category
 import (
 	"bytes"
 	"flag"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -218,6 +219,10 @@ func TestRun(t *testing.T) {
 	err := cmd.Run(db, matcher)
 	if err != nil {
 		t.Errorf("Run() error = %v", err)
+	}
+	err = os.Remove(outputLocation)
+	if err != nil {
+		t.Errorf("failed to delete test_output.txt= %v", err)
 	}
 
 	// Test recategorize action
