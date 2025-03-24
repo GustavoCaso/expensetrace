@@ -28,4 +28,4 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: gustavocaso/expensetrace:latest,gustavocaso/expensetrace:${{ steps.read-version.outputs.version }}
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/expensetrace:latest,${{ vars.DOCKERHUB_USERNAME }}/expensetrace:${{ steps.read-version.outputs.version }}
