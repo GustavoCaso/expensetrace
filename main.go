@@ -132,7 +132,11 @@ func printHelp() {
 func initFlagSets() {
 	for commandName, cliCommand := range subcommands {
 		fset := flag.NewFlagSet(commandName, flag.ExitOnError)
-		fset.StringVar(&configPath, "c", "expense.yaml", "Configuration file")
+		configPath = os.Getenv("EXPENSETRACE_CONFIG")
+		if configPath == "" {
+			configPath = "expense.yaml"
+		}
+		fset.StringVar(&configPath, "c", configPath, "Configuration file")
 
 		cliCommand.c.SetFlags(fset)
 		cliCommand.flagSet = fset

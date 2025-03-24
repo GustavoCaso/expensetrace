@@ -305,7 +305,7 @@ func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 		return fmt.Errorf("failed to get terminal size: %w", err)
 	}
 
-	if len(os.Getenv("DEBUG")) > 0 {
+	if len(os.Getenv("EXPENSETRACE_DEBUG")) > 0 {
 		f, err := tea.LogToFile("debug.log", "debug")
 		if err != nil {
 			return fmt.Errorf("failed to log to file: %w", err)
