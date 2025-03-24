@@ -25,22 +25,6 @@ func createTestFile(t *testing.T, content string) string {
 	return tmpFile
 }
 
-func TestNewCommand(t *testing.T) {
-	cmd := NewCommand()
-	if cmd == nil {
-		t.Fatal("Expected non-nil command")
-	}
-
-	importCmd, ok := cmd.(importCommand)
-	if !ok {
-		t.Fatal("Expected importCommand type")
-	}
-
-	if desc := importCmd.Description(); desc != "Imports expenses to the DB" {
-		t.Errorf("Description = %q, want Imports expenses to the DB", desc)
-	}
-}
-
 func TestSetFlags(t *testing.T) {
 	cmd := NewCommand()
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)

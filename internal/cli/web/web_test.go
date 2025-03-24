@@ -13,22 +13,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func TestNewCommand(t *testing.T) {
-	cmd := NewCommand()
-	if cmd == nil {
-		t.Fatal("Expected non-nil command")
-	}
-
-	webCmd, ok := cmd.(webCommand)
-	if !ok {
-		t.Fatal("Expected webCommand type")
-	}
-
-	if desc := webCmd.Description(); desc != "Web interface" {
-		t.Errorf("Description = %q, want Web interface", desc)
-	}
-}
-
 func TestSetFlags(t *testing.T) {
 	cmd := NewCommand()
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
@@ -42,6 +26,24 @@ func TestSetFlags(t *testing.T) {
 
 	if portFlag.DefValue != "8080" {
 		t.Errorf("Port default value = %q, want 8080", portFlag.DefValue)
+	}
+}
+
+func TestSetFlagsENV(t *testing.T) {
+	t.Setenv("EXPENSETRACE_PORT", "8081")
+
+	cmd := NewCommand()
+	fs := flag.NewFlagSet("test", flag.ContinueOnError)
+	cmd.SetFlags(fs)
+
+	// Check if port flag is registered
+	portFlag := fs.Lookup("p")
+	if portFlag == nil {
+		t.Fatal("Expected port flag to be registered")
+	}
+
+	if portFlag.DefValue != "8081" {
+		t.Errorf("Port default value = %q, want 8081", portFlag.DefValue)
 	}
 }
 

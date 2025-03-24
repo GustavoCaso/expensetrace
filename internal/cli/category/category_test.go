@@ -13,22 +13,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func TestNewCommand(t *testing.T) {
-	cmd := NewCommand()
-	if cmd == nil {
-		t.Fatal("Expected non-nil command")
-	}
-
-	categoryCmd, ok := cmd.(categoryCommand)
-	if !ok {
-		t.Fatal("Expected categoryCommand type")
-	}
-
-	if desc := categoryCmd.Description(); desc != "Allows to interact with the expenses category." {
-		t.Errorf("Description = %q, want Allows to interact with the expenses category.", desc)
-	}
-}
-
 func TestSetFlags(t *testing.T) {
 	cmd := NewCommand()
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)

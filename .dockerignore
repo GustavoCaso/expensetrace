@@ -4,4 +4,3 @@
 *.txt
 expense*.yml
 reports/**/*
-docker-compose.yml

@@ -72,6 +72,8 @@ func main() {
 			log.Fatalf("Unable to parse the configuration: %s", err.Error())
 		}
 
+		log.Printf("Using db located at %s\n", conf.DB)
+
 		dbInstance, err := db.GetDB(conf.DB)
 		if err != nil {
 			log.Fatalf("Unable to get DB: %s", err.Error())
@@ -132,7 +134,11 @@ func printHelp() {
 func initFlagSets() {
 	for commandName, cliCommand := range subcommands {
 		fset := flag.NewFlagSet(commandName, flag.ExitOnError)
-		fset.StringVar(&configPath, "c", "expense.yaml", "Configuration file")
+		configPath = os.Getenv("EXPENSETRACE_CONFIG")
+		if configPath == "" {
+			configPath = "expense.yml"
+		}
+		fset.StringVar(&configPath, "c", configPath, "Configuration file")
 
 		cliCommand.c.SetFlags(fset)
 		cliCommand.flagSet = fset

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
@@ -26,7 +27,12 @@ func (c webCommand) Description() string {
 var port string
 
 func (c webCommand) SetFlags(fs *flag.FlagSet) {
-	fs.StringVar(&port, "p", "8080", "port")
+	port = os.Getenv("EXPENSETRACE_PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	fs.StringVar(&port, "p", port, "port")
 }
 
 func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
