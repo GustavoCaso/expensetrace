@@ -1,0 +1,37 @@
+name: Create tag
+
+on:
+  push:
+    branches: "main"
+    # Release whenever this file changes
+    paths:
+      - "version.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch git tags
+        run: git fetch --force --tags
+
+      - name: Read version name
+        id: read-version
+        run: |
+          echo "version=$(cat ./version.txt)" > "$GITHUB_OUTPUT"
+
+      - name: Create new tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          custom_tag: ${{ steps.read-version.outputs.version }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
