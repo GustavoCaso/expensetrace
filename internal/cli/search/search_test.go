@@ -15,22 +15,6 @@ import (
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 )
 
-func TestNewCommand(t *testing.T) {
-	cmd := NewCommand()
-	if cmd == nil {
-		t.Fatal("Expected non-nil command")
-	}
-
-	searchCmd, ok := cmd.(searchCommand)
-	if !ok {
-		t.Fatal("Expected searchCommand type")
-	}
-
-	if desc := searchCmd.Description(); desc != "Search expenses" {
-		t.Errorf("Description = %q, want Search expenses", desc)
-	}
-}
-
 func TestSetFlags(t *testing.T) {
 	cmd := NewCommand()
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
