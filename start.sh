@@ -4,12 +4,10 @@
 case "$SUBCOMMAND" in
     "web")
         echo "Starting web server..."
-        ls -la
         ./expensetrace web
         ;;
     "tui")
         echo "Starting TUI interface..."
-        ls -la
         ./expensetrace tui
         ;;
     *)
