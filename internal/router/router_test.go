@@ -19,7 +19,7 @@ func TestNew(t *testing.T) {
 	matcher := category.NewMatcher(categories)
 
 	// Create router
-	handler := New(database, matcher)
+	handler, _ := New(database, matcher)
 	if handler == nil {
 		t.Fatal("Expected non-nil handler")
 	}

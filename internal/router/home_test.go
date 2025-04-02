@@ -51,7 +51,7 @@ func TestHomeHandler(t *testing.T) {
 	}
 
 	// Create router
-	handler := New(database, matcher)
+	handler, _ := New(database, matcher)
 
 	tests := []struct {
 		name           string

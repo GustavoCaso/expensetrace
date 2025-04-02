@@ -1,0 +1,16 @@
+[
+  {
+    "source": "Test Source",
+    "date": "2025-02-28T00:00:00Z",
+    "description": "Restaurant bill",
+    "amount": -820,
+    "currency": "EUR"
+  },
+  {
+    "source": "Test Source",
+    "date": "2025-02-28T00:00:00Z",
+    "description": "Uber ride",
+    "amount": -5800,
+    "currency": "EUR"
+  }
+]

@@ -40,7 +40,7 @@ func TestSearchHandler(t *testing.T) {
 	}
 
 	// Create router
-	handler := New(database, matcher)
+	handler, _ := New(database, matcher)
 
 	// Create test request
 	body := strings.NewReader("keyword=restaurant")
