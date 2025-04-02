@@ -93,11 +93,11 @@ func Categories(expenses []*expenseDB.Expense) (map[string]Category, []string, i
 		switch ex.Type {
 		case expenseDB.ChargeType:
 			spending += ex.Amount
-			addExpenseToCategory(categories, ex)
 		case expenseDB.IncomeType:
 			income += ex.Amount
-			addExpenseToCategory(categories, ex)
 		}
+
+		addExpenseToCategory(categories, ex)
 	}
 
 	return categories, duplicates, income, spending
