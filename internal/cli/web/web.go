@@ -36,7 +36,7 @@ func (c webCommand) SetFlags(fs *flag.FlagSet) {
 }
 
 func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
-	router := router.New(db, matcher)
+	handler, _ := router.New(db, matcher)
 	log.Printf("Open report on http://localhost:%s\n", port)
-	return http.ListenAndServe(fmt.Sprintf(":%s", port), router)
+	return http.ListenAndServe(fmt.Sprintf(":%s", port), handler)
 }

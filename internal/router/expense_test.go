@@ -50,7 +50,7 @@ func TestExpensesHandler(t *testing.T) {
 	}
 
 	// Create router
-	handler := New(database, matcher)
+	handler, _ := New(database, matcher)
 
 	// Create test request
 	req := httptest.NewRequest("GET", "/expenses", nil)

@@ -33,7 +33,6 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 	io.Copy(&buf, file)
 	log.Printf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len())
 	errors := importUtil.Import(header.Filename, &buf, router.db, router.matcher)
-
 	if len(errors) > 0 {
 		errorStrings := make([]string, len(errors))
 		for i, err := range errors {
@@ -44,6 +43,8 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, errorMessage)
 		return
 	}
+
+	router.resetCache()
 
 	fmt.Fprint(w, "Imported")
 }

@@ -23,7 +23,7 @@ func TestCategoriesHandler(t *testing.T) {
 	matcher := category.NewMatcher(categories)
 
 	// Create router
-	handler := New(database, matcher)
+	handler, _ := New(database, matcher)
 
 	// Create test request
 	req := httptest.NewRequest("GET", "/categories", nil)
@@ -66,7 +66,7 @@ func TestUncategorizedHandler(t *testing.T) {
 	}
 
 	// Create router
-	handler := New(database, matcher)
+	handler, _ := New(database, matcher)
 
 	// Create test request
 	req := httptest.NewRequest("GET", "/uncategorized", nil)
@@ -92,7 +92,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 	matcher := category.NewMatcher(categories)
 
 	// Create router
-	handler := New(database, matcher)
+	handler, _ := New(database, matcher)
 
 	// Create test request
 	body := strings.NewReader("name=Entertainment&pattern=cinema|movie|theater")

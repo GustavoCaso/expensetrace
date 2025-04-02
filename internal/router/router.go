@@ -36,7 +36,7 @@ type router struct {
 	reportsOnce      sync.Once
 }
 
-func New(db *sql.DB, matcher *category.Matcher) http.Handler {
+func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	router := &router{
 		reload:  os.Getenv("LIVERELOAD") == "true",
 		matcher: matcher,
@@ -93,6 +93,10 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 		}
 	})
 
+	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
+		router.importHandler(w, r)
+	})
+
 	mux.HandleFunc("GET /categories", func(w http.ResponseWriter, _ *http.Request) {
 		router.categoriesHandler(w)
 	})
@@ -125,16 +129,12 @@ func New(db *sql.DB, matcher *category.Matcher) http.Handler {
 		router.searchHandler(w, r)
 	})
 
-	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
-		router.importHandler(w, r)
-	})
-
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	//wrap entire mux with live reload middleware
 	wrappedMux := newLiveReloadMiddleware(router, mux)
 
-	return wrappedMux
+	return wrappedMux, router
 }
 
 func (router *router) generateReports() error {
@@ -186,4 +186,8 @@ func (router *router) generateReports() error {
 	router.reports = reports
 
 	return nil
+}
+
+func (router *router) resetCache() {
+	router.reportsOnce = sync.Once{}
 }
