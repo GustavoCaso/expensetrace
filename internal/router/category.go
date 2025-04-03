@@ -114,6 +114,20 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 		router.templates.Render(w, "partials/categories/uncategorized.html", data)
 	}
 
+	_, err = expenseDB.GetCategory(router.db, categoryID)
+
+	if err != nil {
+		log.Println("error GetCategory ", err.Error())
+
+		data := struct {
+			Error error
+		}{
+			Error: err,
+		}
+		router.templates.Render(w, "partials/categories/uncategorized.html", data)
+		return
+	}
+
 	expenses, err := expenseDB.SearchExpensesByDescription(router.db, expenseDescription)
 
 	if err != nil {
@@ -148,8 +162,10 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 			log.Print("not all expenses updated succesfully")
 		}
 
-		router.uncategorizedHandler(w)
+		router.resetCache()
 	}
+
+	router.uncategorizedHandler(w)
 }
 
 func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, r *http.Request) {
@@ -194,7 +210,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 
 	total := len(results)
 
-	if create {
+	if create && total > 0 {
 		categoryID, err := expenseDB.CreateCategory(router.db, name, pattern)
 
 		if err != nil {
@@ -244,6 +260,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 
 		matcher := category.NewMatcher(categories)
 		router.matcher = matcher
+		router.resetCache()
 	}
 
 	data := struct {

@@ -33,14 +33,15 @@ type router struct {
 	templates        templates
 	reports          map[string]report.Report
 	sortedReportKeys []string
-	reportsOnce      sync.Once
+	reportsOnce      *sync.Once
 }
 
 func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	router := &router{
-		reload:  os.Getenv("LIVERELOAD") == "true",
-		matcher: matcher,
-		db:      db,
+		reload:      os.Getenv("LIVERELOAD") == "true",
+		matcher:     matcher,
+		db:          db,
+		reportsOnce: &sync.Once{},
 	}
 
 	mux := &http.ServeMux{}
@@ -181,5 +182,5 @@ func (router *router) generateReports() error {
 }
 
 func (router *router) resetCache() {
-	router.reportsOnce = sync.Once{}
+	router.reportsOnce = &sync.Once{}
 }
