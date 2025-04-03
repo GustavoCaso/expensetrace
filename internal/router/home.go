@@ -2,7 +2,6 @@ package router
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -81,14 +80,9 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if useReportTemplate {
-		err = router.templates.Render(w, "partials/reports/report.html", data)
+		router.templates.Render(w, "partials/reports/report.html", data)
 	} else {
-		err = router.templates.Render(w, "pages/reports/index.html", data)
-	}
-
-	if err != nil {
-		log.Print(err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		router.templates.Render(w, "pages/reports/index.html", data)
 	}
 }
 

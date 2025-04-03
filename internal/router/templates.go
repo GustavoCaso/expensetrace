@@ -27,14 +27,20 @@ var templateFuncs = template.FuncMap{
 
 type templates map[string]*template.Template
 
-func (t templates) Render(w io.Writer, templateName string, data interface{}) error {
+func (t templates) Render(w io.Writer, templateName string, data interface{}) {
 	temp, ok := t[templateName]
 
 	if !ok {
-		return fmt.Errorf("template '%s' is not available", templateName)
+		w.Write([]byte(fmt.Sprintf("template '%s' is not available", templateName)))
+		return
 	}
 	log.Printf("rendering template `%s`\n", templateName)
-	return temp.Execute(w, data)
+	err := temp.Execute(w, data)
+	if err != nil {
+		log.Print(err.Error())
+		errorMessage := fmt.Sprintf("Error rendering template '%s': %v", templateName, err.Error())
+		w.Write([]byte(errorMessage))
+	}
 }
 
 func localFSDirectory() fs.FS {

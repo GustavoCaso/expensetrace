@@ -33,14 +33,15 @@ type router struct {
 	templates        templates
 	reports          map[string]report.Report
 	sortedReportKeys []string
-	reportsOnce      sync.Once
+	reportsOnce      *sync.Once
 }
 
 func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	router := &router{
-		reload:  os.Getenv("LIVERELOAD") == "true",
-		matcher: matcher,
-		db:      db,
+		reload:      os.Getenv("LIVERELOAD") == "true",
+		matcher:     matcher,
+		db:          db,
+		reportsOnce: &sync.Once{},
 	}
 
 	mux := &http.ServeMux{}
@@ -86,11 +87,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	})
 
 	mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
-		err := router.templates.Render(w, "pages/import/index.html", nil)
-		if err != nil {
-			log.Print(err.Error())
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		}
+		router.templates.Render(w, "pages/import/index.html", nil)
 	})
 
 	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
@@ -106,11 +103,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	})
 
 	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
-		err := router.templates.Render(w, "pages/categories/new.html", nil)
-		if err != nil {
-			log.Print(err.Error())
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		}
+		router.templates.Render(w, "pages/categories/new.html", nil)
 	})
 
 	mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {
@@ -189,5 +182,5 @@ func (router *router) generateReports() error {
 }
 
 func (router *router) resetCache() {
-	router.reportsOnce = sync.Once{}
+	router.reportsOnce = &sync.Once{}
 }
