@@ -1,36 +1,14 @@
 package db
 
 import (
-	"database/sql"
 	"testing"
 
 	"github.com/GustavoCaso/expensetrace/internal/config"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func setupTestCategoryDB(t *testing.T) *sql.DB {
-	t.Helper()
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
-	}
-
-	err = CreateCategoriesTable(db)
-	if err != nil {
-		t.Fatalf("Failed to create categories table: %v", err)
-	}
-
-	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Errorf("Failed to close test categories database: %v", err)
-		}
-	})
-
-	return db
-}
-
 func TestCreateCategoriesTable(t *testing.T) {
-	db := setupTestCategoryDB(t)
+	db := setupTestDB(t)
 
 	// Verify table exists by trying to insert a record
 	_, err := db.Exec("INSERT INTO categories(name, pattern) VALUES(?, ?)", "Test", "test.*")
@@ -40,7 +18,7 @@ func TestCreateCategoriesTable(t *testing.T) {
 }
 
 func TestPopulateCategoriesFromConfig(t *testing.T) {
-	db := setupTestCategoryDB(t)
+	db := setupTestDB(t)
 
 	conf := &config.Config{
 		Categories: []config.Category{
@@ -76,7 +54,7 @@ func TestPopulateCategoriesFromConfig(t *testing.T) {
 }
 
 func TestGetCategories(t *testing.T) {
-	db := setupTestCategoryDB(t)
+	db := setupTestDB(t)
 
 	// Insert test categories
 	testCategories := []struct {
@@ -115,7 +93,7 @@ func TestGetCategories(t *testing.T) {
 }
 
 func TestGetCategory(t *testing.T) {
-	db := setupTestCategoryDB(t)
+	db := setupTestDB(t)
 
 	// Insert test category
 	_, err := db.Exec("INSERT INTO categories(name, pattern) VALUES(?, ?)", "Test", "test.*")
@@ -124,7 +102,8 @@ func TestGetCategory(t *testing.T) {
 	}
 
 	// Test getting existing category
-	category, err := GetCategory(db, 1)
+	categoryID := 1
+	category, err := GetCategory(db, &categoryID)
 	if err != nil {
 		t.Errorf("Failed to get category: %v", err)
 	}
@@ -137,14 +116,15 @@ func TestGetCategory(t *testing.T) {
 	}
 
 	// Test getting non-existent category
-	_, err = GetCategory(db, 999)
+	categoryID = 999
+	_, err = GetCategory(db, &categoryID)
 	if err == nil {
 		t.Error("Expected error when getting non-existent category, got nil")
 	}
 }
 
 func TestCreateCategory(t *testing.T) {
-	db := setupTestCategoryDB(t)
+	db := setupTestDB(t)
 
 	id, err := CreateCategory(db, "Test", "test.*")
 	if err != nil {
@@ -156,7 +136,8 @@ func TestCreateCategory(t *testing.T) {
 	}
 
 	// Verify category was created
-	category, err := GetCategory(db, int(id))
+	categoryID := int(id)
+	category, err := GetCategory(db, &categoryID)
 	if err != nil {
 		t.Errorf("Failed to get created category: %v", err)
 	}
@@ -170,7 +151,7 @@ func TestCreateCategory(t *testing.T) {
 }
 
 func TestDeleteCategoriesDB(t *testing.T) {
-	db := setupTestCategoryDB(t)
+	db := setupTestDB(t)
 
 	// Insert test category
 	_, err := db.Exec("INSERT INTO categories(name, pattern) VALUES(?, ?)", "Test", "test.*")

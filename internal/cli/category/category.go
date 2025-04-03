@@ -141,7 +141,7 @@ func recategorize(db *sql.DB, categoryMatcher *category.Matcher, expenses []*exp
 	for _, ex := range expenses {
 		id, c := categoryMatcher.Match(ex.Description)
 
-		if id > 0 && c != "" {
+		if id != nil && c != "" {
 			ex.CategoryID = id
 			expensesToUpdate = append(expensesToUpdate, ex)
 		}

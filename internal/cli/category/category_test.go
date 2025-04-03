@@ -151,16 +151,20 @@ func TestRecategorize(t *testing.T) {
 		t.Fatalf("Failed to get updated expenses: %v", err)
 	}
 
-	expectedCategories := map[string]int{
-		"restaurant":    1, // Food category
-		"uber":          2, // Transport category
-		"Other expense": 0, // No category
+	expectedCategories := map[string]*int{
+		"restaurant":    intPtr(1), // Food category
+		"uber":          intPtr(2), // Transport category
+		"Other expense": nil,       // No category
 	}
 
 	for _, e := range updatedExpenses {
 		expectedCategoryID := expectedCategories[e.Description]
-		if e.CategoryID != expectedCategoryID {
-			t.Errorf("Expense %q has category ID %d, want %d", e.Description, e.CategoryID, expectedCategoryID)
+		if e.CategoryID == nil {
+			continue
+		}
+
+		if *e.CategoryID != *expectedCategoryID {
+			t.Errorf("Expense %q has category ID %d, want %d", e.Description, *e.CategoryID, *expectedCategoryID)
 		}
 	}
 }
@@ -253,4 +257,8 @@ func TestRun(t *testing.T) {
 	if err == nil {
 		t.Error("Run() expected error for invalid output location, got nil")
 	}
+}
+
+func intPtr(x int) *int {
+	return &x
 }

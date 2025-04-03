@@ -41,12 +41,12 @@ func (c Matcher) Categories() []db.Category {
 	return c.categories
 }
 
-func (c Matcher) Match(s string) (int, string) {
+func (c Matcher) Match(s string) (*int, string) {
 	for _, matcher := range c.matchers {
 		if matcher.re.MatchString(s) {
-			return matcher.id, matcher.category
+			return &matcher.id, matcher.category
 		}
 	}
 
-	return 0, ""
+	return nil, ""
 }

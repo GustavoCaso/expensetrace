@@ -16,14 +16,15 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to open test database: %v", err)
 	}
 
-	err = db.CreateExpenseTable(database)
+	err = db.ApplyMigrations(database)
 	if err != nil {
-		t.Fatalf("Failed to create expense table: %v", err)
+		t.Fatalf("Failed to create schema: %v", err)
 	}
 
-	err = db.CreateCategoriesTable(database)
+	// Enable foreign key constraints
+	_, err = database.Exec("PRAGMA foreign_keys = ON")
 	if err != nil {
-		t.Fatalf("Failed to create categories table: %v", err)
+		t.Fatalf("Failed to enable PRAGMA: %v", err)
 	}
 
 	t.Cleanup(func() {

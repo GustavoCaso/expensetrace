@@ -19,6 +19,14 @@ func TestExpensesHandler(t *testing.T) {
 		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
 		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
 	}
+
+	for _, c := range categories {
+		_, err := db.CreateCategory(database, c.Name, c.Pattern)
+		if err != nil {
+			t.Fatalf("Failed to create category: %v", err)
+		}
+	}
+
 	matcher := category.NewMatcher(categories)
 
 	// Create test expenses
@@ -31,7 +39,7 @@ func TestExpensesHandler(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  1,
+			CategoryID:  intPtr(1),
 		},
 		{
 			Source:      "Test Source",
@@ -40,7 +48,7 @@ func TestExpensesHandler(t *testing.T) {
 			Amount:      -50000,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  2,
+			CategoryID:  intPtr(2),
 		},
 	}
 
@@ -76,7 +84,7 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  1,
+			CategoryID:  intPtr(1),
 		},
 		{
 			Source:      "Test Source",
@@ -85,7 +93,7 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 			Amount:      -50000,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  2,
+			CategoryID:  intPtr(2),
 		},
 	}
 
@@ -118,10 +126,10 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 	foundFood := false
 	foundTransport := false
 	for _, expense := range monthExpenses {
-		if expense.CategoryID == 1 {
+		if *expense.CategoryID == 1 {
 			foundFood = true
 		}
-		if expense.CategoryID == 2 {
+		if *expense.CategoryID == 2 {
 			foundTransport = true
 		}
 	}
@@ -132,4 +140,8 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 	if !foundTransport {
 		t.Error("Transport expense not found")
 	}
+}
+
+func intPtr(x int) *int {
+	return &x
 }

@@ -46,7 +46,7 @@ func TestImport(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  1,
+			CategoryID:  intPtr(1),
 		},
 		{
 			Source:      "Test Source",
@@ -55,7 +55,7 @@ func TestImport(t *testing.T) {
 			Amount:      -50000,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  2,
+			CategoryID:  intPtr(2),
 		},
 	}
 

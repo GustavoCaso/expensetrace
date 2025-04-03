@@ -79,13 +79,9 @@ func main() {
 			log.Fatalf("Unable to get DB: %s", err.Error())
 		}
 
-		err = db.CreateExpenseTable(dbInstance)
+		err = db.ApplyMigrations(dbInstance)
 		if err != nil {
-			log.Fatalf("Unable to get create expenses table: %s", err.Error())
-		}
-		err = db.CreateCategoriesTable(dbInstance)
-		if err != nil {
-			log.Fatalf("Unable to get create categories table: %s", err.Error())
+			log.Fatalf("Unable to get create schema: %s", err.Error())
 		}
 
 		err = db.PopulateCategoriesFromConfig(dbInstance, conf)

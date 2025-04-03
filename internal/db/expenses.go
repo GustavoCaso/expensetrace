@@ -26,13 +26,13 @@ type Expense struct {
 	Amount      int64
 	Type        ExpenseType
 	Currency    string
-	CategoryID  int
+	CategoryID  *int
 
 	db *sql.DB
 }
 
 func (e Expense) Category() (string, error) {
-	if e.CategoryID != 0 {
+	if e.CategoryID != nil {
 		if e.db == nil {
 			fmt.Println("missing db instance on expense instance")
 			return "", nil
@@ -53,33 +53,6 @@ func (e Expense) Category() (string, error) {
 //
 //go:embed templates/*
 var content embed.FS
-
-var createTableStatement = `
-CREATE TABLE IF NOT EXISTS expenses
-(
- id INTEGER PRIMARY KEY,
- source TEXT,
- amount INTEGER NOT NULL,
- description TEXT NOT NULL,
- expense_type INTEGER NOT NULL,
- date INTEGER NOT NULL,
- currency TEXT NOT NULL,
- category_id INTEGER,
- UNIQUE(source, date, description, amount) ON CONFLICT FAIL
-) STRICT;
-`
-
-func CreateExpenseTable(db *sql.DB) error {
-	// Create table
-	statement, err := db.Prepare(createTableStatement)
-	if err != nil {
-		return err
-	}
-
-	_, err = statement.Exec()
-
-	return err
-}
 
 func DeleteExpenseDB(db *sql.DB) error {
 	// drop table
@@ -202,7 +175,7 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]*Ex
 }
 
 func GetExpensesWithoutCategory(db *sql.DB) ([]*Expense, error) {
-	rows, err := db.Query("SELECT * FROM expenses WHERE category_id == 0")
+	rows, err := db.Query("SELECT * FROM expenses WHERE category_id IS NULL")
 	if err != nil {
 		return []*Expense{}, err
 	}
