@@ -86,11 +86,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	})
 
 	mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
-		err := router.templates.Render(w, "pages/import/index.html", nil)
-		if err != nil {
-			log.Print(err.Error())
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		}
+		router.templates.Render(w, "pages/import/index.html", nil)
 	})
 
 	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
@@ -106,11 +102,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	})
 
 	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
-		err := router.templates.Render(w, "pages/categories/new.html", nil)
-		if err != nil {
-			log.Print(err.Error())
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		}
+		router.templates.Render(w, "pages/categories/new.html", nil)
 	})
 
 	mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {

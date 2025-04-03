@@ -35,12 +35,7 @@ func (router *router) categoriesHandler(w http.ResponseWriter) {
 		}
 	}
 
-	err = router.templates.Render(w, "pages/categories/index.html", data)
-	if err != nil {
-		log.Print(err.Error())
-		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-		w.Write([]byte(errorMessage))
-	}
+	router.templates.Render(w, "pages/categories/index.html", data)
 }
 
 type reportExpense struct {
@@ -57,13 +52,8 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 		}{
 			Error: err,
 		}
-		err = router.templates.Render(w, "partials/categories/uncategorized.html", data)
-		if err != nil {
-			log.Print(err.Error())
-			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-			w.Write([]byte(errorMessage))
-			return
-		}
+		router.templates.Render(w, "partials/categories/uncategorized.html", data)
+		return
 	}
 
 	groupedExpenses := map[string]reportExpense{}
@@ -104,13 +94,7 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 		Categories:      router.matcher.Categories(),
 		Error:           nil,
 	}
-	err = router.templates.Render(w, "partials/categories/uncategorized.html", data)
-	if err != nil {
-		log.Print(err.Error())
-		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-		w.Write([]byte(errorMessage))
-		return
-	}
+	router.templates.Render(w, "partials/categories/uncategorized.html", data)
 }
 
 func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Request) {
@@ -127,13 +111,7 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		err = router.templates.Render(w, "partials/categories/uncategorized.html", data)
-		if err != nil {
-			log.Print(err.Error())
-			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-			w.Write([]byte(errorMessage))
-			return
-		}
+		router.templates.Render(w, "partials/categories/uncategorized.html", data)
 	}
 
 	expenses, err := expenseDB.SearchExpensesByDescription(router.db, expenseDescription)
@@ -146,13 +124,8 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		err = router.templates.Render(w, "partials/categories/uncategorized.html", data)
-		if err != nil {
-			log.Print(err.Error())
-			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-			w.Write([]byte(errorMessage))
-			return
-		}
+		router.templates.Render(w, "partials/categories/uncategorized.html", data)
+		return
 	}
 
 	if len(expenses) > 0 {
@@ -162,20 +135,13 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 
 		updated, err := expenseDB.UpdateExpenses(router.db, expenses)
 		if err != nil {
-			log.Println("error UpdateExpenses ", err.Error())
-
 			data := struct {
 				Error error
 			}{
 				Error: err,
 			}
-			err = router.templates.Render(w, "partials/categories/uncategorized.html", data)
-			if err != nil {
-				log.Print(err.Error())
-				errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-				w.Write([]byte(errorMessage))
-				return
-			}
+			router.templates.Render(w, "partials/categories/uncategorized.html", data)
+			return
 		}
 
 		if updated != int64(len(expenses)) {
@@ -199,13 +165,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			Error: fmt.Errorf("category must include name and a valid regex pattern. Ensure that you populate the name and pattern input"),
 		}
 
-		err := router.templates.Render(w, "partials/categories/new_result.html", data)
-		if err != nil {
-			log.Print(err.Error())
-			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-			w.Write([]byte(errorMessage))
-			return
-		}
+		router.templates.Render(w, "partials/categories/new_result.html", data)
 		return
 	}
 
@@ -218,13 +178,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			Error: err,
 		}
 
-		err = router.templates.Render(w, "partials/categories/new_result.html", data)
-		if err != nil {
-			log.Print(err.Error())
-			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-			w.Write([]byte(errorMessage))
-			return
-		}
+		router.templates.Render(w, "partials/categories/new_result.html", data)
 		return
 	}
 
@@ -250,13 +204,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 				Error: err,
 			}
 
-			err = router.templates.Render(w, "partials/categories/new_result.html", data)
-			if err != nil {
-				log.Print(err.Error())
-				errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-				w.Write([]byte(errorMessage))
-				return
-			}
+			router.templates.Render(w, "partials/categories/new_result.html", data)
 			return
 		}
 
@@ -272,13 +220,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 				Error: err,
 			}
 
-			err = router.templates.Render(w, "partials/categories/new_result.html", data)
-			if err != nil {
-				log.Print(err.Error())
-				errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-				w.Write([]byte(errorMessage))
-				return
-			}
+			router.templates.Render(w, "partials/categories/new_result.html", data)
 			return
 		}
 
@@ -296,13 +238,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 				Error: err,
 			}
 
-			err = router.templates.Render(w, "partials/categories/new_result.html", data)
-			if err != nil {
-				log.Print(err.Error())
-				errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-				w.Write([]byte(errorMessage))
-				return
-			}
+			router.templates.Render(w, "partials/categories/new_result.html", data)
 			return
 		}
 
@@ -326,11 +262,5 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 		Create:  create,
 	}
 
-	err = router.templates.Render(w, "partials/categories/new_result.html", data)
-	if err != nil {
-		log.Print(err.Error())
-		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-		w.Write([]byte(errorMessage))
-		return
-	}
+	router.templates.Render(w, "partials/categories/new_result.html", data)
 }

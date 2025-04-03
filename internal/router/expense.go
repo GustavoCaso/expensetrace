@@ -1,8 +1,6 @@
 package router
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"sort"
 	"time"
@@ -35,13 +33,7 @@ func (router *router) expensesHandler(w http.ResponseWriter) {
 		}{
 			Error: err,
 		}
-		err = router.templates.Render(w, "pages/expenses/index.html", data)
-		if err != nil {
-			log.Print(err.Error())
-			errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-			w.Write([]byte(errorMessage))
-			return
-		}
+		router.templates.Render(w, "pages/expenses/index.html", data)
 	}
 
 	groupedExpenses, years := expensesGroupByYearAndMonth(expenses)
@@ -62,12 +54,7 @@ func (router *router) expensesHandler(w http.ResponseWriter) {
 		CurrentMonth: today.Month().String(),
 	}
 
-	err = router.templates.Render(w, "pages/expenses/index.html", data)
-	if err != nil {
-		log.Print(err.Error())
-		errorMessage := fmt.Sprintf("Internal Server Error: %v", err.Error())
-		w.Write([]byte(errorMessage))
-	}
+	router.templates.Render(w, "pages/expenses/index.html", data)
 }
 
 func expensesGroupByYearAndMonth(expenses []*expenseDB.Expense) (expensesByYear, []int) {
