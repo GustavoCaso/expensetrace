@@ -21,6 +21,38 @@ func createMigrationsTable(db *sql.DB) error {
 	return err
 }
 
+func DropTables(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction for dropping tables: %w", err)
+	}
+
+	// drop tables
+	_, err = tx.Exec("DROP TABLE IF EXISTS expenses;")
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DROP TABLE IF EXISTS categories;")
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DROP TABLE IF EXISTS schema_migrations;")
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit deletion: %w", err)
+	}
+
+	return nil
+}
+
 func ApplyMigrations(db *sql.DB) error {
 	// Create migrations table if it doesn't exist
 	if err := createMigrationsTable(db); err != nil {
@@ -102,7 +134,7 @@ func ApplyMigrations(db *sql.DB) error {
 					date INTEGER NOT NULL,
 					currency TEXT NOT NULL,
 					category_id INTEGER,
-					UNIQUE(source, date, description, amount) ON CONFLICT FAIL
+					UNIQUE(source, date, description, amount) ON CONFLICT FAIL,
 					FOREIGN KEY(category_id) REFERENCES categories(id)
 				) STRICT;
 				INSERT INTO expenses_new SELECT * FROM expenses;

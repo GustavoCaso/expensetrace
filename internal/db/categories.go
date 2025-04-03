@@ -124,19 +124,3 @@ func CreateCategory(db *sql.DB, name, pattern string) (int64, error) {
 
 	return result.LastInsertId()
 }
-
-func DeleteCategoriesDB(db *sql.DB) error {
-	// drop table
-	statement, err := db.Prepare("DROP TABLE IF EXISTS categories;")
-	if err != nil {
-		return err
-	}
-
-	_, err = statement.Exec()
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}

@@ -54,22 +54,6 @@ func (e Expense) Category() (string, error) {
 //go:embed templates/*
 var content embed.FS
 
-func DeleteExpenseDB(db *sql.DB) error {
-	// drop table
-	statement, err := db.Prepare("DROP TABLE IF EXISTS expenses;")
-	if err != nil {
-		return err
-	}
-
-	_, err = statement.Exec()
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 type ErrInsert struct {
 	err error
 }

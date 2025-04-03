@@ -149,24 +149,3 @@ func TestCreateCategory(t *testing.T) {
 		t.Errorf("Created category.Pattern = %v, want test.*", category.Pattern)
 	}
 }
-
-func TestDeleteCategoriesDB(t *testing.T) {
-	db := setupTestDB(t)
-
-	// Insert test category
-	_, err := db.Exec("INSERT INTO categories(name, pattern) VALUES(?, ?)", "Test", "test.*")
-	if err != nil {
-		t.Fatalf("Failed to insert test category: %v", err)
-	}
-
-	err = DeleteCategoriesDB(db)
-	if err != nil {
-		t.Errorf("Failed to delete categories table: %v", err)
-	}
-
-	// Verify table was deleted
-	_, err = db.Query("SELECT * FROM categories")
-	if err == nil {
-		t.Error("Expected error when querying deleted table, got nil")
-	}
-}
