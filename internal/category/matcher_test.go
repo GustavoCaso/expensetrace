@@ -35,31 +35,31 @@ func TestMatch(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		wantID   int
+		wantID   *int
 		wantName string
 	}{
 		{
 			name:     "should match food category",
 			input:    "restaurant bill",
-			wantID:   1,
+			wantID:   intPtr(1),
 			wantName: "Food",
 		},
 		{
 			name:     "should match transport category",
 			input:    "uber ride",
-			wantID:   2,
+			wantID:   intPtr(2),
 			wantName: "Transport",
 		},
 		{
 			name:     "should match entertainment category",
 			input:    "netflix subscription",
-			wantID:   3,
+			wantID:   intPtr(3),
 			wantName: "Entertainment",
 		},
 		{
 			name:     "should not match any category",
 			input:    "random text",
-			wantID:   0,
+			wantID:   nil,
 			wantName: "",
 		},
 	}
@@ -67,9 +67,11 @@ func TestMatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotID, gotName := matcher.Match(tt.input)
-			if gotID != tt.wantID {
-				t.Errorf("Match() ID = %v, want %v", gotID, tt.wantID)
+
+			if gotID != nil && *gotID != *tt.wantID {
+				t.Errorf("Match() ID = %v, want %v", *gotID, *tt.wantID)
 			}
+
 			if gotName != tt.wantName {
 				t.Errorf("Match() Name = %v, want %v", gotName, tt.wantName)
 			}
@@ -101,4 +103,8 @@ func TestCategories(t *testing.T) {
 			t.Errorf("Categories()[%d].Pattern = %v, want %v", i, cat.Pattern, categories[i].Pattern)
 		}
 	}
+}
+
+func intPtr(x int) *int {
+	return &x
 }

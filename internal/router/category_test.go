@@ -161,7 +161,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 		t.Fatalf("Failed more expenses than it should: %v", err)
 	}
 
-	if expensesUpdated[0].CategoryID != categoryId {
+	if *expensesUpdated[0].CategoryID != categoryId {
 		t.Fatal("Expense did not update the category ID")
 	}
 
@@ -238,7 +238,7 @@ func TestUpdateCategoryHandler(t *testing.T) {
 		t.Fatalf("Failed more expenses than it should: %v", err)
 	}
 
-	if expensesUpdated[0].CategoryID != int(categoryID) {
+	if *expensesUpdated[0].CategoryID != int(categoryID) {
 		t.Fatal("Expense did not update the category ID")
 	}
 

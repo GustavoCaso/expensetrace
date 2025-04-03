@@ -282,7 +282,7 @@ func TestExpenseCategory(t *testing.T) {
 		{
 			name: "Uncategorized income",
 			expense: &expenseDB.Expense{
-				CategoryID: 0,
+				CategoryID: nil,
 				Type:       expenseDB.IncomeType,
 			},
 			expected: "uncategorized income",
@@ -290,7 +290,7 @@ func TestExpenseCategory(t *testing.T) {
 		{
 			name: "Uncategorized charge",
 			expense: &expenseDB.Expense{
-				CategoryID: 0,
+				CategoryID: nil,
 				Type:       expenseDB.ChargeType,
 			},
 			expected: "uncategorized charge",
@@ -298,7 +298,7 @@ func TestExpenseCategory(t *testing.T) {
 		{
 			name: "Categorized expense",
 			expense: &expenseDB.Expense{
-				CategoryID: 1,
+				CategoryID: intPtr(1),
 				Type:       expenseDB.ChargeType,
 			},
 			expected: "Needs to fix this",
@@ -313,4 +313,8 @@ func TestExpenseCategory(t *testing.T) {
 			}
 		})
 	}
+}
+
+func intPtr(x int) *int {
+	return &x
 }

@@ -49,6 +49,14 @@ func TestRun(t *testing.T) {
 		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
 		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
 	}
+
+	for _, c := range categories {
+		_, err := db.CreateCategory(database, c.Name, c.Pattern)
+		if err != nil {
+			t.Fatalf("Failed to create category: %v", err)
+		}
+	}
+
 	matcher := category.NewMatcher(categories)
 
 	// Create test CSV file with various amount formats

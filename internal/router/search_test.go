@@ -19,6 +19,14 @@ func TestSearchHandler(t *testing.T) {
 	categories := []db.Category{
 		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
 	}
+
+	for _, c := range categories {
+		_, err := db.CreateCategory(database, c.Name, c.Pattern)
+		if err != nil {
+			t.Fatalf("Failed to create category: %v", err)
+		}
+	}
+
 	matcher := category.NewMatcher(categories)
 
 	// Create test expenses
@@ -30,7 +38,7 @@ func TestSearchHandler(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  1,
+			CategoryID:  intPtr(1),
 		},
 	}
 

@@ -114,7 +114,7 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 		router.templates.Render(w, "partials/categories/uncategorized.html", data)
 	}
 
-	_, err = expenseDB.GetCategory(router.db, categoryID)
+	_, err = expenseDB.GetCategory(router.db, &categoryID)
 
 	if err != nil {
 		log.Println("error GetCategory ", err.Error())
@@ -144,7 +144,7 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 
 	if len(expenses) > 0 {
 		for _, ex := range expenses {
-			ex.CategoryID = categoryID
+			ex.CategoryID = &categoryID
 		}
 
 		updated, err := expenseDB.UpdateExpenses(router.db, expenses)
@@ -224,8 +224,10 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			return
 		}
 
+		categoryIDInt := int(categoryID)
+
 		for _, ex := range expenses {
-			ex.CategoryID = int(categoryID)
+			ex.CategoryID = &categoryIDInt
 		}
 
 		updated, err := expenseDB.UpdateExpenses(router.db, expenses)

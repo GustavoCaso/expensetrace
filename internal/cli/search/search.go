@@ -125,7 +125,7 @@ func (c searchCommand) Run(db *sql.DB, matcher *categoryPkg.Matcher) error {
 }
 
 func expeseCategory(ex *expenseDB.Expense) string {
-	if ex.CategoryID == 0 {
+	if ex.CategoryID == nil {
 		if ex.Type == expenseDB.IncomeType {
 			return "uncategorized income"
 		} else {

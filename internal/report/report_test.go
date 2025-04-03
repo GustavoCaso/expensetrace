@@ -20,7 +20,7 @@ func TestGenerate(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  1,
+			CategoryID:  intPtr(1),
 		},
 		{
 			Source:      "Test Source",
@@ -29,7 +29,7 @@ func TestGenerate(t *testing.T) {
 			Amount:      -50000,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  2,
+			CategoryID:  intPtr(2),
 		},
 		{
 			Source:      "Test Source",
@@ -38,7 +38,7 @@ func TestGenerate(t *testing.T) {
 			Amount:      5000000,
 			Type:        db.IncomeType,
 			Currency:    "USD",
-			CategoryID:  3,
+			CategoryID:  intPtr(3),
 		},
 	}
 
@@ -97,7 +97,7 @@ func TestCategories(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  1,
+			CategoryID:  intPtr(1),
 		},
 		{
 			Source:      "Test Source",
@@ -106,7 +106,7 @@ func TestCategories(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  1,
+			CategoryID:  intPtr(1),
 		},
 		{
 			Source:      "Test Source",
@@ -115,7 +115,7 @@ func TestCategories(t *testing.T) {
 			Amount:      5000000,
 			Type:        db.IncomeType,
 			Currency:    "USD",
-			CategoryID:  3,
+			CategoryID:  intPtr(3),
 		},
 	}
 
@@ -184,4 +184,8 @@ func TestCalendarDays(t *testing.T) {
 			}
 		})
 	}
+}
+
+func intPtr(x int) *int {
+	return &x
 }

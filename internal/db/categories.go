@@ -10,33 +10,11 @@ import (
 	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
-var createCategoriesTableStatement = `
-CREATE TABLE IF NOT EXISTS categories
-(
- id INTEGER PRIMARY KEY,
- name TEXT NOT NULL,
- pattern TEXT NOT NULL,
- UNIQUE(name) ON CONFLICT FAIL
-) STRICT;
-`
-
 type Category struct {
 	ID      int
 	Name    string
 	Pattern string
 	Total   int
-}
-
-func CreateCategoriesTable(db *sql.DB) error {
-	// Create table
-	statement, err := db.Prepare(createCategoriesTableStatement)
-	if err != nil {
-		return err
-	}
-
-	_, err = statement.Exec()
-
-	return err
 }
 
 func PopulateCategoriesFromConfig(db *sql.DB, conf *config.Config) error {
@@ -91,7 +69,7 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 	return categories, nil
 }
 
-func GetCategory(db *sql.DB, categoryID int) (Category, error) {
+func GetCategory(db *sql.DB, categoryID *int) (Category, error) {
 	row := db.QueryRow("SELECT * FROM categories WHERE id=$1", categoryID)
 	var id int
 	var name string
@@ -145,20 +123,4 @@ func CreateCategory(db *sql.DB, name, pattern string) (int64, error) {
 	}
 
 	return result.LastInsertId()
-}
-
-func DeleteCategoriesDB(db *sql.DB) error {
-	// drop table
-	statement, err := db.Prepare("DROP TABLE IF EXISTS categories;")
-	if err != nil {
-		return err
-	}
-
-	_, err = statement.Exec()
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

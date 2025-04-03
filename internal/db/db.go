@@ -7,5 +7,16 @@ import (
 )
 
 func GetDB(dbsource string) (*sql.DB, error) {
-	return sql.Open("sqlite3", dbsource)
+	db, err := sql.Open("sqlite3", dbsource)
+	if err != nil {
+		return nil, err
+	}
+
+	// Enable foreign key constraints
+	_, err = db.Exec("PRAGMA foreign_keys = ON")
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }

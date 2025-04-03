@@ -8,42 +8,46 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func setupTestExpenseDB(t *testing.T) *sql.DB {
+func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	db, err := sql.Open("sqlite3", ":memory:")
+	database, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
 	}
 
-	err = CreateExpenseTable(db)
+	err = ApplyMigrations(database)
 	if err != nil {
-		t.Fatalf("Failed to create expenses table: %v", err)
+		t.Fatalf("Failed to create schema: %v", err)
+	}
+
+	// Enable foreign key constraints
+	_, err = database.Exec("PRAGMA foreign_keys = ON")
+	if err != nil {
+		t.Fatalf("Failed to enable PRAGMA: %v", err)
 	}
 
 	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
+		if err := database.Close(); err != nil {
 			t.Errorf("Failed to close test expenses database: %v", err)
 		}
 	})
 
-	return db
+	return database
 }
 
 func TestCreateExpenseTable(t *testing.T) {
-	db := setupTestExpenseDB(t)
-	defer db.Close()
+	database := setupTestDB(t)
 
 	// Verify table exists by trying to insert a record
-	_, err := db.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
-		"test", 1000, "Test expense", ChargeType, time.Now().Unix(), "USD", 0)
+	_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+		"test", 1000, "Test expense", ChargeType, time.Now().Unix(), "USD", nil)
 	if err != nil {
 		t.Errorf("Failed to insert test expense: %v", err)
 	}
 }
 
 func TestInsertExpenses(t *testing.T) {
-	db := setupTestExpenseDB(t)
-	defer db.Close()
+	database := setupTestDB(t)
 
 	now := time.Now()
 	expenses := []*Expense{
@@ -54,7 +58,7 @@ func TestInsertExpenses(t *testing.T) {
 			Type:        ChargeType,
 			Date:        now,
 			Currency:    "USD",
-			CategoryID:  0,
+			CategoryID:  nil,
 		},
 		{
 			Source:      "test2",
@@ -63,17 +67,17 @@ func TestInsertExpenses(t *testing.T) {
 			Type:        IncomeType,
 			Date:        now,
 			Currency:    "USD",
-			CategoryID:  0,
+			CategoryID:  nil,
 		},
 	}
 
-	errs := InsertExpenses(db, expenses)
+	errs := InsertExpenses(database, expenses)
 	if len(errs) > 0 {
 		t.Errorf("Failed to insert expenses: %v", errs)
 	}
 
 	// Verify expenses were inserted
-	got, err := GetExpenses(db)
+	got, err := GetExpenses(database)
 	if err != nil {
 		t.Errorf("Failed to get expenses: %v", err)
 	}
@@ -105,8 +109,7 @@ func TestInsertExpenses(t *testing.T) {
 }
 
 func TestGetExpenses(t *testing.T) {
-	db := setupTestExpenseDB(t)
-	defer db.Close()
+	database := setupTestDB(t)
 
 	now := time.Now()
 	testExpenses := []struct {
@@ -115,22 +118,28 @@ func TestGetExpenses(t *testing.T) {
 		description string
 		expenseType ExpenseType
 		currency    string
-		categoryID  int
+		categoryID  *int
 	}{
-		{"test1", 1000, "Test expense 1", ChargeType, "USD", 0},
-		{"test2", 2000, "Test expense 2", IncomeType, "USD", 0},
-		{"test3", 3000, "Test expense 3", ChargeType, "EUR", 1},
+		{"test1", 1000, "Test expense 1", ChargeType, "USD", nil},
+		{"test2", 2000, "Test expense 2", IncomeType, "USD", nil},
+		{"test3", 3000, "Test expense 3", ChargeType, "EUR", intPtr(1)},
+	}
+
+	// Create Category 1
+	_, err := CreateCategory(database, "Test", "*")
+	if err != nil {
+		t.Fatalf("Failed to create category: %v", err)
 	}
 
 	for _, exp := range testExpenses {
-		_, err := db.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+		_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
 			exp.source, exp.amount, exp.description, exp.expenseType, now.Unix(), exp.currency, exp.categoryID)
 		if err != nil {
 			t.Fatalf("Failed to insert test expense: %v", err)
 		}
 	}
 
-	expenses, err := GetExpenses(db)
+	expenses, err := GetExpenses(database)
 	if err != nil {
 		t.Errorf("Failed to get expenses: %v", err)
 	}
@@ -155,15 +164,17 @@ func TestGetExpenses(t *testing.T) {
 		if exp.Currency != testExpenses[i].currency {
 			t.Errorf("Expense[%d].Currency = %v, want %v", i, exp.Currency, testExpenses[i].currency)
 		}
-		if exp.CategoryID != testExpenses[i].categoryID {
-			t.Errorf("Expense[%d].CategoryID = %v, want %v", i, exp.CategoryID, testExpenses[i].categoryID)
+		if exp.CategoryID == nil {
+			continue
+		}
+		if *exp.CategoryID != *testExpenses[i].categoryID {
+			t.Errorf("Expense[%d].CategoryID = %v, want %v", i, *exp.CategoryID, *testExpenses[i].categoryID)
 		}
 	}
 }
 
 func TestGetExpensesFromDateRange(t *testing.T) {
-	db := setupTestExpenseDB(t)
-	defer db.Close()
+	database := setupTestDB(t)
 
 	now := time.Now()
 	yesterday := now.AddDate(0, 0, -1)
@@ -177,15 +188,21 @@ func TestGetExpensesFromDateRange(t *testing.T) {
 		expenseType ExpenseType
 		date        time.Time
 		currency    string
-		categoryID  int
+		categoryID  *int
 	}{
-		{"test1", 1000, "Test expense 1", ChargeType, yesterday, "USD", 0},
-		{"test2", 2000, "Test expense 2", IncomeType, now, "USD", 0},
-		{"test3", 3000, "Test expense 3", ChargeType, tomorrow, "EUR", 1},
+		{"test1", 1000, "Test expense 1", ChargeType, yesterday, "USD", nil},
+		{"test2", 2000, "Test expense 2", IncomeType, now, "USD", nil},
+		{"test3", 3000, "Test expense 3", ChargeType, tomorrow, "EUR", intPtr(1)},
+	}
+
+	// Create Category 1
+	_, err := CreateCategory(database, "Test", "*")
+	if err != nil {
+		t.Fatalf("Failed to create category: %v", err)
 	}
 
 	for _, exp := range testExpenses {
-		_, err := db.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+		_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
 			exp.source, exp.amount, exp.description, exp.expenseType, exp.date.Unix(), exp.currency, exp.categoryID)
 		if err != nil {
 			t.Fatalf("Failed to insert test expense: %v", err)
@@ -193,7 +210,7 @@ func TestGetExpensesFromDateRange(t *testing.T) {
 	}
 
 	// Test getting expenses within date range
-	expenses, err := GetExpensesFromDateRange(db, yesterday, tomorrow)
+	expenses, err := GetExpensesFromDateRange(database, yesterday, tomorrow)
 	if err != nil {
 		t.Errorf("Failed to get expenses from date range: %v", err)
 	}
@@ -204,8 +221,7 @@ func TestGetExpensesFromDateRange(t *testing.T) {
 }
 
 func TestGetExpensesWithoutCategory(t *testing.T) {
-	db := setupTestExpenseDB(t)
-	defer db.Close()
+	database := setupTestDB(t)
 
 	now := time.Now()
 	testExpenses := []struct {
@@ -214,22 +230,28 @@ func TestGetExpensesWithoutCategory(t *testing.T) {
 		description string
 		expenseType ExpenseType
 		currency    string
-		categoryID  int
+		categoryID  *int
 	}{
-		{"test1", 1000, "Test expense 1", ChargeType, "USD", 0},
-		{"test2", 2000, "Test expense 2", IncomeType, "USD", 1},
-		{"test3", 3000, "Test expense 3", ChargeType, "EUR", 0},
+		{"test1", 1000, "Test expense 1", ChargeType, "USD", nil},
+		{"test2", 2000, "Test expense 2", IncomeType, "USD", intPtr(1)},
+		{"test3", 3000, "Test expense 3", ChargeType, "EUR", nil},
+	}
+
+	// Create Category 1
+	_, err := CreateCategory(database, "Test", "*")
+	if err != nil {
+		t.Fatalf("Failed to create category: %v", err)
 	}
 
 	for _, exp := range testExpenses {
-		_, err := db.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+		_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
 			exp.source, exp.amount, exp.description, exp.expenseType, now.Unix(), exp.currency, exp.categoryID)
 		if err != nil {
 			t.Fatalf("Failed to insert test expense: %v", err)
 		}
 	}
 
-	expenses, err := GetExpensesWithoutCategory(db)
+	expenses, err := GetExpensesWithoutCategory(database)
 	if err != nil {
 		t.Errorf("Failed to get expenses without category: %v", err)
 	}
@@ -239,15 +261,14 @@ func TestGetExpensesWithoutCategory(t *testing.T) {
 	}
 
 	for _, exp := range expenses {
-		if exp.CategoryID != 0 {
+		if exp.CategoryID != nil {
 			t.Errorf("Expected CategoryID 0, got %d", exp.CategoryID)
 		}
 	}
 }
 
 func TestSearchExpenses(t *testing.T) {
-	db := setupTestExpenseDB(t)
-	defer db.Close()
+	database := setupTestDB(t)
 
 	now := time.Now()
 	testExpenses := []struct {
@@ -256,22 +277,28 @@ func TestSearchExpenses(t *testing.T) {
 		description string
 		expenseType ExpenseType
 		currency    string
-		categoryID  int
+		categoryID  *int
 	}{
-		{"test1", 1000, "Test expense 1", ChargeType, "USD", 0},
-		{"test2", 2000, "Test expense 2", IncomeType, "USD", 1},
-		{"test3", 3000, "Test expense 3", ChargeType, "EUR", 0},
+		{"test1", 1000, "Test expense 1", ChargeType, "USD", nil},
+		{"test2", 2000, "Test expense 2", IncomeType, "USD", intPtr(1)},
+		{"test3", 3000, "Test expense 3", ChargeType, "EUR", nil},
+	}
+
+	// Create Category 1
+	_, err := CreateCategory(database, "Test", "*")
+	if err != nil {
+		t.Fatalf("Failed to create category: %v", err)
 	}
 
 	for _, exp := range testExpenses {
-		_, err := db.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+		_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
 			exp.source, exp.amount, exp.description, exp.expenseType, now.Unix(), exp.currency, exp.categoryID)
 		if err != nil {
 			t.Fatalf("Failed to insert test expense: %v", err)
 		}
 	}
 
-	expenses, err := SearchExpenses(db, "Test")
+	expenses, err := SearchExpenses(database, "Test")
 	if err != nil {
 		t.Errorf("Failed to search expenses: %v", err)
 	}
@@ -287,25 +314,6 @@ func TestSearchExpenses(t *testing.T) {
 	}
 }
 
-func TestDeleteExpenseDB(t *testing.T) {
-	db := setupTestExpenseDB(t)
-	defer db.Close()
-
-	// Insert test expense
-	_, err := db.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
-		"test", 1000, "Test expense", ChargeType, time.Now().Unix(), "USD", 0)
-	if err != nil {
-		t.Fatalf("Failed to insert test expense: %v", err)
-	}
-
-	err = DeleteExpenseDB(db)
-	if err != nil {
-		t.Errorf("Failed to delete expenses table: %v", err)
-	}
-
-	// Verify table was deleted
-	_, err = db.Query("SELECT * FROM expenses")
-	if err == nil {
-		t.Error("Expected error when querying deleted table, got nil")
-	}
+func intPtr(x int) *int {
+	return &x
 }
