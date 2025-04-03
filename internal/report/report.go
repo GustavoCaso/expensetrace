@@ -12,9 +12,12 @@ import (
 )
 
 type Category struct {
-	Name     string
-	Amount   int64
-	Expenses []*expenseDB.Expense
+	Name              string
+	Amount            int64
+	Expenses          []*expenseDB.Expense
+	PercentageOfTotal float64
+	LastTransaction   time.Time
+	AvgAmount         int64
 }
 
 type Report struct {
@@ -98,6 +101,34 @@ func Categories(expenses []*expenseDB.Expense) (map[string]Category, []string, i
 		}
 
 		addExpenseToCategory(categories, ex)
+	}
+
+	for key, category := range categories {
+		// Calculate percentage of total
+		if category.Amount < 0 && spending < 0 {
+			// For expense categories
+			category.PercentageOfTotal = float64(category.Amount*-100) / float64(spending*-1)
+		} else if category.Amount > 0 && income > 0 {
+			// For income categories
+			category.PercentageOfTotal = float64(category.Amount*100) / float64(income)
+		}
+
+		// Find most recent transaction
+		if len(category.Expenses) > 0 {
+			category.LastTransaction = category.Expenses[0].Date
+			// Calculate average amount
+			total := int64(0)
+			for _, exp := range category.Expenses {
+				total += exp.Amount
+
+				if exp.Date.After(category.LastTransaction) {
+					category.LastTransaction = exp.Date
+				}
+			}
+			category.AvgAmount = total / int64(len(category.Expenses))
+		}
+
+		categories[key] = category
 	}
 
 	return categories, duplicates, income, spending

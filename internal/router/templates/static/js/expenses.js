@@ -42,4 +42,47 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   });
+
+  // Handle category tabs
+  document.body.addEventListener('click', function (e) {
+    const tabBtn = e.target.closest('.tab-btn');
+    if (tabBtn) {
+      e.preventDefault();
+
+      // Get all tab buttons and contents
+      const tabBtns = document.querySelectorAll('.tab-btn');
+      const tabContents = document.querySelectorAll('.tab-content');
+
+      // Remove active class from all
+      tabBtns.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+
+      // Add active class to clicked tab and its content
+      tabBtn.classList.add('active');
+      const tabId = tabBtn.getAttribute('data-tab');
+      document.getElementById(tabId + '-tab').classList.add('active');
+    }
+  });
+
+  // Toggle details function
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('.toggle-details')) {
+      const button = e.target.closest('.toggle-details');
+      const targetId = button.getAttribute('data-target');
+      const targetContent = document.getElementById(targetId);
+
+      if (targetContent) {
+        const isCollapsed = targetContent.classList.contains('collapsed');
+        const toggleText = button.querySelector('.toggle-text');
+
+        if (isCollapsed) {
+          targetContent.classList.remove('collapsed');
+          toggleText.textContent = 'Hide Details';
+        } else {
+          targetContent.classList.add('collapsed');
+          toggleText.textContent = 'Show Details';
+        }
+      }
+    }
+  });
 });
