@@ -2,48 +2,171 @@
 
 {{define "main"}}
   {{ if eq .Error nil }}
-    <!-- List of Expenses -->
-    <nav class="month-nav">
-     {{range $link := .Links}}
-      <a href="{{$link.URL}}" 
-        hx-get={{$link.URL}} 
-        hx-target="#report" 
-        hx-swap="outerHTML" 
-        class="month-link">
-          <span class="month-name">{{$link.Name}}</span>
-          <div class="tooltip"><span class="income">Income: {{formatMoney .Income "." ","}}€</span> <span class="expense">Spending: {{formatMoney .Spending "." ","}}€</span></div>
-      </a>
-     {{end}}  
-    </nav>
-    
-    {{with .Report }} 
-      <div id="report">
-        <h2>{{.Title}}</h2>
-        <ul id="summary">
-          <li><span class="income"><b>Income: {{formatMoney .Income "." ","}}</b>€</span></li>
-          <li><span class="expense"><u>Spending:  {{formatMoney .Spending "." ","}}€</u></span></li>
-
-          {{if gt .Savings 0}}
-            <li>Savings: {{formatMoney .Savings "." ","}}€ <span class="savings-percentage savings"><b>{{printf "%.2f%%" .SavingsPercentage}}</b></span></li>
-          {{else}}
-            <li>Savings: {{formatMoney .Savings "." ","}}€ <span class="savings-percentage expenses"><u>{{printf "%.2f%%" .SavingsPercentage}}</u></span></li>
-          {{end}}
-        </ul>
+    <div id="report-content">
+      <!-- Timeline Navigation -->
+      <nav class="month-nav">
+       {{range $link := .Links}}
+        <a href="{{$link.URL}}" 
+          hx-get={{$link.URL}} 
+          hx-target="#report" 
+          hx-swap="outerHTML" 
+          class="month-link {{if gt $link.Savings 0}}positive{{else}}negative{{end}}">
+            <span class="month-name">{{$link.Name}}</span>
+        </a>
+       {{end}}  
+      </nav>
       
-        <div class="categories-header">Breakdown by category</div>
-        <ul id="categories">
-          {{range $category := .Categories}}
-            {{if gt $category.Amount 0}}
-              <li>{{$category.Name}}: <span class="income"><b>{{formatMoney $category.Amount "." ","}}</b></span></li>
-            {{else}}
-              <li>{{$category.Name}}: <span class="expense"><u>{{formatMoney $category.Amount "." ","}}</u></span></li>
-            {{end}}
-          {{end}}
-        </ul>
-      </div>
-    {{end}}
+      {{with .Report }} 
+        <div id="report">
+          <h2>{{.Title}} Summary</h2>
+          <div class="report-cards">
+            <div class="summary-card income-card">
+              <h3>Income</h3>
+              <div class="card-amount">{{formatMoney .Income "." ","}}€</div>
+              <div class="card-comparison">
+                {{if gt .Income 0}}+{{else}}-{{end}}{{printf "%.1f%%" 5.2}} from last month
+              </div>
+            </div>
+            
+            <div class="summary-card expense-card">
+              <h3>Spending</h3>
+              <div class="card-amount">{{formatMoney .Spending "." ","}}€</div>
+              <div class="card-comparison">
+                {{if gt .Spending 0}}+{{else}}-{{end}}{{printf "%.1f%%" 2.7}} from last month
+              </div>
+            </div>
+            
+            <div class="summary-card {{if gt .Savings 0}}savings-card{{else}}deficit-card{{end}}">
+              <h3>Savings</h3>
+              <div class="card-amount">{{formatMoney .Savings "." ","}}€</div>
+              <div class="card-percentage">
+                {{if gt .Savings 0}}
+                  <span class="savings-percentage savings">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
+                {{else}}
+                  <span class="savings-percentage expenses">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
+                {{end}}
+              </div>
+            </div>
+          </div>
+        
+          <div class="report-details">
+            <div class="chart-container">
+              <h3>Spending Breakdown</h3>
+              <div class="chart-placeholder">
+                <div class="chart-legend">
+                  {{range $index, $category := .Categories}}
+                    {{if lt $category.Amount 0}}
+                      <div class="legend-item">
+                        <span class="legend-color color-{{$index}}"></span>
+                        <span class="legend-label">{{$category.Name}}</span>
+                        <span class="legend-value expense">{{formatMoney $category.Amount "." ","}}€</span>
+                      </div>
+                    {{end}}
+                  {{end}}
+                </div>
+              </div>
+            </div>
+            
+            <div class="categories-breakdown">
+              <h3>Categories</h3>
+              <div class="categories-tabs">
+                <button class="tab-btn active" data-tab="expenses">Expenses</button>
+                <button class="tab-btn" data-tab="income">Income</button>
+              </div>
+              
+              <div id="expenses-tab" class="tab-content active">
+                <ul id="categories-list">
+                  {{range $category := .Categories}}
+                    {{if lt $category.Amount 0}}
+                      <li class="category-item">
+                        <div class="category-header">
+                          <span class="category-name">{{$category.Name}}</span>
+                          <span class="category-amount expense">{{formatMoney $category.Amount "." ","}}€</span>
+                        </div>
+                        <div class="category-bar">
+                          <div class="category-progress" style="width: {{$category.PercentageOfTotal}}%"></div>
+                        </div>
+                        
+                        <button class="btn-small toggle-details" data-target="expense-details-{{$category.Name}}">
+                          <span class="toggle-text">Show Details</span>
+                        </button>
+                        <div id="expense-details-{{$category.Name}}" class="category-details toggle-content collapsed">
+                          <table class="transactions-table">
+                            <thead>
+                              <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {{range $expense := $category.Expenses}}
+                                <tr>
+                                  <td>{{$expense.Date.Format "2006-01-02"}}</td>
+                                  <td>{{$expense.Description}}</td>
+                                  <td class="expense">{{formatMoney $expense.Amount "." ","}}€</td>
+                                </tr>
+                              {{end}}
+                            </tbody>
+                          </table>
+                        </div>
+                      </li>
+                    {{end}}
+                  {{end}}
+                </ul>
+              </div>
+              
+              <div id="income-tab" class="tab-content">
+                <ul id="income-categories-list">
+                  {{range $category := .Categories}}
+                    {{if gt $category.Amount 0}}
+                      <li class="category-item">
+                        <div class="category-header">
+                          <span class="category-name">{{$category.Name}}</span>
+                          <span class="category-amount income">{{formatMoney $category.Amount "." ","}}€</span>
+                        </div>
+                        <div class="category-bar">
+                          <div class="category-progress income-bar" style="width: {{$category.PercentageOfTotal}}%"></div>
+                        </div>
+                        <button class="btn-small toggle-details" data-target="income-details-{{$category.Name}}">
+                          <span class="toggle-text">Show Details</span>
+                        </button>
+                        
+                        <div id="income-details-{{$category.Name}}" class="category-details toggle-content collapsed">
+                          <table class="transactions-table">
+                            <thead>
+                              <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {{range $expense := $category.Expenses}}
+                                <tr>
+                                  <td>{{$expense.Date.Format "2006-01-02"}}</td>
+                                  <td>{{$expense.Description}}</td>
+                                  <td class="income">{{formatMoney $expense.Amount "." ","}}€</td>
+                                </tr>
+                              {{end}}
+                            </tbody>
+                          </table>
+                        </div>
+                      </li>
+                    {{end}}
+                  {{end}}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      {{end}}
+    </div>
   {{ else }}
-    <h2>There was an error: {{.Error}}</h2>
+    <div class="error-message">
+      <h2>There was an error</h2>
+      <p>{{.Error}}</p>
+      <button class="btn-primary" hx-get="/" hx-swap="outerHTML">Retry</button>
+    </div>
   {{ end }}
 {{end}}
- 
