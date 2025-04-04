@@ -1,21 +1,103 @@
 {{define "title"}}Categories{{end}}
 
 {{define "main"}}
-  <nav>
-    <a href="/category/uncategorized" hx-get="/category/uncategorized" hx-target="#category-list" hx-swap="outerHTML">Uncategorized</a>
-    <a href="/category/new">New</a>
-  </nav>
+  <div class="category-actions">
+    <nav class="category-tabs">
+      <a href="/category/uncategorized" hx-get="/category/uncategorized" hx-target="#category-content" hx-swap="innerHTML" class="tab-link">Uncategorized</a>
+      <a href="/category/new" hx-get="/category/new" hx-target="#category-content" hx-swap="innerHTML" class="tab-link">New Category</a>
+    </nav>
+  </div>
 
-  {{ if eq .Error nil }}
-    <div id="category-list">
-      <ul>
+  <div id="category-content">
+    {{ if eq .Error nil }}
+      <div class="categories-stats">
+        <div class="stats-card">
+          <h3>Total Categories</h3>
+          <div class="stats-number">{{len .Categories}}</div>
+        </div>
+        <div class="stats-card">
+          <h3>Categorized Expenses</h3>
+          <div class="stats-number">{{.CategorizedCount}}</div>
+        </div>
+        <div class="stats-card">
+          <h3>Uncategorized Expenses</h3>
+          <div class="stats-number">{{.UncategorizedCount}}</div>
+        </div>
+      </div>
+    
+      <div class="categories-grid">
         {{range $category := .Categories}}
-          <li>{{$category.Name}} - {{$category.Total}} expenses</li>
+          <div class="category-card" id="category-{{$category.ID}}">
+            <div class="category-card-header">
+              <h3>{{$category.Name}}</h3>
+              <div class="category-actions">
+                <button class="btn-icon toggle-details-swap" data-content="category-content-{{$category.ID}}" data-target="category-edit-{{$category.ID}}">
+                  <span class="icon">✏️</span>
+                </button>
+                <button class="btn-icon" 
+                  hx-delete="/category/{{$category.ID}}" 
+                  hx-confirm="Are you sure you want to delete this category? All expenses will be uncategorized."
+                  hx-target="#category-{{$category.ID}}" 
+                  hx-swap="outerHTML">
+                  <span class="icon">🗑️</span>
+                </button>
+              </div>
+            </div>
+            
+            <div class="category-card collapsed" id="category-edit-{{$category.ID}}">
+              <form hx-put="/category/{{.Category.ID}}" hx-target="#category-{{$category.ID}}" hx-swap="outerHTML">
+                <div class="form-group">
+                  <label for="category-edit-name">Name</label>
+                  <input type="text" id="category-edit-name" name="name" value="{{$category.Name}}" required>
+                </div>
+                <div class="form-group">
+                  <label for="category-edit-pattern">Pattern</label>
+                  <input type="text" id="category-edit-pattern" name="pattern" value="{{$category.Pattern}}" required>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn-primary">Save</button>
+                </div>
+              </form>
+            </div>
+            
+            <div id="category-content-{{$category.ID}}">
+              <div class="category-meta">
+                <div class="meta-item">
+                  <span class="meta-label">Pattern:</span>
+                  <code class="pattern-code">{{$category.Pattern}}</code>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Expenses:</span>
+                  <span class="meta-value">{{$category.Total}}</span>
+                </div>
+              </div>
+              <div class="category-stats">
+                {{if gt $category.AvgAmount 0 }}
+                  <div class="stat-item">
+                    <span class="stat-label">Avg Amount:</span>
+                    <span class="stat-value income">{{formatMoney $category.AvgAmount "." ","}}€</span>
+                  </div>
+                {{else}}
+                  <div class="stat-item">
+                    <span class="stat-label">Avg Amount:</span>
+                    <span class="stat-value expense">{{formatMoney $category.AvgAmount "." ","}}€</span>
+                  </div>
+                {{end}}
+                <div class="stat-item">
+                  <span class="stat-label">Last Transaction:</span>
+                  <span class="stat-value">{{$category.LastTransaction}}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         {{end}}
-      </ul>
-    </div>
-  {{ else }}
-    <h2>There was an error: {{.Error}}</h2>
-  {{ end }}
+      </div>
+    {{ else }}
+      <div class="error-message">
+        <h2>There was an error</h2>
+        <p>{{.Error}}</p>
+        <button class="btn-primary" hx-get="/categories" hx-target="#category-content" hx-swap="innerHTML">Retry</button>
+      </div>
+    {{ end }}
+  </div>
 {{end}}
- 

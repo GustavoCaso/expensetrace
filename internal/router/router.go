@@ -82,6 +82,10 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 		router.homeHandler(w, r)
 	})
 
+	mux.HandleFunc("DELETE /expense/{id}", func(w http.ResponseWriter, r *http.Request) {
+		// TODO
+	})
+
 	mux.HandleFunc("GET /expenses", func(w http.ResponseWriter, _ *http.Request) {
 		router.expensesHandler(w)
 	})
@@ -98,12 +102,16 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 		router.categoriesHandler(w)
 	})
 
+	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
+		router.templates.Render(w, "partials/categories/new.html", nil)
+	})
+
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, _ *http.Request) {
 		router.uncategorizedHandler(w)
 	})
 
-	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
-		router.templates.Render(w, "pages/categories/new.html", nil)
+	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		// TODO
 	})
 
 	mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {
