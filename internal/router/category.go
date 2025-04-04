@@ -15,24 +15,99 @@ import (
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 )
 
+// EnhancedCategory extends db.Category with extra UI-friendly fields
+type EnhancedCategory struct {
+	expenseDB.Category
+	AvgAmount       int64
+	LastTransaction string
+	TotalAmount     int64
+	SpendingCount   int
+	IncomeCount     int
+}
+
 func (router *router) categoriesHandler(w http.ResponseWriter) {
 	categoriesWithTotalExpenses, err := expenseDB.GetCategoriesAndTotalExpenses(router.db)
-	var data interface{}
+
 	if err != nil {
-		log.Print(err.Error())
-		data = struct {
+		data := struct {
 			Error error
 		}{
 			Error: fmt.Errorf("error fetch categories: %v", err.Error()),
 		}
-	} else {
-		data = struct {
-			Categories []expenseDB.Category
-			Error      error
-		}{
-			Categories: categoriesWithTotalExpenses,
-			Error:      nil,
+		router.templates.Render(w, "pages/categories/index.html", data)
+		return
+	}
+
+	// Get counts for uncategorized expenses
+	uncategorizedExpenses, err := expenseDB.GetExpensesWithoutCategory(router.db)
+	uncategorizedCount := 0
+	if err == nil {
+		uncategorizedCount = len(uncategorizedExpenses)
+	}
+
+	// Get total categorized count
+	totalCategorized := 0
+	for _, cat := range categoriesWithTotalExpenses {
+		totalCategorized += cat.Total
+	}
+
+	// Enhance categories with additional data
+	enhancedCategories := make([]EnhancedCategory, len(categoriesWithTotalExpenses))
+
+	for i, cat := range categoriesWithTotalExpenses {
+		// Get expenses for this category
+		expenses, _ := expenseDB.GetExpensesByCategory(router.db, cat.ID)
+
+		// Calculate average amount and last transaction
+		var totalAmount int64
+		var lastTransaction time.Time
+		spendingCount := 0
+		incomeCount := 0
+
+		for _, exp := range expenses {
+			totalAmount += exp.Amount
+
+			if exp.Amount < 0 {
+				spendingCount++
+			} else {
+				incomeCount++
+			}
+
+			if lastTransaction.IsZero() || exp.Date.After(lastTransaction) {
+				lastTransaction = exp.Date
+			}
 		}
+
+		avgAmount := int64(0)
+		if len(expenses) > 0 {
+			avgAmount = totalAmount / int64(len(expenses))
+		}
+
+		lastTransactionStr := ""
+		if !lastTransaction.IsZero() {
+			lastTransactionStr = lastTransaction.Format("2006-01-02")
+		}
+
+		enhancedCategories[i] = EnhancedCategory{
+			Category:        cat,
+			AvgAmount:       avgAmount,
+			LastTransaction: lastTransactionStr,
+			TotalAmount:     totalAmount,
+			SpendingCount:   spendingCount,
+			IncomeCount:     incomeCount,
+		}
+	}
+
+	data := struct {
+		Categories         []EnhancedCategory
+		CategorizedCount   int
+		UncategorizedCount int
+		Error              error
+	}{
+		Categories:         enhancedCategories,
+		CategorizedCount:   totalCategorized,
+		UncategorizedCount: uncategorizedCount,
+		Error:              nil,
 	}
 
 	router.templates.Render(w, "pages/categories/index.html", data)
