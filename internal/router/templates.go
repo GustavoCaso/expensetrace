@@ -9,9 +9,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
@@ -35,7 +35,13 @@ func (t templates) Render(w io.Writer, templateName string, data interface{}) {
 		return
 	}
 	log.Printf("rendering template `%s`\n", templateName)
-	err := temp.Execute(w, data)
+	var err error
+	if strings.Contains(templateName, "partials") {
+		tName := strings.TrimSuffix(temp.Name(), ".html")
+		err = temp.ExecuteTemplate(w, tName, data)
+	} else {
+		err = temp.Execute(w, data)
+	}
 	if err != nil {
 		log.Print(err.Error())
 		errorMessage := fmt.Sprintf("Error rendering template '%s': %v", templateName, err.Error())
@@ -62,51 +68,97 @@ func embeddedFS() fs.FS {
 	return subTemplateFS
 }
 
-func parsePages(fsDir fs.FS, basetempl *template.Template, templates templates) {
+func parseTemplates(fsDir fs.FS) templates {
+	templates := templates{}
+
+	// First, collect all partials with proper naming
+	partials := template.New("partials").Funcs(templateFuncs)
+	fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, err error) error {
+		if !d.IsDir() {
+			b, err := fs.ReadFile(fsDir, filepath)
+			if err != nil {
+				panic(err)
+			}
+
+			// Use a template name that includes the path (excluding the "partials/" prefix)
+			templateName := strings.TrimPrefix(filepath, "partials/")
+
+			// Parse with the unique template name
+			_, err = partials.New(templateName).Parse(string(b))
+			if err != nil {
+				panic(err)
+			}
+		}
+		return nil
+	})
+
+	// Then create the base template with layout and add partials
+	baseTempl := template.New("base").Funcs(templateFuncs)
+
+	// Add all partials to the base template
+	for _, t := range partials.Templates() {
+		if t.Name() != "partials" { // Skip the root template
+			_, err := baseTempl.AddParseTree(t.Name(), t.Tree)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
+	// Parse layout files
+	layoutBytes, err := fs.ReadFile(fsDir, "layout.html")
+	if err != nil {
+		panic(err)
+	}
+	baseTempl, err = baseTempl.Parse(string(layoutBytes))
+	if err != nil {
+		panic(err)
+	}
+
+	// Also parse nav partial which is needed by layout
+	navBytes, err := fs.ReadFile(fsDir, "partials/nav.html")
+	if err != nil {
+		panic(err)
+	}
+	baseTempl, err = baseTempl.Parse(string(navBytes))
+	if err != nil {
+		panic(err)
+	}
+
+	// Parse pages with the enhanced base template
 	fs.WalkDir(fsDir, "pages", func(path string, d fs.DirEntry, err error) error {
-		// If is not a dir, then we can assume that is the final html page template
 		if !d.IsDir() {
 			b, err := fs.ReadFile(fsDir, path)
 			if err != nil {
 				panic(err)
 			}
 
-			t := template.Must(template.Must(basetempl.Clone()).Parse(string(b)))
-			// Store the new created template in the templates map
-			templates[path] = t
-		}
-		return nil
-	})
-}
-
-func parsePartials(fsDir fs.FS, templates templates) {
-	fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, err error) error {
-		if !d.IsDir() {
-			name := path.Base(filepath)
-			b, err := fs.ReadFile(fsDir, filepath)
+			pageTempl, err := baseTempl.Clone()
 			if err != nil {
 				panic(err)
 			}
 
-			t := template.Must(template.New(name).Funcs(templateFuncs).Parse(string(b)))
+			pageTempl, err = pageTempl.Parse(string(b))
+			if err != nil {
+				panic(err)
+			}
 
-			templates[filepath] = t
+			templates[path] = pageTempl
 		}
 		return nil
 	})
-}
 
-func parseTemplates(fsDir fs.FS) templates {
-	templates := templates{}
-
-	baseTempl := template.Must(template.New("base").Funcs(templateFuncs).ParseFS(fsDir, []string{
-		"layout.html",
-		"partials/nav.html",
-	}...))
-
-	parsePages(fsDir, baseTempl, templates)
-
-	parsePartials(fsDir, templates)
+	// Also add the partials as standalone templates (for direct rendering)
+	fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, err error) error {
+		if !d.IsDir() {
+			templateName := strings.TrimPrefix(filepath, "partials/")
+			partialTemplate := partials.Lookup(templateName)
+			if partialTemplate != nil {
+				templates[filepath] = partialTemplate
+			}
+		}
+		return nil
+	})
 
 	return templates
 }

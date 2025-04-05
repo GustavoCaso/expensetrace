@@ -80,7 +80,7 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if useReportTemplate {
-		router.templates.Render(w, "partials/reports/report.html", data)
+		router.templates.Render(w, "partials/reports/card.html", data.Report)
 	} else {
 		router.templates.Render(w, "pages/reports/index.html", data)
 	}
