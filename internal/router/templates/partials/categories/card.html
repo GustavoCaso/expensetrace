@@ -1,0 +1,75 @@
+{{define "categories/card"}}
+  <div class="category-card" id="category-{{.ID}}">
+    <div class="category-card-header">
+      <h3>{{.Name}}</h3>
+      <div class="category-actions">
+        <button class="btn-icon toggle-details-swap" data-content="category-content-{{.ID}}" data-target="category-edit-{{.ID}}">
+          <span class="icon">✏️</span>
+        </button>
+        <button class="btn-icon" 
+          hx-delete="/category/{{.ID}}" 
+          hx-confirm="Are you sure you want to delete this category? All expenses will be uncategorized."
+          hx-target="#category-{{.ID}}" 
+          hx-swap="outerHTML">
+          <span class="icon">🗑️</span>
+        </button>
+      </div>
+    </div>
+    
+    {{ $categoryFormClass := "category-card-form collapsed" }}
+    {{ $categoryContentClass := "" }}
+
+    {{if .Errors }}
+      {{ $categoryFormClass = "category-card-form" }}
+      {{ $categoryContentClass = "collapsed" }}
+    {{end}}
+    
+    <div class="{{$categoryFormClass}}" id="category-edit-{{.ID}}">
+      <form hx-put="/category/{{.Category.ID}}" hx-target="#category-{{.ID}}" hx-swap="outerHTML">
+        <div class="form-group">
+          <label for="category-edit-name">Name</label>
+          <input type="text" id="category-edit-name" name="name" value="{{.Name}}" required>
+          <span class="error">{{ index .ErrorStrings "name"}}</span>
+        </div>
+        <div class="form-group">
+          <label for="category-edit-pattern">Pattern</label>
+          <input type="text" id="category-edit-pattern" name="pattern" value="{{.Pattern}}" required>
+          <span class="error">{{ index .ErrorStrings "pattern"}}</span>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+    
+    <div class="{{$categoryContentClass}}" id="category-content-{{.ID}}">
+      <div class="category-meta">
+        <div class="meta-item">
+          <span class="meta-label">Pattern:</span>
+          <code class="pattern-code">{{.Pattern}}</code>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Expenses:</span>
+          <span class="meta-value">{{.Total}}</span>
+        </div>
+      </div>
+      <div class="category-stats">
+        {{if gt .AvgAmount 0 }}
+          <div class="stat-item">
+            <span class="stat-label">Avg Amount:</span>
+            <span class="stat-value income">{{formatMoney .AvgAmount "." ","}}€</span>
+          </div>
+        {{else}}
+          <div class="stat-item">
+            <span class="stat-label">Avg Amount:</span>
+            <span class="stat-value expense">{{formatMoney .AvgAmount "." ","}}€</span>
+          </div>
+        {{end}}
+        <div class="stat-item">
+          <span class="stat-label">Last Transaction:</span>
+          <span class="stat-value">{{.LastTransaction}}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+{{end}}

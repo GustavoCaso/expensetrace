@@ -10,10 +10,12 @@
     </head>
     
     <body>
-        {{template "nav" .}}
+        <div id="page">
+          {{template "nav" .}}
         
-        <div id="main">
-            {{template "main" .}}
+          <div id="main">
+              {{template "main" .}}
+          </div>
         </div>
     </body>
 </html>
