@@ -15,27 +15,203 @@ import (
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 )
 
-func (router *router) categoriesHandler(w http.ResponseWriter) {
-	categoriesWithTotalExpenses, err := expenseDB.GetCategoriesAndTotalExpenses(router.db)
-	var data interface{}
+// EnhancedCategory extends db.Category with extra UI-friendly fields
+type EnhancedCategory struct {
+	expenseDB.Category
+	AvgAmount       int64
+	LastTransaction string
+	Total           int
+	TotalAmount     int64
+	SpendingCount   int
+	IncomeCount     int
+	Errors          bool
+	ErrorStrings    map[string]string
+}
+
+func (router *router) categoriesHandler(w http.ResponseWriter, err error) {
 	if err != nil {
-		log.Print(err.Error())
-		data = struct {
+		data := struct {
+			Error error
+		}{
+			Error: err,
+		}
+		router.templates.Render(w, "pages/categories/index.html", data)
+		return
+	}
+
+	categories, err := expenseDB.GetCategories(router.db)
+
+	if err != nil {
+		data := struct {
 			Error error
 		}{
 			Error: fmt.Errorf("error fetch categories: %v", err.Error()),
 		}
-	} else {
-		data = struct {
-			Categories []expenseDB.Category
-			Error      error
-		}{
-			Categories: categoriesWithTotalExpenses,
-			Error:      nil,
+		router.templates.Render(w, "pages/categories/index.html", data)
+		return
+	}
+
+	// Get counts for uncategorized expenses
+	uncategorizedExpenses, err := expenseDB.GetExpensesWithoutCategory(router.db)
+	uncategorizedCount := 0
+	if err == nil {
+		uncategorizedCount = len(uncategorizedExpenses)
+	}
+
+	// Get total categorized count
+	totalCategorized := 0
+
+	// Enhance categories with additional data
+	enhancedCategories := make([]EnhancedCategory, len(categories))
+
+	for i, cat := range categories {
+		// Get expenses for this category
+		expenses, _ := expenseDB.GetExpensesByCategory(router.db, cat.ID)
+
+		// Calculate average amount and last transaction
+		var totalAmount int64
+		var lastTransaction time.Time
+		spendingCount := 0
+		incomeCount := 0
+
+		for _, exp := range expenses {
+			totalAmount += exp.Amount
+
+			if exp.Amount < 0 {
+				spendingCount++
+			} else {
+				incomeCount++
+			}
+
+			if lastTransaction.IsZero() || exp.Date.After(lastTransaction) {
+				lastTransaction = exp.Date
+			}
+		}
+
+		avgAmount := int64(0)
+		if len(expenses) > 0 {
+			avgAmount = totalAmount / int64(len(expenses))
+		}
+
+		lastTransactionStr := ""
+		if !lastTransaction.IsZero() {
+			lastTransactionStr = lastTransaction.Format("2006-01-02")
+		}
+
+		totalCategorized += len(expenses)
+
+		enhancedCategories[i] = EnhancedCategory{
+			Category:        cat,
+			AvgAmount:       avgAmount,
+			LastTransaction: lastTransactionStr,
+			Total:           len(expenses),
+			TotalAmount:     totalAmount,
+			SpendingCount:   spendingCount,
+			IncomeCount:     incomeCount,
 		}
 	}
 
+	data := struct {
+		Categories         []EnhancedCategory
+		CategorizedCount   int
+		UncategorizedCount int
+		Error              error
+	}{
+		Categories:         enhancedCategories,
+		CategorizedCount:   totalCategorized,
+		UncategorizedCount: uncategorizedCount,
+		Error:              nil,
+	}
+
 	router.templates.Render(w, "pages/categories/index.html", data)
+}
+
+func (router *router) updateCategoryHandler(id, name, pattern string, w http.ResponseWriter) {
+	categoryID, err := strconv.Atoi(id)
+
+	if err != nil {
+		router.categoriesHandler(w, err)
+		return
+	}
+
+	category, err := expenseDB.GetCategory(router.db, &categoryID)
+
+	if err != nil {
+		router.categoriesHandler(w, err)
+		return
+	}
+
+	// Get expenses for this category
+	expenses, _ := expenseDB.GetExpensesByCategory(router.db, category.ID)
+
+	// Calculate average amount and last transaction
+	var totalAmount int64
+	var lastTransaction time.Time
+	spendingCount := 0
+	incomeCount := 0
+
+	for _, exp := range expenses {
+		totalAmount += exp.Amount
+
+		if exp.Amount < 0 {
+			spendingCount++
+		} else {
+			incomeCount++
+		}
+
+		if lastTransaction.IsZero() || exp.Date.After(lastTransaction) {
+			lastTransaction = exp.Date
+		}
+	}
+
+	avgAmount := int64(0)
+	if len(expenses) > 0 {
+		avgAmount = totalAmount / int64(len(expenses))
+	}
+
+	lastTransactionStr := ""
+	if !lastTransaction.IsZero() {
+		lastTransactionStr = lastTransaction.Format("2006-01-02")
+	}
+
+	enhancedCategory := EnhancedCategory{
+		Category:        category,
+		AvgAmount:       avgAmount,
+		LastTransaction: lastTransactionStr,
+		Total:           len(expenses),
+		TotalAmount:     totalAmount,
+		SpendingCount:   spendingCount,
+		IncomeCount:     incomeCount,
+	}
+
+	_, err = regexp.Compile(pattern)
+
+	if err != nil {
+		enhancedCategory.Errors = true
+		enhancedCategory.ErrorStrings = map[string]string{
+			"pattern": fmt.Sprintf("invalid pattern %v", err),
+		}
+
+		router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
+		return
+	}
+
+	err = expenseDB.UpdateCategory(router.db, &categoryID, name, pattern)
+
+	if err != nil {
+		enhancedCategory.Errors = true
+		enhancedCategory.ErrorStrings = map[string]string{
+			"name": fmt.Sprintf("not unique name %v", err),
+		}
+
+		router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
+		return
+	}
+
+	enhancedCategory.Category.Name = name
+	enhancedCategory.Category.Pattern = pattern
+
+	router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
 }
 
 type reportExpense struct {
@@ -52,7 +228,7 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 		}{
 			Error: err,
 		}
-		router.templates.Render(w, "partials/categories/uncategorized.html", data)
+		router.templates.Render(w, "pages/categories/uncategorized.html", data)
 		return
 	}
 
@@ -94,10 +270,10 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 		Categories:      router.matcher.Categories(),
 		Error:           nil,
 	}
-	router.templates.Render(w, "partials/categories/uncategorized.html", data)
+	router.templates.Render(w, "pages/categories/uncategorized.html", data)
 }
 
-func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Request) {
+func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	expenseDescription := r.FormValue("description")
@@ -111,7 +287,7 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		router.templates.Render(w, "partials/categories/uncategorized.html", data)
+		router.templates.Render(w, "pages/categories/uncategorized.html", data)
 	}
 
 	_, err = expenseDB.GetCategory(router.db, &categoryID)
@@ -124,7 +300,7 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		router.templates.Render(w, "partials/categories/uncategorized.html", data)
+		router.templates.Render(w, "pages/categories/uncategorized.html", data)
 		return
 	}
 
@@ -138,7 +314,7 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		router.templates.Render(w, "partials/categories/uncategorized.html", data)
+		router.templates.Render(w, "pages/categories/uncategorized.html", data)
 		return
 	}
 
@@ -154,7 +330,7 @@ func (router *router) updateCategoryHandler(w http.ResponseWriter, r *http.Reque
 			}{
 				Error: err,
 			}
-			router.templates.Render(w, "partials/categories/uncategorized.html", data)
+			router.templates.Render(w, "pages/categories/uncategorized.html", data)
 			return
 		}
 

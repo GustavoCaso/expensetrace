@@ -236,6 +236,47 @@ func GetFirstExpense(db *sql.DB) (*Expense, error) {
 	return ex, nil
 }
 
+// Get expenses by category ID
+func GetExpensesByCategory(db *sql.DB, categoryID int) ([]*Expense, error) {
+	rows, err := db.Query("SELECT * FROM expenses WHERE category_id = ?", categoryID)
+	if err != nil {
+		return []*Expense{}, err
+	}
+
+	defer rows.Close()
+
+	expenses := []*Expense{}
+
+	for rows.Next() {
+		ex, err := expenseFromRow(db, rows.Scan)
+		if err != nil {
+			return []*Expense{}, err
+		}
+		expenses = append(expenses, ex)
+	}
+
+	return expenses, nil
+}
+
+// Delete an expense by ID
+func DeleteExpense(db *sql.DB, expenseID int) error {
+	result, err := db.Exec("DELETE FROM expenses WHERE id = ?", expenseID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no expense found with ID %d", expenseID)
+	}
+
+	return nil
+}
+
 func renderTemplate(out io.Writer, templateName string, value interface{}) error {
 	tmpl, err := content.ReadFile(path.Join("templates", templateName))
 	if err != nil {
