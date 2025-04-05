@@ -1,6 +1,15 @@
 # ExpenseTrace
 
+<div align="center">
+  <img src="./images/expensetrace-minimal-logo.svg" alt="ExpenseTrace Logo" width="200">
+</div>
+
 ExpenseTrace is a privacy-focused expense tracking tool that helps you manage your finances without sharing your banking details with third-party services. Built in Go, it provides a simple yet powerful way to track your expenses, categorize them, and generate insightful reports.
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/GustavoCaso/expensetrace)](https://goreportcard.com/report/github.com/GustavoCaso/expensetrace)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/GustavoCaso/expensetrace)](https://golang.org/)
+
 
 ## Why ExpenseTrace?
 
