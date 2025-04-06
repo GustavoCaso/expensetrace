@@ -82,6 +82,10 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 		router.homeHandler(w, r)
 	})
 
+	mux.HandleFunc("DELETE /expense/{id}", func(w http.ResponseWriter, r *http.Request) {
+		// TODO
+	})
+
 	mux.HandleFunc("GET /expenses", func(w http.ResponseWriter, _ *http.Request) {
 		router.expensesHandler(w)
 	})
@@ -98,12 +102,23 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 		router.categoriesHandler(w)
 	})
 
+	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
+		router.templates.Render(w, "pages/categories/new.html", nil)
+	})
+
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, _ *http.Request) {
 		router.uncategorizedHandler(w)
 	})
 
-	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
-		router.templates.Render(w, "pages/categories/new.html", nil)
+	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
+		categoryID := r.PathValue("id")
+
+		r.ParseForm()
+
+		name := r.FormValue("name")
+		pattern := r.FormValue("pattern")
+
+		router.updateCategoryHandler(categoryID, name, pattern, w)
 	})
 
 	mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +130,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	})
 
 	mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {
-		router.updateCategoryHandler(w, r)
+		router.updateUncategorizedHandler(w, r)
 	})
 
 	mux.HandleFunc("POST /search", func(w http.ResponseWriter, r *http.Request) {

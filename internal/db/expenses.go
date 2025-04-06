@@ -236,6 +236,28 @@ func GetFirstExpense(db *sql.DB) (*Expense, error) {
 	return ex, nil
 }
 
+// Get expenses by category ID
+func GetExpensesByCategory(db *sql.DB, categoryID int) ([]*Expense, error) {
+	rows, err := db.Query("SELECT * FROM expenses WHERE category_id = ?", categoryID)
+	if err != nil {
+		return []*Expense{}, err
+	}
+
+	defer rows.Close()
+
+	expenses := []*Expense{}
+
+	for rows.Next() {
+		ex, err := expenseFromRow(db, rows.Scan)
+		if err != nil {
+			return []*Expense{}, err
+		}
+		expenses = append(expenses, ex)
+	}
+
+	return expenses, nil
+}
+
 func renderTemplate(out io.Writer, templateName string, value interface{}) error {
 	tmpl, err := content.ReadFile(path.Join("templates", templateName))
 	if err != nil {

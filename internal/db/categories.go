@@ -87,32 +87,9 @@ func GetCategory(db *sql.DB, categoryID *int) (Category, error) {
 	}, nil
 }
 
-func GetCategoriesAndTotalExpenses(db *sql.DB) ([]Category, error) {
-	rows, err := db.Query("SELECT c.name , c.id, COUNT(e.category_id) FROM categories AS c JOIN expenses AS e ON c.id = e.category_id GROUP BY c.name ORDER BY c.id;")
-	if err != nil {
-		return []Category{}, err
-	}
-
-	defer rows.Close()
-
-	categories := []Category{}
-
-	for rows.Next() {
-		var category Category
-		var id int
-		var total int
-
-		if err := rows.Scan(&category.Name, &id, &total); err != nil {
-			log.Fatal(err)
-		}
-
-		category.ID = id
-		category.Total = total
-
-		categories = append(categories, category)
-	}
-
-	return categories, nil
+func UpdateCategory(db *sql.DB, categoryID *int, name, pattern string) error {
+	_, err := db.Exec("UPDATE categories SET name = ?, pattern = ? WHERE id = ?;", name, pattern, categoryID)
+	return err
 }
 
 func CreateCategory(db *sql.DB, name, pattern string) (int64, error) {
