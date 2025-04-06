@@ -1,21 +1,22 @@
-
-{{ if eq .Error nil }}
-  <p>Category {{.Name}} with {{.Pattern}} matched <b>{{.Total}}</b> uncategorized expenses</p> 
-  
-  <ul>
-    {{range $expense := .Results}}
-      {{if gt $expense.Type 0}}
-        <li>{{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} <span class="income"><b>{{formatMoney $expense.Amount "." ","}}€</b></span></li>
-      {{else}}
-        <li> {{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} <span class="expense"><u>{{formatMoney $expense.Amount "." ","}}€</u></span></li>
+{{define "categories/new_result"}}
+  {{ if eq .Error nil }}
+    <p>Category {{.Name}} with {{.Pattern}} matched <b>{{.Total}}</b> uncategorized expenses</p> 
+    
+    <ul>
+      {{range $expense := .Results}}
+        {{if gt $expense.Type 0}}
+          <li>{{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} <span class="income"><b>{{formatMoney $expense.Amount "." ","}}€</b></span></li>
+        {{else}}
+          <li> {{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} <span class="expense"><u>{{formatMoney $expense.Amount "." ","}}€</u></span></li>
+        {{end}}
       {{end}}
-    {{end}}
-  </ul>
-  
-  {{ if not .Create}}
-    <p>Press the <b>Create</b> button to create the category and update the expenses</p>
+    </ul>
+    
+    {{ if not .Create}}
+      <p>Press the <b>Create</b> button to create the category and update the expenses</p>
+    {{ end }}
+    
+  {{ else }}
+    <h2>There was an error: {{.Error}}</h2>
   {{ end }}
-  
-{{ else }}
-  <h2>There was an error: {{.Error}}</h2>
-{{ end }}
+{{end}}
