@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"regexp"
@@ -15,8 +16,8 @@ import (
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 )
 
-// EnhancedCategory extends db.Category with extra UI-friendly fields
-type EnhancedCategory struct {
+// enhancedCategory extends db.Category with extra UI-friendly fields
+type enhancedCategory struct {
 	expenseDB.Category
 	AvgAmount       int64
 	LastTransaction string
@@ -28,91 +29,44 @@ type EnhancedCategory struct {
 	ErrorStrings    map[string]string
 }
 
-func (router *router) categoriesHandler(w http.ResponseWriter, err error) {
-	if err != nil {
-		data := struct {
-			Error error
-		}{
-			Error: err,
-		}
-		router.templates.Render(w, "pages/categories/index.html", data)
-		return
-	}
-
+func (router *router) categoriesHandler(w http.ResponseWriter) {
 	categories, err := expenseDB.GetCategories(router.db)
 
 	if err != nil {
-		data := struct {
-			Error error
-		}{
-			Error: fmt.Errorf("error fetch categories: %v", err.Error()),
-		}
-		router.templates.Render(w, "pages/categories/index.html", data)
+		categoryIndexError(router, w, fmt.Errorf("error fetch categories: %v", err.Error()))
 		return
 	}
 
 	// Get counts for uncategorized expenses
 	uncategorizedExpenses, err := expenseDB.GetExpensesWithoutCategory(router.db)
-	uncategorizedCount := 0
-	if err == nil {
-		uncategorizedCount = len(uncategorizedExpenses)
+	if err != nil {
+		categoryIndexError(router, w, err)
+		return
 	}
+	uncategorizedCount := len(uncategorizedExpenses)
 
 	// Get total categorized count
 	totalCategorized := 0
 
 	// Enhance categories with additional data
-	enhancedCategories := make([]EnhancedCategory, len(categories))
+	enhancedCategories := make([]enhancedCategory, len(categories))
 
 	for i, cat := range categories {
 		// Get expenses for this category
-		expenses, _ := expenseDB.GetExpensesByCategory(router.db, cat.ID)
+		expenses, err := expenseDB.GetExpensesByCategory(router.db, cat.ID)
 
-		// Calculate average amount and last transaction
-		var totalAmount int64
-		var lastTransaction time.Time
-		spendingCount := 0
-		incomeCount := 0
-
-		for _, exp := range expenses {
-			totalAmount += exp.Amount
-
-			if exp.Amount < 0 {
-				spendingCount++
-			} else {
-				incomeCount++
-			}
-
-			if lastTransaction.IsZero() || exp.Date.After(lastTransaction) {
-				lastTransaction = exp.Date
-			}
-		}
-
-		avgAmount := int64(0)
-		if len(expenses) > 0 {
-			avgAmount = totalAmount / int64(len(expenses))
-		}
-
-		lastTransactionStr := ""
-		if !lastTransaction.IsZero() {
-			lastTransactionStr = lastTransaction.Format("2006-01-02")
+		if err != nil {
+			categoryIndexError(router, w, err)
+			return
 		}
 
 		totalCategorized += len(expenses)
 
-		enhancedCategories[i] = EnhancedCategory{
-			Category:        cat,
-			AvgAmount:       avgAmount,
-			LastTransaction: lastTransactionStr,
-			Total:           len(expenses),
-			TotalAmount:     totalAmount,
-			SpendingCount:   spendingCount,
-			IncomeCount:     incomeCount,
-		}
+		enhancedCategories[i] = createEnhancedCategory(cat, expenses)
 	}
 
 	data := struct {
-		Categories         []EnhancedCategory
+		Categories         []enhancedCategory
 		CategorizedCount   int
 		UncategorizedCount int
 		Error              error
@@ -130,59 +84,26 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 	categoryID, err := strconv.Atoi(id)
 
 	if err != nil {
-		router.categoriesHandler(w, err)
+		categoryIndexError(router, w, err)
 		return
 	}
 
 	category, err := expenseDB.GetCategory(router.db, &categoryID)
 
 	if err != nil {
-		router.categoriesHandler(w, err)
+		categoryIndexError(router, w, err)
 		return
 	}
 
 	// Get expenses for this category
-	expenses, _ := expenseDB.GetExpensesByCategory(router.db, category.ID)
+	expenses, err := expenseDB.GetExpensesByCategory(router.db, category.ID)
 
-	// Calculate average amount and last transaction
-	var totalAmount int64
-	var lastTransaction time.Time
-	spendingCount := 0
-	incomeCount := 0
-
-	for _, exp := range expenses {
-		totalAmount += exp.Amount
-
-		if exp.Amount < 0 {
-			spendingCount++
-		} else {
-			incomeCount++
-		}
-
-		if lastTransaction.IsZero() || exp.Date.After(lastTransaction) {
-			lastTransaction = exp.Date
-		}
+	if err != nil {
+		categoryIndexError(router, w, err)
+		return
 	}
 
-	avgAmount := int64(0)
-	if len(expenses) > 0 {
-		avgAmount = totalAmount / int64(len(expenses))
-	}
-
-	lastTransactionStr := ""
-	if !lastTransaction.IsZero() {
-		lastTransactionStr = lastTransaction.Format("2006-01-02")
-	}
-
-	enhancedCategory := EnhancedCategory{
-		Category:        category,
-		AvgAmount:       avgAmount,
-		LastTransaction: lastTransactionStr,
-		Total:           len(expenses),
-		TotalAmount:     totalAmount,
-		SpendingCount:   spendingCount,
-		IncomeCount:     incomeCount,
-	}
+	enhancedCategory := createEnhancedCategory(category, expenses)
 
 	_, err = regexp.Compile(pattern)
 
@@ -458,4 +379,55 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	}
 
 	router.templates.Render(w, "partials/categories/new_result.html", data)
+}
+
+func createEnhancedCategory(category expenseDB.Category, expenses []*expenseDB.Expense) enhancedCategory {
+	// Calculate average amount and last transaction
+	var totalAmount int64
+	var lastTransaction time.Time
+	spendingCount := 0
+	incomeCount := 0
+
+	for _, exp := range expenses {
+		totalAmount += exp.Amount
+
+		if exp.Amount < 0 {
+			spendingCount++
+		} else {
+			incomeCount++
+		}
+
+		if lastTransaction.IsZero() || exp.Date.After(lastTransaction) {
+			lastTransaction = exp.Date
+		}
+	}
+
+	avgAmount := int64(0)
+	if len(expenses) > 0 {
+		avgAmount = totalAmount / int64(len(expenses))
+	}
+
+	lastTransactionStr := ""
+	if !lastTransaction.IsZero() {
+		lastTransactionStr = lastTransaction.Format("2006-01-02")
+	}
+
+	return enhancedCategory{
+		Category:        category,
+		AvgAmount:       avgAmount,
+		LastTransaction: lastTransactionStr,
+		Total:           len(expenses),
+		TotalAmount:     totalAmount,
+		SpendingCount:   spendingCount,
+		IncomeCount:     incomeCount,
+	}
+}
+
+func categoryIndexError(router *router, w io.Writer, err error) {
+	data := struct {
+		Error error
+	}{
+		Error: err,
+	}
+	router.templates.Render(w, "pages/categories/index.html", data)
 }

@@ -18,9 +18,9 @@
     
     {{ $categoryFormClass := "category-card-form collapsed" }}
     {{ $categoryContentClass := "" }}
-
+    
     {{if .Errors }}
-      {{ $categoryFormClass = "category-card-form" }}
+      {{ $categoryFormClass = "category-card-form form-error-shake" }}
       {{ $categoryContentClass = "collapsed" }}
     {{end}}
     
@@ -28,13 +28,25 @@
       <form hx-put="/category/{{.Category.ID}}" hx-target="#category-{{.ID}}" hx-swap="outerHTML">
         <div class="form-group">
           <label for="category-edit-name">Name</label>
-          <input type="text" id="category-edit-name" name="name" value="{{.Name}}" required>
-          <span class="error">{{ index .ErrorStrings "name"}}</span>
+          {{if index .ErrorStrings "name"}}
+            <input type="text" class="error-input" id="category-edit-name-{{.ID}}" 
+              name="name" value="{{.Name}}" required>
+            <span class="form-group-error">{{ index .ErrorStrings "name"}}</span>
+          {{else}}
+            <input type="text" id="category-edit-name-{{.ID}}" 
+              name="name" value="{{.Name}}" required>
+          {{end}}
         </div>
         <div class="form-group">
           <label for="category-edit-pattern">Pattern</label>
-          <input type="text" id="category-edit-pattern" name="pattern" value="{{.Pattern}}" required>
-          <span class="error">{{ index .ErrorStrings "pattern"}}</span>
+          {{if index .ErrorStrings "pattern"}}
+            <input type="text" class="error-input" id="category-edit-pattern-{{.ID}}" 
+              name="name" value="{{.Pattern}}" required>
+            <span class="form-group-error">{{ index .ErrorStrings "pattern"}}</span>
+          {{else}}
+            <input type="text" id="category-edit-pattern-{{.ID}}" 
+              name="name" value="{{.Pattern}}" required>
+          {{end}}
         </div>
         <div class="form-actions">
           <button type="submit" class="btn-primary">Save</button>

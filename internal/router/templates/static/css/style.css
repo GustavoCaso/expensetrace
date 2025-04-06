@@ -1294,23 +1294,47 @@ form button:hover {
   padding: 2rem 1rem;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+/* Forms errors */
+.form-group-error {
+  display: block;
+  color: #ef4444;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  max-height: 50px;
+  margin-top: 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 3px solid #ef4444;
+}
+
+.form-group input.error-input {
+  border-color: #ef4444;
+}
+
+.form-group input.error-input:focus {
+  box-shadow: 0 0 0 0.25rem rgba(239, 68, 68, 0.25);
+}
+
+/* Animation for form errors */
+@keyframes errorShake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
   }
 }
 
-.htmx-indicator {
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-}
-
-.htmx-request .htmx-indicator {
-  opacity: 1;
-}
-
-.htmx-request.htmx-indicator {
-  opacity: 1;
+.form-error-shake {
+  animation: errorShake 0.5s ease-in-out;
 }
 
 /* Updated responsive adjustments */

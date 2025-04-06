@@ -99,7 +99,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	})
 
 	mux.HandleFunc("GET /categories", func(w http.ResponseWriter, _ *http.Request) {
-		router.categoriesHandler(w, nil)
+		router.categoriesHandler(w)
 	})
 
 	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {

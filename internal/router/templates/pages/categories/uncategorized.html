@@ -55,6 +55,8 @@
       </ul>
     </div>
   {{ else }}
-    <h2>There was an error: {{.Error}}</h2>
+    <h2>There was an error</h2>
+    <p>{{.Error}}</p>
+    <button class="btn-primary" hx-get="/categories" hx-target="#page" hx-swap="outerHTML">Retry</button>
   {{ end }}
 {{end}}
