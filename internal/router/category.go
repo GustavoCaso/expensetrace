@@ -105,32 +105,34 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 
 	enhancedCategory := createEnhancedCategory(category, expenses)
 
-	_, err = regexp.Compile(pattern)
+	if category.Pattern != pattern || category.Name != name {
+		_, err = regexp.Compile(pattern)
 
-	if err != nil {
-		enhancedCategory.Errors = true
-		enhancedCategory.ErrorStrings = map[string]string{
-			"pattern": fmt.Sprintf("invalid pattern %v", err),
+		if err != nil {
+			enhancedCategory.Errors = true
+			enhancedCategory.ErrorStrings = map[string]string{
+				"pattern": fmt.Sprintf("invalid pattern %v", err),
+			}
+
+			router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
+			return
 		}
 
-		router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
-		return
-	}
+		err = expenseDB.UpdateCategory(router.db, &categoryID, name, pattern)
 
-	err = expenseDB.UpdateCategory(router.db, &categoryID, name, pattern)
+		if err != nil {
+			enhancedCategory.Errors = true
+			enhancedCategory.ErrorStrings = map[string]string{
+				"name": fmt.Sprintf("not unique name %v", err),
+			}
 
-	if err != nil {
-		enhancedCategory.Errors = true
-		enhancedCategory.ErrorStrings = map[string]string{
-			"name": fmt.Sprintf("not unique name %v", err),
+			router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
+			return
 		}
 
-		router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
-		return
+		enhancedCategory.Category.Name = name
+		enhancedCategory.Category.Pattern = pattern
 	}
-
-	enhancedCategory.Category.Name = name
-	enhancedCategory.Category.Pattern = pattern
 
 	router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
 }

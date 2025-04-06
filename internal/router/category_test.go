@@ -174,6 +174,72 @@ func TestCreateCategoryHandler(t *testing.T) {
 	}
 }
 
+func TestUpdateHandler(t *testing.T) {
+	database := testutil.SetupTestDB(t)
+
+	// Create test categories
+	categoryID, err := db.CreateCategory(database, "Entertainment", "restaurant|bars|cinema")
+	if err != nil {
+		t.Fatalf("Failed to create Category: %v", err)
+	}
+
+	categoryIDInt := int(categoryID)
+
+	categories, err := db.GetCategories(database)
+	if err != nil {
+		t.Fatalf("Failed to get Categories: %v", err)
+	}
+
+	matcher := category.NewMatcher(categories)
+
+	// Create test expenses
+	expenses := []*db.Expense{
+		{
+			Source:      "Test Source",
+			Date:        time.Now(),
+			Description: "cinema",
+			Amount:      -123456,
+			Type:        db.ChargeType,
+			Currency:    "USD",
+			CategoryID:  &categoryIDInt,
+		},
+	}
+
+	expenseErrors := db.InsertExpenses(database, expenses)
+	if len(expenseErrors) > 0 {
+		t.Fatalf("Failed to insert test expenses: %v", expenseErrors)
+	}
+
+	// Create router
+	handler, _ := New(database, matcher)
+
+	// Create test request
+	body := strings.NewReader("name=Entertainment&pattern=test_pattern")
+	req := httptest.NewRequest("PUT", fmt.Sprintf("/category/%d", categoryID), body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+
+	// Serve request
+	handler.ServeHTTP(w, req)
+
+	// Check response
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK; got %v", resp.Status)
+	}
+
+	// Verify category was updated
+	categoryUpdated, err := db.GetCategory(database, &categoryIDInt)
+
+	if err != nil {
+		t.Fatalf("Failed to get category: %v", err)
+	}
+
+	if categoryUpdated.Pattern != "test_pattern" {
+		t.Fatalf("Category was not updated properly. Expected pattern to be `test_pattern` but was %s", categoryUpdated.Pattern)
+	}
+}
+
 func TestUpdateUncategorizedHandler(t *testing.T) {
 	database := testutil.SetupTestDB(t)
 
