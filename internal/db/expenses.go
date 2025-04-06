@@ -258,25 +258,6 @@ func GetExpensesByCategory(db *sql.DB, categoryID int) ([]*Expense, error) {
 	return expenses, nil
 }
 
-// Delete an expense by ID
-func DeleteExpense(db *sql.DB, expenseID int) error {
-	result, err := db.Exec("DELETE FROM expenses WHERE id = ?", expenseID)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("no expense found with ID %d", expenseID)
-	}
-
-	return nil
-}
-
 func renderTemplate(out io.Writer, templateName string, value interface{}) error {
 	tmpl, err := content.ReadFile(path.Join("templates", templateName))
 	if err != nil {
