@@ -174,7 +174,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 	}
 }
 
-func TestUpdateCategoryHandler(t *testing.T) {
+func TestUpdateUncategorizedHandler(t *testing.T) {
 	database := testutil.SetupTestDB(t)
 
 	// Create test categories
