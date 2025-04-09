@@ -2,6 +2,7 @@ package router
 
 import (
 	"bytes"
+	"database/sql"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -46,7 +47,7 @@ func TestImport(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(1),
+			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
 		},
 		{
 			Source:      "Test Source",
@@ -55,7 +56,7 @@ func TestImport(t *testing.T) {
 			Amount:      -50000,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(2),
+			CategoryID:  sql.NullInt64{Int64: int64(2), Valid: true},
 		},
 	}
 

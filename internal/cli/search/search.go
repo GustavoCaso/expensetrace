@@ -125,14 +125,17 @@ func (c searchCommand) Run(db *sql.DB, matcher *categoryPkg.Matcher) error {
 }
 
 func expeseCategory(ex *expenseDB.Expense) string {
-	if ex.CategoryID == nil {
+	c, err := ex.Category()
+
+	if err != nil || c == "" {
 		if ex.Type == expenseDB.IncomeType {
 			return "uncategorized income"
 		} else {
 			return "uncategorized charge"
 		}
 	}
-	return "Needs to fix this"
+
+	return c
 }
 
 var colorsOptions = map[string]color.Attribute{

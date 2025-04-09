@@ -1,6 +1,7 @@
 package category
 
 import (
+	"database/sql"
 	"testing"
 
 	"github.com/GustavoCaso/expensetrace/internal/db"
@@ -35,31 +36,31 @@ func TestMatch(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		wantID   *int
+		wantID   sql.NullInt64
 		wantName string
 	}{
 		{
 			name:     "should match food category",
 			input:    "restaurant bill",
-			wantID:   intPtr(1),
+			wantID:   sql.NullInt64{Int64: int64(1), Valid: true},
 			wantName: "Food",
 		},
 		{
 			name:     "should match transport category",
 			input:    "uber ride",
-			wantID:   intPtr(2),
+			wantID:   sql.NullInt64{Int64: int64(2), Valid: true},
 			wantName: "Transport",
 		},
 		{
 			name:     "should match entertainment category",
 			input:    "netflix subscription",
-			wantID:   intPtr(3),
+			wantID:   sql.NullInt64{Int64: int64(3), Valid: true},
 			wantName: "Entertainment",
 		},
 		{
 			name:     "should not match any category",
 			input:    "random text",
-			wantID:   nil,
+			wantID:   sql.NullInt64{Int64: 0, Valid: false},
 			wantName: "",
 		},
 	}
@@ -68,8 +69,8 @@ func TestMatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotID, gotName := matcher.Match(tt.input)
 
-			if gotID != nil && *gotID != *tt.wantID {
-				t.Errorf("Match() ID = %v, want %v", *gotID, *tt.wantID)
+			if gotID.Int64 != tt.wantID.Int64 {
+				t.Errorf("Match() ID = %v, want %v", gotID.Int64, tt.wantID.Int64)
 			}
 
 			if gotName != tt.wantName {
@@ -103,8 +104,4 @@ func TestCategories(t *testing.T) {
 			t.Errorf("Categories()[%d].Pattern = %v, want %v", i, cat.Pattern, categories[i].Pattern)
 		}
 	}
-}
-
-func intPtr(x int) *int {
-	return &x
 }

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -161,7 +162,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 		t.Fatalf("Failed more expenses than it should: %v", err)
 	}
 
-	if *expensesUpdated[0].CategoryID != categoryId {
+	if expensesUpdated[0].CategoryID.Int64 != int64(categoryId) {
 		t.Fatal("Expense did not update the category ID")
 	}
 
@@ -183,8 +184,6 @@ func TestUpdateHandler(t *testing.T) {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	categoryIDInt := int(categoryID)
-
 	categories, err := db.GetCategories(database)
 	if err != nil {
 		t.Fatalf("Failed to get Categories: %v", err)
@@ -201,7 +200,7 @@ func TestUpdateHandler(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  &categoryIDInt,
+			CategoryID:  sql.NullInt64{Int64: int64(categoryID), Valid: true},
 		},
 	}
 
@@ -229,7 +228,7 @@ func TestUpdateHandler(t *testing.T) {
 	}
 
 	// Verify category was updated
-	categoryUpdated, err := db.GetCategory(database, &categoryIDInt)
+	categoryUpdated, err := db.GetCategory(database, categoryID)
 
 	if err != nil {
 		t.Fatalf("Failed to get category: %v", err)
@@ -304,7 +303,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 		t.Fatalf("Failed more expenses than it should: %v", err)
 	}
 
-	if *expensesUpdated[0].CategoryID != int(categoryID) {
+	if int(expensesUpdated[0].CategoryID.Int64) != int(categoryID) {
 		t.Fatal("Expense did not update the category ID")
 	}
 

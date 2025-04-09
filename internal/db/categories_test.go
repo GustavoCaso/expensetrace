@@ -102,8 +102,7 @@ func TestGetCategory(t *testing.T) {
 	}
 
 	// Test getting existing category
-	categoryID := 1
-	category, err := GetCategory(db, &categoryID)
+	category, err := GetCategory(db, int64(1))
 	if err != nil {
 		t.Errorf("Failed to get category: %v", err)
 	}
@@ -116,8 +115,7 @@ func TestGetCategory(t *testing.T) {
 	}
 
 	// Test getting non-existent category
-	categoryID = 999
-	_, err = GetCategory(db, &categoryID)
+	_, err = GetCategory(db, int64(999))
 	if err == nil {
 		t.Error("Expected error when getting non-existent category, got nil")
 	}
@@ -136,8 +134,7 @@ func TestCreateCategory(t *testing.T) {
 	}
 
 	// Verify category was created
-	categoryID := int(id)
-	category, err := GetCategory(db, &categoryID)
+	category, err := GetCategory(db, int64(id))
 	if err != nil {
 		t.Errorf("Failed to get created category: %v", err)
 	}

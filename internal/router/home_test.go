@@ -1,6 +1,7 @@
 package router
 
 import (
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -40,7 +41,7 @@ func TestHomeHandler(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(1),
+			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
 		},
 		{
 			Source:      "Test Source",
@@ -49,7 +50,7 @@ func TestHomeHandler(t *testing.T) {
 			Amount:      -50000,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(2),
+			CategoryID:  sql.NullInt64{Int64: int64(2), Valid: true},
 		},
 	}
 

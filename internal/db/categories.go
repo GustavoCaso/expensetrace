@@ -69,7 +69,7 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 	return categories, nil
 }
 
-func GetCategory(db *sql.DB, categoryID *int) (Category, error) {
+func GetCategory(db *sql.DB, categoryID int64) (Category, error) {
 	row := db.QueryRow("SELECT * FROM categories WHERE id=$1", categoryID)
 	var id int
 	var name string
@@ -87,7 +87,7 @@ func GetCategory(db *sql.DB, categoryID *int) (Category, error) {
 	}, nil
 }
 
-func UpdateCategory(db *sql.DB, categoryID *int, name, pattern string) error {
+func UpdateCategory(db *sql.DB, categoryID int, name, pattern string) error {
 	_, err := db.Exec("UPDATE categories SET name = ?, pattern = ? WHERE id = ?;", name, pattern, categoryID)
 	return err
 }

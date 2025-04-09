@@ -2,11 +2,11 @@ package search
 
 import (
 	"bytes"
+	"database/sql"
 	"flag"
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
@@ -56,8 +56,8 @@ func TestCategoryDisplay(t *testing.T) {
 			category: category{
 				name:         "Food",
 				amount:       -1000,
-				categoryType: db.ChargeType,
-				expenses: []*db.Expense{
+				categoryType: expenseDB.ChargeType,
+				expenses: []*expenseDB.Expense{
 					{
 						Date:        time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 						Description: "Restaurant",
@@ -73,8 +73,8 @@ func TestCategoryDisplay(t *testing.T) {
 			category: category{
 				name:         "Salary",
 				amount:       100000,
-				categoryType: db.IncomeType,
-				expenses: []*db.Expense{
+				categoryType: expenseDB.IncomeType,
+				expenses: []*expenseDB.Expense{
 					{
 						Date:        time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 						Description: "Monthly salary",
@@ -90,8 +90,8 @@ func TestCategoryDisplay(t *testing.T) {
 			category: category{
 				name:         "Food",
 				amount:       -1000,
-				categoryType: db.ChargeType,
-				expenses: []*db.Expense{
+				categoryType: expenseDB.ChargeType,
+				expenses: []*expenseDB.Expense{
 					{
 						Date:        time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 						Description: "Restaurant",
@@ -169,8 +169,8 @@ func TestRenderTemplate(t *testing.T) {
 			"Food": {
 				name:         "Food",
 				amount:       -1000,
-				categoryType: db.ChargeType,
-				expenses: []*db.Expense{
+				categoryType: expenseDB.ChargeType,
+				expenses: []*expenseDB.Expense{
 					{
 						Date:        time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 						Description: "Restaurant",
@@ -274,6 +274,33 @@ func TestRun(t *testing.T) {
 }
 
 func TestExpenseCategory(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+
+	id, err := expenseDB.CreateCategory(db, "Test", "test.*")
+	if err != nil {
+		t.Errorf("Failed to create category: %v", err)
+	}
+
+	expenses := []*expenseDB.Expense{
+		{
+			Description: "Restaurant bill",
+			Date:        time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			Amount:      -1000,
+			Type:        expenseDB.ChargeType,
+			CategoryID:  sql.NullInt64{Int64: int64(id), Valid: true},
+		},
+	}
+
+	errs := expenseDB.InsertExpenses(db, expenses)
+	if len(errs) > 0 {
+		t.Fatalf("Failed to create expenses: %v", errs)
+	}
+
+	expenses, err = expenseDB.GetExpenses(db)
+	if err != nil {
+		t.Fatalf("Failed to get expenses: %v", err)
+	}
+
 	tests := []struct {
 		name     string
 		expense  *expenseDB.Expense
@@ -282,7 +309,7 @@ func TestExpenseCategory(t *testing.T) {
 		{
 			name: "Uncategorized income",
 			expense: &expenseDB.Expense{
-				CategoryID: nil,
+				CategoryID: sql.NullInt64{Int64: 0, Valid: false},
 				Type:       expenseDB.IncomeType,
 			},
 			expected: "uncategorized income",
@@ -290,18 +317,15 @@ func TestExpenseCategory(t *testing.T) {
 		{
 			name: "Uncategorized charge",
 			expense: &expenseDB.Expense{
-				CategoryID: nil,
+				CategoryID: sql.NullInt64{Int64: 0, Valid: false},
 				Type:       expenseDB.ChargeType,
 			},
 			expected: "uncategorized charge",
 		},
 		{
-			name: "Categorized expense",
-			expense: &expenseDB.Expense{
-				CategoryID: intPtr(1),
-				Type:       expenseDB.ChargeType,
-			},
-			expected: "Needs to fix this",
+			name:     "Categorized expense",
+			expense:  expenses[0],
+			expected: "Test",
 		},
 	}
 
@@ -313,8 +337,4 @@ func TestExpenseCategory(t *testing.T) {
 			}
 		})
 	}
-}
-
-func intPtr(x int) *int {
-	return &x
 }

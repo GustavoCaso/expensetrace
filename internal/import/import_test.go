@@ -65,7 +65,7 @@ Test Source,03/01/2024,Salary,500000.00,USD`
 	if expenses[0].Currency != "USD" {
 		t.Errorf("Expense[0].Currency = %v, want USD", expenses[0].Currency)
 	}
-	if *expenses[0].CategoryID != 1 {
+	if expenses[0].CategoryID.Int64 != 1 {
 		t.Errorf("Expense[0].CategoryID = %v, want 1", expenses[0].CategoryID)
 	}
 
@@ -76,7 +76,7 @@ Test Source,03/01/2024,Salary,500000.00,USD`
 	if expenses[1].Amount != -500000 {
 		t.Errorf("Expense[1].Amount = %v, want -500000", expenses[1].Amount)
 	}
-	if *expenses[1].CategoryID != 2 {
+	if expenses[1].CategoryID.Int64 != 2 {
 		t.Errorf("Expense[1].CategoryID = %v, want 2", expenses[1].CategoryID)
 	}
 
@@ -164,7 +164,7 @@ func TestImportJSON(t *testing.T) {
 	if expenses[0].Currency != "USD" {
 		t.Errorf("Expense[0].Currency = %v, want USD", expenses[0].Currency)
 	}
-	if *expenses[0].CategoryID != 1 {
+	if expenses[0].CategoryID.Int64 != 1 {
 		t.Errorf("Expense[0].CategoryID = %v, want 1", expenses[0].CategoryID)
 	}
 
@@ -175,7 +175,7 @@ func TestImportJSON(t *testing.T) {
 	if expenses[1].Amount != -500000 {
 		t.Errorf("Expense[1].Amount = %v, want -500000", expenses[1].Amount)
 	}
-	if *expenses[1].CategoryID != 2 {
+	if expenses[1].CategoryID.Int64 != 2 {
 		t.Errorf("Expense[1].CategoryID = %v, want 2", expenses[1].CategoryID)
 	}
 
