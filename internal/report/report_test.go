@@ -1,6 +1,7 @@
 package report
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 
@@ -20,7 +21,7 @@ func TestGenerate(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(1),
+			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
 		},
 		{
 			Source:      "Test Source",
@@ -29,7 +30,7 @@ func TestGenerate(t *testing.T) {
 			Amount:      -50000,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(2),
+			CategoryID:  sql.NullInt64{Int64: int64(2), Valid: true},
 		},
 		{
 			Source:      "Test Source",
@@ -38,7 +39,7 @@ func TestGenerate(t *testing.T) {
 			Amount:      5000000,
 			Type:        db.IncomeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(3),
+			CategoryID:  sql.NullInt64{Int64: int64(3), Valid: true},
 		},
 	}
 
@@ -97,7 +98,7 @@ func TestCategories(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(1),
+			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
 		},
 		{
 			Source:      "Test Source",
@@ -106,7 +107,7 @@ func TestCategories(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(1),
+			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
 		},
 		{
 			Source:      "Test Source",
@@ -115,7 +116,7 @@ func TestCategories(t *testing.T) {
 			Amount:      5000000,
 			Type:        db.IncomeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(3),
+			CategoryID:  sql.NullInt64{Int64: int64(3), Valid: true},
 		},
 	}
 
@@ -184,8 +185,4 @@ func TestCalendarDays(t *testing.T) {
 			}
 		})
 	}
-}
-
-func intPtr(x int) *int {
-	return &x
 }

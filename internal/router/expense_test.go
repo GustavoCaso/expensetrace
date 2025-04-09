@@ -1,6 +1,7 @@
 package router
 
 import (
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -39,7 +40,7 @@ func TestExpensesHandler(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(1),
+			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
 		},
 		{
 			Source:      "Test Source",
@@ -48,7 +49,7 @@ func TestExpensesHandler(t *testing.T) {
 			Amount:      -50000,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(2),
+			CategoryID:  sql.NullInt64{Int64: int64(2), Valid: true},
 		},
 	}
 
@@ -84,7 +85,7 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 			Amount:      -123456,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(1),
+			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
 		},
 		{
 			Source:      "Test Source",
@@ -93,7 +94,7 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 			Amount:      -50000,
 			Type:        db.ChargeType,
 			Currency:    "USD",
-			CategoryID:  intPtr(2),
+			CategoryID:  sql.NullInt64{Int64: int64(2), Valid: true},
 		},
 	}
 
@@ -126,10 +127,10 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 	foundFood := false
 	foundTransport := false
 	for _, expense := range monthExpenses {
-		if *expense.CategoryID == 1 {
+		if expense.CategoryID.Int64 == 1 {
 			foundFood = true
 		}
-		if *expense.CategoryID == 2 {
+		if expense.CategoryID.Int64 == 2 {
 			foundTransport = true
 		}
 	}
@@ -140,8 +141,4 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 	if !foundTransport {
 		t.Error("Transport expense not found")
 	}
-}
-
-func intPtr(x int) *int {
-	return &x
 }

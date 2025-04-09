@@ -58,7 +58,6 @@ func TestInsertExpenses(t *testing.T) {
 			Type:        ChargeType,
 			Date:        now,
 			Currency:    "USD",
-			CategoryID:  nil,
 		},
 		{
 			Source:      "test2",
@@ -67,7 +66,6 @@ func TestInsertExpenses(t *testing.T) {
 			Type:        IncomeType,
 			Date:        now,
 			Currency:    "USD",
-			CategoryID:  nil,
 		},
 	}
 
@@ -118,11 +116,11 @@ func TestGetExpenses(t *testing.T) {
 		description string
 		expenseType ExpenseType
 		currency    string
-		categoryID  *int
+		categoryID  sql.NullInt64
 	}{
-		{"test1", 1000, "Test expense 1", ChargeType, "USD", nil},
-		{"test2", 2000, "Test expense 2", IncomeType, "USD", nil},
-		{"test3", 3000, "Test expense 3", ChargeType, "EUR", intPtr(1)},
+		{"test1", 1000, "Test expense 1", ChargeType, "USD", sql.NullInt64{Int64: 0, Valid: false}},
+		{"test2", 2000, "Test expense 2", IncomeType, "USD", sql.NullInt64{Int64: 0, Valid: false}},
+		{"test3", 3000, "Test expense 3", ChargeType, "EUR", sql.NullInt64{Int64: 1, Valid: true}},
 	}
 
 	// Create Category 1
@@ -164,11 +162,11 @@ func TestGetExpenses(t *testing.T) {
 		if exp.Currency != testExpenses[i].currency {
 			t.Errorf("Expense[%d].Currency = %v, want %v", i, exp.Currency, testExpenses[i].currency)
 		}
-		if exp.CategoryID == nil {
-			continue
-		}
-		if *exp.CategoryID != *testExpenses[i].categoryID {
-			t.Errorf("Expense[%d].CategoryID = %v, want %v", i, *exp.CategoryID, *testExpenses[i].categoryID)
+		// if exp.CategoryID == nil {
+		// 	continue
+		// }
+		if exp.CategoryID.Int64 != testExpenses[i].categoryID.Int64 {
+			t.Errorf("Expense[%d].CategoryID = %v, want %v", i, exp.CategoryID.Int64, testExpenses[i].categoryID.Int64)
 		}
 	}
 }
@@ -188,11 +186,11 @@ func TestGetExpensesFromDateRange(t *testing.T) {
 		expenseType ExpenseType
 		date        time.Time
 		currency    string
-		categoryID  *int
+		categoryID  sql.NullInt64
 	}{
-		{"test1", 1000, "Test expense 1", ChargeType, yesterday, "USD", nil},
-		{"test2", 2000, "Test expense 2", IncomeType, now, "USD", nil},
-		{"test3", 3000, "Test expense 3", ChargeType, tomorrow, "EUR", intPtr(1)},
+		{"test1", 1000, "Test expense 1", ChargeType, yesterday, "USD", sql.NullInt64{Int64: 0, Valid: false}},
+		{"test2", 2000, "Test expense 2", IncomeType, now, "USD", sql.NullInt64{Int64: 0, Valid: false}},
+		{"test3", 3000, "Test expense 3", ChargeType, tomorrow, "EUR", sql.NullInt64{Int64: 1, Valid: true}},
 	}
 
 	// Create Category 1
@@ -230,11 +228,11 @@ func TestGetExpensesWithoutCategory(t *testing.T) {
 		description string
 		expenseType ExpenseType
 		currency    string
-		categoryID  *int
+		categoryID  sql.NullInt64
 	}{
-		{"test1", 1000, "Test expense 1", ChargeType, "USD", nil},
-		{"test2", 2000, "Test expense 2", IncomeType, "USD", intPtr(1)},
-		{"test3", 3000, "Test expense 3", ChargeType, "EUR", nil},
+		{"test1", 1000, "Test expense 1", ChargeType, "USD", sql.NullInt64{Int64: 0, Valid: false}},
+		{"test2", 2000, "Test expense 2", IncomeType, "USD", sql.NullInt64{Int64: 1, Valid: true}},
+		{"test3", 3000, "Test expense 3", ChargeType, "EUR", sql.NullInt64{Int64: 0, Valid: false}},
 	}
 
 	// Create Category 1
@@ -261,8 +259,8 @@ func TestGetExpensesWithoutCategory(t *testing.T) {
 	}
 
 	for _, exp := range expenses {
-		if exp.CategoryID != nil {
-			t.Errorf("Expected CategoryID 0, got %d", exp.CategoryID)
+		if exp.CategoryID.Valid {
+			t.Errorf("Expected CategoryID to be NULL, got %+v", exp.CategoryID)
 		}
 	}
 }
@@ -277,11 +275,11 @@ func TestSearchExpenses(t *testing.T) {
 		description string
 		expenseType ExpenseType
 		currency    string
-		categoryID  *int
+		categoryID  sql.NullInt64
 	}{
-		{"test1", 1000, "Test expense 1", ChargeType, "USD", nil},
-		{"test2", 2000, "Test expense 2", IncomeType, "USD", intPtr(1)},
-		{"test3", 3000, "Test expense 3", ChargeType, "EUR", nil},
+		{"test1", 1000, "Test expense 1", ChargeType, "USD", sql.NullInt64{Int64: 0, Valid: false}},
+		{"test2", 2000, "Test expense 2", IncomeType, "USD", sql.NullInt64{Int64: 1, Valid: true}},
+		{"test3", 3000, "Test expense 3", ChargeType, "EUR", sql.NullInt64{Int64: 0, Valid: false}},
 	}
 
 	// Create Category 1
@@ -312,8 +310,4 @@ func TestSearchExpenses(t *testing.T) {
 			t.Errorf("Unexpected expense description: %s", exp.Description)
 		}
 	}
-}
-
-func intPtr(x int) *int {
-	return &x
 }

@@ -1,6 +1,7 @@
 package category
 
 import (
+	"database/sql"
 	"regexp"
 
 	"github.com/GustavoCaso/expensetrace/internal/db"
@@ -41,12 +42,12 @@ func (c Matcher) Categories() []db.Category {
 	return c.categories
 }
 
-func (c Matcher) Match(s string) (*int, string) {
+func (c Matcher) Match(s string) (sql.NullInt64, string) {
 	for _, matcher := range c.matchers {
 		if matcher.re.MatchString(s) {
-			return &matcher.id, matcher.category
+			return sql.NullInt64{Int64: int64(matcher.id), Valid: true}, matcher.category
 		}
 	}
 
-	return nil, ""
+	return sql.NullInt64{Int64: 0, Valid: false}, ""
 }

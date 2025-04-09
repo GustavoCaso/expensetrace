@@ -26,19 +26,19 @@ type Expense struct {
 	Amount      int64
 	Type        ExpenseType
 	Currency    string
-	CategoryID  *int
+	CategoryID  sql.NullInt64
 
 	db *sql.DB
 }
 
 func (e Expense) Category() (string, error) {
-	if e.CategoryID != nil {
+	if e.CategoryID.Valid {
 		if e.db == nil {
 			fmt.Println("missing db instance on expense instance")
 			return "", nil
 		}
 
-		c, err := GetCategory(e.db, e.CategoryID)
+		c, err := GetCategory(e.db, e.CategoryID.Int64)
 		if err != nil {
 			return "", err
 		}

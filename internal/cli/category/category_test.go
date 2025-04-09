@@ -2,6 +2,7 @@ package category
 
 import (
 	"bytes"
+	"database/sql"
 	"flag"
 	"os"
 	"strings"
@@ -151,20 +152,17 @@ func TestRecategorize(t *testing.T) {
 		t.Fatalf("Failed to get updated expenses: %v", err)
 	}
 
-	expectedCategories := map[string]*int{
-		"restaurant":    intPtr(1), // Food category
-		"uber":          intPtr(2), // Transport category
-		"Other expense": nil,       // No category
+	expectedCategories := map[string]sql.NullInt64{
+		"restaurant":    {Int64: int64(1), Valid: true}, // Food category
+		"uber":          {Int64: int64(2), Valid: true}, // Transport category
+		"Other expense": {Int64: 0, Valid: false},       // No category
 	}
 
 	for _, e := range updatedExpenses {
 		expectedCategoryID := expectedCategories[e.Description]
-		if e.CategoryID == nil {
-			continue
-		}
 
-		if *e.CategoryID != *expectedCategoryID {
-			t.Errorf("Expense %q has category ID %d, want %d", e.Description, *e.CategoryID, *expectedCategoryID)
+		if e.CategoryID.Int64 != expectedCategoryID.Int64 {
+			t.Errorf("Expense %q has category ID %d, want %d", e.Description, e.CategoryID.Int64, expectedCategoryID.Int64)
 		}
 	}
 }
@@ -257,8 +255,4 @@ func TestRun(t *testing.T) {
 	if err == nil {
 		t.Error("Run() expected error for invalid output location, got nil")
 	}
-}
-
-func intPtr(x int) *int {
-	return &x
 }

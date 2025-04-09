@@ -1,6 +1,7 @@
 package router
 
 import (
+	"database/sql"
 	"fmt"
 	"io"
 	"log"
@@ -88,7 +89,7 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 		return
 	}
 
-	category, err := expenseDB.GetCategory(router.db, &categoryID)
+	category, err := expenseDB.GetCategory(router.db, int64(categoryID))
 
 	if err != nil {
 		categoryIndexError(router, w, err)
@@ -118,7 +119,7 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 			return
 		}
 
-		err = expenseDB.UpdateCategory(router.db, &categoryID, name, pattern)
+		err = expenseDB.UpdateCategory(router.db, categoryID, name, pattern)
 
 		if err != nil {
 			enhancedCategory.Errors = true
@@ -213,7 +214,7 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 		router.templates.Render(w, "pages/categories/uncategorized.html", data)
 	}
 
-	_, err = expenseDB.GetCategory(router.db, &categoryID)
+	_, err = expenseDB.GetCategory(router.db, int64(categoryID))
 
 	if err != nil {
 		log.Println("error GetCategory ", err.Error())
@@ -243,7 +244,7 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 
 	if len(expenses) > 0 {
 		for _, ex := range expenses {
-			ex.CategoryID = &categoryID
+			ex.CategoryID = sql.NullInt64{Int64: int64(categoryID), Valid: true}
 		}
 
 		updated, err := expenseDB.UpdateExpenses(router.db, expenses)
@@ -323,10 +324,10 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			return
 		}
 
-		categoryIDInt := int(categoryID)
+		sqlCategoryID := sql.NullInt64{Int64: int64(categoryID), Valid: true}
 
 		for _, ex := range expenses {
-			ex.CategoryID = &categoryIDInt
+			ex.CategoryID = sqlCategoryID
 		}
 
 		updated, err := expenseDB.UpdateExpenses(router.db, expenses)

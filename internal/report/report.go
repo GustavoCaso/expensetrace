@@ -159,7 +159,6 @@ func expeseCategory(ex *expenseDB.Expense) string {
 	category, err := ex.Category()
 	if err != nil {
 		fmt.Printf("error fetching the category: %+v\n", err.Error())
-		return ""
 	}
 
 	if category == "" {
