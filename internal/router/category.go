@@ -346,17 +346,6 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	name := r.FormValue("name")
 	pattern := r.FormValue("pattern")
 
-	if name == "" || pattern == "" {
-		data := struct {
-			Error error
-		}{
-			Error: fmt.Errorf("category must include name and a valid regex pattern. Ensure that you populate the name and pattern input"),
-		}
-
-		router.templates.Render(w, "partials/categories/new_result.html", data)
-		return
-	}
-
 	data := struct {
 		Name    string
 		Pattern string
@@ -367,6 +356,13 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	}{
 		Name:    name,
 		Pattern: pattern,
+	}
+
+	if name == "" || pattern == "" {
+		data.Error = fmt.Errorf("category must include name and a valid regex pattern. Ensure that you populate the name and pattern input")
+
+		router.templates.Render(w, "partials/categories/new_result.html", data)
+		return
 	}
 
 	re, err := regexp.Compile(pattern)
