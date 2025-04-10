@@ -123,4 +123,13 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
   });
+
+  // Setup functionality when new content is added via HTMX
+  document.body.addEventListener('htmx:afterSwap', function (event) {
+    // If our category form was just loaded, make sure the pattern help is hidden by default
+    const patternHelp = document.getElementById('pattern-help');
+    if (patternHelp) {
+      patternHelp.classList.add('hidden');
+    }
+  });
 });
