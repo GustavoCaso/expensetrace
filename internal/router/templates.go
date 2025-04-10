@@ -23,6 +23,10 @@ var templatesFS embed.FS
 
 var templateFuncs = template.FuncMap{
 	"formatMoney": util.FormatMoney,
+	"colorOutput": util.ColorOutput,
+	"sub": func(a, b int) int {
+		return a - b
+	},
 }
 
 type templates map[string]*template.Template
