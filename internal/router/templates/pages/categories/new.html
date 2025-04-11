@@ -78,27 +78,27 @@
               <div class="example-categories">
                 <div class="example-category">
                   <h4>Food & Dining</h4>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='restaurant|cafe|dining'">Restaurant/Cafe</div>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='grocery|supermarket'">Groceries</div>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='^starbucks'">Starbucks</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='restaurant|cafe|dining'; document.getElementById('category-name').value='Restaurant/Cafe'">Restaurant/Cafe</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='grocery|supermarket'; document.getElementById('category-name').value='Groceries'">Groceries</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='^starbucks'; document.getElementById('category-name').value='Starbucks'">Starbucks</div>
                 </div>
                 <div class="example-category">
                   <h4>Shopping</h4>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='^amzn|^amazon'">Amazon</div>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='walmart|target|store'">Retail</div>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='clothing|apparel|fashion'">Clothing</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='^amzn|^amazon'; document.getElementById('category-name').value='Amazon'">Amazon</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='walmart|target|store'; document.getElementById('category-name').value='Retail'">Retail</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='clothing|apparel|fashion'; document.getElementById('category-name').value='Clothing'">Clothing</div>
                 </div>
                 <div class="example-category">
                   <h4>Bills & Utilities</h4>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='electric|water|gas|utility'">Utilities</div>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='internet|cable|phone'">Telecom</div>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='insurance'">Insurance</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='electric|water|gas|utility'; document.getElementById('category-name').value='Utilities'">Utilities</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='internet|cable|phone'; document.getElementById('category-name').value='Telecom'">Telecom</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='insurance'; document.getElementById('category-name').value='Insurance'">Insurance</div>
                 </div>
                 <div class="example-category">
                   <h4>Entertainment</h4>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='netflix|hulu|disney|spotify|subscription$'">Subscriptions</div>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='movie|theater|cinema'">Movies</div>
-                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='game|playstation|xbox|nintendo'">Gaming</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='netflix|hulu|disney|spotify|subscriptions; document.getElementById('category-name').value='Subscriptions''">Subscriptions</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='movie|theater|cinema'; document.getElementById('category-name').value='Movies'">Movies</div>
+                  <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='game|playstation|xbox|nintendo'; document.getElementById('category-name').value='Gaming'">Gaming</div>
                 </div>
               </div>
             </div>
