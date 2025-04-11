@@ -176,66 +176,162 @@ func TestCreateCategoryHandler(t *testing.T) {
 }
 
 func TestUpdateHandler(t *testing.T) {
-	database := testutil.SetupTestDB(t)
-
-	// Create test categories
-	categoryID, err := db.CreateCategory(database, "Entertainment", "restaurant|bars|cinema")
-	if err != nil {
-		t.Fatalf("Failed to create Category: %v", err)
-	}
-
-	categories, err := db.GetCategories(database)
-	if err != nil {
-		t.Fatalf("Failed to get Categories: %v", err)
-	}
-
-	matcher := category.NewMatcher(categories)
-
-	// Create test expenses
-	expenses := []*db.Expense{
+	tests := []struct {
+		name          string
+		body          string
+		updateMatcher bool
+		assertion     func(t *testing.T, updatedCategory db.Category, updatedExpenses []*db.Expense)
+	}{
 		{
-			Source:      "Test Source",
-			Date:        time.Now(),
-			Description: "cinema",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(categoryID), Valid: true},
+			"modify pattern and set expense to NULL category",
+			"pattern=test_pattern",
+			true,
+			func(t *testing.T, updatedCategory db.Category, updatedExpenses []*db.Expense) {
+				if updatedCategory.Pattern != "test_pattern" {
+					t.Fatalf("Category was not updated properly. Expected pattern to be `test_pattern` but was %s", updatedCategory.Pattern)
+				}
+
+				for _, ex := range updatedExpenses {
+					if ex.Description == "cinema" {
+						if ex.CategoryID.Valid {
+							t.Fatalf("Expense was not properly updated. Category ID must be NULL. Got %d", ex.CategoryID.Int64)
+						}
+					}
+				}
+			},
+		},
+		{
+			"modify pattern and update existing expenses",
+			"pattern=restaurant|bars|cinema|gym",
+			true,
+			func(t *testing.T, updatedCategory db.Category, updatedExpenses []*db.Expense) {
+				if updatedCategory.Pattern != "restaurant|bars|cinema|gym" {
+					t.Fatalf("Category was not updated properly. Expected pattern to be `restaurant|bars|cinema|gym` but was %s", updatedCategory.Pattern)
+				}
+
+				for _, ex := range updatedExpenses {
+					if int(ex.CategoryID.Int64) != updatedCategory.ID {
+						t.Fatalf("Expense %s was incoreectly updated. Category ID must be %d. Got %d", ex.Description, updatedCategory.ID, ex.CategoryID.Int64)
+					}
+				}
+			},
+		},
+		{
+			"modify name",
+			"name=Enjoyment",
+			false,
+			func(t *testing.T, updatedCategory db.Category, updatedExpenses []*db.Expense) {
+				if updatedCategory.Name != "Enjoyment" {
+					t.Fatalf("Category was not updated properly. Expected name to be `Enjoyment` but was %s", updatedCategory.Name)
+				}
+				for _, ex := range updatedExpenses {
+					if ex.Description == "cinema" {
+						if int(ex.CategoryID.Int64) != updatedCategory.ID {
+							t.Fatalf("Expense %s was incoreectly updated. Category ID must be %d. Got %d", ex.Description, updatedCategory.ID, ex.CategoryID.Int64)
+						}
+					}
+
+					if ex.Description == "gym" {
+						if ex.CategoryID.Valid {
+							t.Fatalf("Expense was updated. Category ID must be NULL. Got %d", ex.CategoryID.Int64)
+						}
+					}
+				}
+			},
 		},
 	}
 
-	expenseErrors := db.InsertExpenses(database, expenses)
-	if len(expenseErrors) > 0 {
-		t.Fatalf("Failed to insert test expenses: %v", expenseErrors)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			database := testutil.SetupTestDB(t)
+			// Create test categories
+			categoryID, err := db.CreateCategory(database, "Entertainment", "restaurant|bars|cinema")
+			if err != nil {
+				t.Fatalf("Failed to create Category: %v", err)
+			}
 
-	// Create router
-	handler, _ := New(database, matcher)
+			categories, err := db.GetCategories(database)
+			if err != nil {
+				t.Fatalf("Failed to get Categories: %v", err)
+			}
 
-	// Create test request
-	body := strings.NewReader("name=Entertainment&pattern=test_pattern")
-	req := httptest.NewRequest("PUT", fmt.Sprintf("/category/%d", categoryID), body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	w := httptest.NewRecorder()
+			matcher := category.NewMatcher(categories)
 
-	// Serve request
-	handler.ServeHTTP(w, req)
+			// Create test expenses
+			expenses := []*db.Expense{
+				// id 1
+				{
+					Source:      "Test Source",
+					Date:        time.Now(),
+					Description: "cinema",
+					Amount:      -123456,
+					Type:        db.ChargeType,
+					Currency:    "USD",
+					CategoryID:  sql.NullInt64{Int64: int64(categoryID), Valid: true},
+				},
+				// id 2
+				{
+					Source:      "Test Source",
+					Date:        time.Now(),
+					Description: "gym",
+					Amount:      -123,
+					Type:        db.ChargeType,
+					Currency:    "USD",
+					CategoryID:  sql.NullInt64{Int64: int64(0), Valid: false},
+				},
+			}
 
-	// Check response
-	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status OK; got %v", resp.Status)
-	}
+			expenseErrors := db.InsertExpenses(database, expenses)
+			if len(expenseErrors) > 0 {
+				t.Fatalf("Failed to insert test expenses: %v", expenseErrors)
+			}
 
-	// Verify category was updated
-	categoryUpdated, err := db.GetCategory(database, categoryID)
+			// Create new router for every request
+			// that way we do not share state between tests
+			handler, router := New(database, matcher)
 
-	if err != nil {
-		t.Fatalf("Failed to get category: %v", err)
-	}
+			oldSyncOnce := router.reportsOnce
+			oldMatcher := router.matcher
 
-	if categoryUpdated.Pattern != "test_pattern" {
-		t.Fatalf("Category was not updated properly. Expected pattern to be `test_pattern` but was %s", categoryUpdated.Pattern)
+			// Create test request
+			body := strings.NewReader(tt.body)
+			req := httptest.NewRequest("PUT", fmt.Sprintf("/category/%d", categoryID), body)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+
+			// Serve request
+			handler.ServeHTTP(w, req)
+
+			// Check response
+			resp := w.Result()
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("Expected status OK; got %v", resp.Status)
+			}
+
+			// Get updated category
+			categoryUpdated, err := db.GetCategory(database, categoryID)
+
+			if err != nil {
+				t.Fatalf("Failed to get category: %v", err)
+			}
+			updatedExpenses, err := db.GetExpenses(database)
+
+			if err != nil {
+				t.Fatalf("Failed to get expenses: %v", err)
+			}
+
+			tt.assertion(t, categoryUpdated, updatedExpenses)
+
+			if oldSyncOnce == router.reportsOnce {
+				t.Error("Router cache was not reset")
+			}
+
+			if tt.updateMatcher {
+				if oldMatcher == router.matcher {
+					t.Error("Router matcher was not updated")
+				}
+			}
+		})
 	}
 }
 

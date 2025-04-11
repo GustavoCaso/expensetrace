@@ -14,6 +14,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
+	internalCategory "github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 )
 
@@ -106,33 +107,104 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 
 	enhancedCategory := createEnhancedCategory(category, expenses)
 
-	if category.Pattern != pattern || category.Name != name {
-		_, err = regexp.Compile(pattern)
+	if (pattern != "" && category.Pattern != pattern) || (name != "" && category.Name != name) {
+		patternChanged := false
+		updated := false
 
-		if err != nil {
-			enhancedCategory.Errors = true
-			enhancedCategory.ErrorStrings = map[string]string{
-				"pattern": fmt.Sprintf("invalid pattern %v", err),
+		if pattern != "" && category.Pattern != pattern {
+			_, err = regexp.Compile(pattern)
+
+			if err != nil {
+				enhancedCategory.Errors = true
+				enhancedCategory.ErrorStrings = map[string]string{
+					"pattern": fmt.Sprintf("invalid pattern %v", err),
+				}
+
+				router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
+				return
 			}
-
-			router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
-			return
+			patternChanged = true
 		}
 
-		err = expenseDB.UpdateCategory(router.db, categoryID, name, pattern)
+		if name != "" && category.Name != name || patternChanged {
+			err = expenseDB.UpdateCategory(router.db, categoryID, name, pattern)
 
-		if err != nil {
-			enhancedCategory.Errors = true
-			enhancedCategory.ErrorStrings = map[string]string{
-				"name": fmt.Sprintf("not unique name %v", err),
+			if err != nil {
+				enhancedCategory.Errors = true
+				enhancedCategory.ErrorStrings = map[string]string{
+					"name": fmt.Sprintf("failed to updated category %v", err),
+				}
+
+				router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
+				return
 			}
 
-			router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
-			return
+			updated = true
+		}
+
+		if updated {
+			categories, err := expenseDB.GetCategories(router.db)
+			if err != nil {
+				categoryIndexError(router, w, err)
+				return
+			}
+
+			matcher := internalCategory.NewMatcher(categories)
+			router.matcher = matcher
+
+			if patternChanged {
+				expenses, err := expenseDB.GetExpenses(router.db)
+
+				if err != nil {
+					categoryIndexError(router, w, err)
+					return
+				}
+
+				toUpdated := []*expenseDB.Expense{}
+
+				for _, ex := range expenses {
+					id, _ := matcher.Match(ex.Description)
+					if id.Valid {
+						if ex.CategoryID.Valid {
+							// Update exiting expense with a new category
+							if id.Int64 != ex.CategoryID.Int64 {
+								ex.CategoryID = id
+								toUpdated = append(toUpdated, ex)
+							}
+							// Update exiting expense without category with category
+						} else {
+							ex.CategoryID = id
+							toUpdated = append(toUpdated, ex)
+						}
+					} else {
+						if ex.CategoryID.Valid {
+							// Changing a category pattern could render exiting expenses to have category NULL
+							ex.CategoryID = sql.NullInt64{}
+							toUpdated = append(toUpdated, ex)
+						}
+					}
+				}
+
+				if len(toUpdated) > 0 {
+					updated, err := expenseDB.UpdateExpenses(router.db, toUpdated)
+					if err != nil {
+						categoryIndexError(router, w, err)
+						return
+					}
+
+					if int(updated) != len(toUpdated) {
+						fmt.Println("not all categories were updated")
+					}
+				}
+			}
 		}
 
 		enhancedCategory.Category.Name = name
 		enhancedCategory.Category.Pattern = pattern
+
+		if updated {
+			router.resetCache()
+		}
 	}
 
 	router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
@@ -274,12 +346,20 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	name := r.FormValue("name")
 	pattern := r.FormValue("pattern")
 
+	data := struct {
+		Name    string
+		Pattern string
+		Results []*expenseDB.Expense
+		Total   int
+		Error   error
+		Create  bool
+	}{
+		Name:    name,
+		Pattern: pattern,
+	}
+
 	if name == "" || pattern == "" {
-		data := struct {
-			Error error
-		}{
-			Error: fmt.Errorf("category must include name and a valid regex pattern. Ensure that you populate the name and pattern input"),
-		}
+		data.Error = fmt.Errorf("category must include name and a valid regex pattern. Ensure that you populate the name and pattern input")
 
 		router.templates.Render(w, "partials/categories/new_result.html", data)
 		return
@@ -288,37 +368,36 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	re, err := regexp.Compile(pattern)
 
 	if err != nil {
-		data := struct {
-			Error error
-		}{
-			Error: err,
-		}
+		data.Error = err
 
 		router.templates.Render(w, "partials/categories/new_result.html", data)
 		return
 	}
 
-	expenses, _ := expenseDB.GetExpensesWithoutCategory(router.db)
+	expenses, err := expenseDB.GetExpensesWithoutCategory(router.db)
 
-	results := []*expenseDB.Expense{}
+	if err != nil {
+		data.Error = err
+
+		router.templates.Render(w, "partials/categories/new_result.html", data)
+		return
+	}
+
+	toUpdated := []*expenseDB.Expense{}
 
 	for _, ex := range expenses {
 		if re.MatchString(ex.Description) {
-			results = append(results, ex)
+			toUpdated = append(toUpdated, ex)
 		}
 	}
 
-	total := len(results)
+	total := len(toUpdated)
 
 	if create && total > 0 {
 		categoryID, err := expenseDB.CreateCategory(router.db, name, pattern)
 
 		if err != nil {
-			data := struct {
-				Error error
-			}{
-				Error: err,
-			}
+			data.Error = err
 
 			router.templates.Render(w, "partials/categories/new_result.html", data)
 			return
@@ -330,13 +409,9 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			ex.CategoryID = sqlCategoryID
 		}
 
-		updated, err := expenseDB.UpdateExpenses(router.db, expenses)
+		updated, err := expenseDB.UpdateExpenses(router.db, toUpdated)
 		if err != nil {
-			data := struct {
-				Error error
-			}{
-				Error: err,
-			}
+			data.Error = err
 
 			router.templates.Render(w, "partials/categories/new_result.html", data)
 			return
@@ -350,11 +425,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 
 		categories, err := expenseDB.GetCategories(router.db)
 		if err != nil {
-			data := struct {
-				Error error
-			}{
-				Error: err,
-			}
+			data.Error = err
 
 			router.templates.Render(w, "partials/categories/new_result.html", data)
 			return
@@ -365,21 +436,9 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 		router.resetCache()
 	}
 
-	data := struct {
-		Name    string
-		Pattern string
-		Results []*expenseDB.Expense
-		Total   int
-		Error   error
-		Create  bool
-	}{
-		Name:    name,
-		Pattern: pattern,
-		Results: results,
-		Total:   total,
-		Error:   err,
-		Create:  create,
-	}
+	data.Total = total
+	data.Results = toUpdated
+	data.Create = create
 
 	router.templates.Render(w, "partials/categories/new_result.html", data)
 }

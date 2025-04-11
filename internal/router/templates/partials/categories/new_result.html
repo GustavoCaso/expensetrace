@@ -1,22 +1,97 @@
 {{define "categories/new_result"}}
-  {{ if eq .Error nil }}
-    <p>Category {{.Name}} with {{.Pattern}} matched <b>{{.Total}}</b> uncategorized expenses</p> 
-    
-    <ul>
-      {{range $expense := .Results}}
-        {{if gt $expense.Type 0}}
-          <li>{{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} <span class="income"><b>{{formatMoney $expense.Amount "." ","}}€</b></span></li>
-        {{else}}
-          <li> {{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} <span class="expense"><u>{{formatMoney $expense.Amount "." ","}}€</u></span></li>
+  {{if .Error}}
+    <!-- Error in regex pattern or server error -->
+    <div class="pattern-test-results error">
+      <div class="result-header">
+        <h3>Error Testing Pattern</h3>
+        {{if .Pattern}}
+        <div class="pattern-badge error">{{.Pattern}}</div>
         {{end}}
-      {{end}}
-    </ul>
-    
-    {{ if not .Create}}
-      <p>Press the <b>Create</b> button to create the category and update the expenses</p>
-    {{ end }}
-    
-  {{ else }}
-    <h2>There was an error: {{.Error}}</h2>
-  {{ end }}
+      </div>
+      <div class="error-message">
+        <div class="error-icon">⚠️</div>
+        <div class="error-details">
+          <p class="error-title">Error</p>
+          <p class="error-description">{{.Error}}</p>
+        </div>
+      </div>
+      <div class="help-suggestions">
+        <h4>Suggestions:</h4>
+        <ul>
+          <li>Check for matching parentheses, brackets, and braces</li>
+          <li>Escape special characters with a backslash \</li>
+          <li>Try one of the basic patterns from the helper section</li>
+        </ul>
+      </div>
+    </div>
+  {{else}}
+    {{if eq .Total 0}}
+      <!-- No matches result -->
+      <div class="pattern-test-results no-matches">
+        <div class="result-header">
+          <h3>No Matching Transactions</h3>
+          <div class="pattern-badge">{{.Pattern}}</div>
+        </div>
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <p>Your pattern didn't match any uncategorized transactions.</p>
+          <p>Try a different pattern or check if all similar transactions are already categorized.</p>
+        </div>
+      </div>
+    {{else}}
+      <!-- Success result with matched transactions -->
+      <div class="pattern-test-results success">
+        <div class="result-header">
+          <h3>Pattern Matched <span class="match-count">{{.Total}}</span> Transactions</h3>
+          <div class="pattern-badge">{{.Pattern}}</div>
+        </div>
+        <div class="matched-transactions">
+          <table class="transactions-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{$maxShown := 5}}
+              {{range $index, $expense := .Results}}
+                {{if lt $index $maxShown}}
+                  <tr>
+                    <td>{{$expense.Date.Format "2006-01-02"}}</td>
+                    <td>{{$expense.Description}}</td>
+                    {{if gt $expense.Amount 0}}
+                      <td class="income">{{formatMoney $expense.Amount "." ","}}€</td>
+                    {{else}}
+                      <td class="expense">{{formatMoney $expense.Amount "." ","}}€</td>
+                    {{end}}
+                  </tr>
+                {{end}}
+              {{end}}
+            </tbody>
+          </table>
+          
+          <!-- Show when there are more matches than shown -->
+          {{if gt .Total $maxShown}}
+            <div class="more-matches">And {{sub .Total $maxShown}} more transactions</div>
+          {{end}}
+        </div>
+        
+        {{if not .Create}}
+          <div class="result-actions">
+            <button hx-post="/category" 
+                    hx-include="input[name='name'],input[name='pattern']" 
+                    hx-target="#pattern-results" 
+                    class="btn-primary">Create "{{.Name}}" Category</button>
+          </div>
+        {{else}}
+          <div class="result-success">
+            <div class="success-icon">✅</div>
+            <p>Category "{{.Name}}" was created successfully and {{.Total}} transactions were categorized!</p>
+          </div>
+        {{end}}
+      </div>
+    {{end}}
+  {{end}}
 {{end}}

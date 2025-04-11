@@ -134,7 +134,7 @@ func TestCreateCategory(t *testing.T) {
 	}
 
 	// Verify category was created
-	category, err := GetCategory(db, int64(id))
+	category, err := GetCategory(db, id)
 	if err != nil {
 		t.Errorf("Failed to get created category: %v", err)
 	}

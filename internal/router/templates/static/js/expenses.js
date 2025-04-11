@@ -108,4 +108,31 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
   });
+
+  document.addEventListener('click', function (event) {
+    // Handle toggle pattern help button
+    if (event.target.id === 'toggle-pattern-help' || event.target.closest('#toggle-pattern-help')) {
+      const patternHelp = document.getElementById('pattern-help');
+      const toggleBtn = document.getElementById('toggle-pattern-help');
+
+      if (patternHelp && toggleBtn) {
+        patternHelp.classList.toggle('hidden');
+        toggleBtn.textContent = patternHelp.classList.contains('hidden')
+          ? 'Need help with patterns?'
+          : 'Hide pattern help';
+      }
+    }
+  });
+
+  // Setup functionality when new content is added via HTMX
+  document.body.addEventListener('htmx:afterSwap', function (event) {
+    // If our category form was just loaded, make sure the pattern help is hidden by default
+    const patternHelp = document.getElementById('pattern-help');
+    const toggleBtn = document.getElementById('toggle-pattern-help');
+
+    if (patternHelp && toggleBtn) {
+      patternHelp.classList.add('hidden');
+      toggleBtn.textContent = 'Need help with patterns?'
+    }
+  });
 });
