@@ -74,6 +74,8 @@ func InsertExpenses(db *sql.DB, expenses []*Expense) []error {
 		errors = append(errors, err)
 		return errors
 	}
+	defer insertStmt.Close()
+
 	for _, expense := range expenses {
 		_, err := insertStmt.Exec(
 			expense.Source,
@@ -98,6 +100,10 @@ func GetExpenses(db *sql.DB) ([]*Expense, error) {
 	rows, err := db.Query("SELECT * FROM expenses")
 	if err != nil {
 		return []*Expense{}, err
+	}
+
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
 	}
 
 	defer rows.Close()
@@ -151,6 +157,10 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]*Ex
 		return []*Expense{}, err
 	}
 
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
+	}
+
 	defer rows.Close()
 
 	expenses := []*Expense{}
@@ -172,6 +182,10 @@ func GetExpensesWithoutCategory(db *sql.DB) ([]*Expense, error) {
 	rows, err := db.Query("SELECT * FROM expenses WHERE category_id IS NULL")
 	if err != nil {
 		return []*Expense{}, err
+	}
+
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
 	}
 
 	defer rows.Close()
@@ -196,6 +210,10 @@ func SearchExpenses(db *sql.DB, keyword string) ([]*Expense, error) {
 		return []*Expense{}, err
 	}
 
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
+	}
+
 	defer rows.Close()
 
 	expenses := []*Expense{}
@@ -218,6 +236,10 @@ func SearchExpensesByDescription(db *sql.DB, description string) ([]*Expense, er
 	rows, err := db.Query(fmt.Sprintf("SELECT * FROM expenses WHERE description == \"%s\"", description))
 	if err != nil {
 		return []*Expense{}, err
+	}
+
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
 	}
 
 	defer rows.Close()
@@ -250,6 +272,10 @@ func GetExpensesByCategory(db *sql.DB, categoryID int) ([]*Expense, error) {
 	rows, err := db.Query("SELECT * FROM expenses WHERE category_id = ?", categoryID)
 	if err != nil {
 		return []*Expense{}, err
+	}
+
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
 	}
 
 	defer rows.Close()

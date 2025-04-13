@@ -35,7 +35,7 @@ func (t templates) Render(w io.Writer, templateName string, data interface{}) {
 	temp, ok := t[templateName]
 
 	if !ok {
-		_, _ = w.Write([]byte(fmt.Sprintf("template '%s' is not available", templateName)))
+		_, _ = fmt.Fprintf(w, "template '%s' is not available", templateName)
 		return
 	}
 	log.Printf("rendering template `%s`\n", templateName)
@@ -49,7 +49,7 @@ func (t templates) Render(w io.Writer, templateName string, data interface{}) {
 	if err != nil {
 		log.Print(err.Error())
 		errorMessage := fmt.Sprintf("Error rendering template '%s': %v", templateName, err.Error())
-		_, _ = w.Write([]byte(errorMessage))
+		_, _ = fmt.Fprint(w, errorMessage)
 	}
 }
 
@@ -77,7 +77,7 @@ func parseTemplates(fsDir fs.FS) (templates, error) {
 
 	// First, collect all partials with proper naming
 	partials := template.New("partials").Funcs(templateFuncs)
-	err := fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, _ error) error {
 		if !d.IsDir() {
 			b, err := fs.ReadFile(fsDir, filepath)
 			if err != nil {
@@ -134,7 +134,7 @@ func parseTemplates(fsDir fs.FS) (templates, error) {
 	}
 
 	// Parse pages with the enhanced base template
-	err = fs.WalkDir(fsDir, "pages", func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(fsDir, "pages", func(path string, d fs.DirEntry, _ error) error {
 		if !d.IsDir() {
 			b, err := fs.ReadFile(fsDir, path)
 			if err != nil {
@@ -161,7 +161,7 @@ func parseTemplates(fsDir fs.FS) (templates, error) {
 	}
 
 	// Also add the partials as standalone templates (for direct rendering)
-	_ = fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, err error) error {
+	_ = fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, _ error) error {
 		if !d.IsDir() {
 			templateName := strings.TrimPrefix(filepath, "partials/")
 			partialTemplate := partials.Lookup(templateName)

@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"maps"
 	"net/http"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"golang.org/x/exp/maps"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
@@ -63,7 +63,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 				log.Fatalf("generateReports fail %v", err)
 			}
 
-			reportKeys := maps.Keys(router.reports)
+			reportKeys := slices.Collect(maps.Keys(router.reports))
 
 			sort.SliceStable(reportKeys, func(i, j int) bool {
 				s1 := strings.Split(reportKeys[i], "-")
@@ -153,7 +153,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	//wrap entire mux with live reload middleware
+	// wrap entire mux with live reload middleware
 	wrappedMux := newLiveReloadMiddleware(router, mux)
 
 	return wrappedMux, router
@@ -192,7 +192,7 @@ func (router *router) generateReports() error {
 		reports[fmt.Sprintf("%d-%d", year, month)] = result
 
 		if skipYear {
-			year = year - 1
+			year--
 			month = time.December
 			skipYear = false
 			continue
@@ -202,7 +202,7 @@ func (router *router) generateReports() error {
 			break
 		}
 
-		month = month - 1
+		month--
 	}
 
 	router.reports = reports

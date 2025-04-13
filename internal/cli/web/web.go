@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
@@ -38,5 +39,11 @@ func (c webCommand) SetFlags(fs *flag.FlagSet) {
 func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	handler, _ := router.New(db, matcher)
 	log.Printf("Open report on http://localhost:%s\n", port)
-	return http.ListenAndServe(fmt.Sprintf(":%s", port), handler)
+
+	server := &http.Server{
+		Addr:              fmt.Sprintf(":%s", port),
+		ReadHeaderTimeout: 3 * time.Second,
+		Handler:           handler,
+	}
+	return server.ListenAndServe()
 }

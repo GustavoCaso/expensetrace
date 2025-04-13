@@ -36,18 +36,42 @@ func TestDropDB(t *testing.T) {
 	}
 
 	// Verify tables were deleted
-	_, err = database.Query("SELECT * FROM expenses")
+	rows, err := database.Query("SELECT * FROM expenses")
 	if err == nil {
 		t.Error("Expected error when querying expenses table, got nil")
 	}
 
-	_, err = database.Query("SELECT * FROM categories")
+	if rows != nil {
+		defer rows.Close()
+
+		if rows.Err() != nil {
+			t.Errorf("Unexpected error %s", rows.Err())
+		}
+	}
+
+	rows, err = database.Query("SELECT * FROM categories")
 	if err == nil {
 		t.Error("Expected error when querying category table, got nil")
 	}
 
-	_, err = database.Query("SELECT * FROM schema_migrations")
+	if rows != nil {
+		defer rows.Close()
+
+		if rows.Err() != nil {
+			t.Errorf("Unexpected error %s", rows.Err())
+		}
+	}
+
+	rows, err = database.Query("SELECT * FROM schema_migrations")
 	if err == nil {
 		t.Error("Expected error when querying schema_migrations table, got nil")
+	}
+
+	if rows != nil {
+		defer rows.Close()
+
+		if rows.Err() != nil {
+			t.Errorf("Unexpected error %s", rows.Err())
+		}
 	}
 }

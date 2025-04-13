@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"maps"
 	"net/http"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"time"
-
-	"golang.org/x/exp/maps"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
@@ -249,7 +249,7 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 		}
 	}
 
-	keys := maps.Keys(groupedExpenses)
+	keys := slices.Collect(maps.Keys(groupedExpenses))
 
 	sort.SliceStable(keys, func(i, j int) bool {
 		return groupedExpenses[keys[i]].Count > groupedExpenses[keys[j]].Count

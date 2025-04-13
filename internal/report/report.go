@@ -2,11 +2,11 @@ package report
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strconv"
 	"time"
-
-	"golang.org/x/exp/maps"
 
 	pkgCategory "github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
@@ -53,7 +53,7 @@ func Generate(startDate, endDate time.Time, expenses []*expenseDB.Expense, repor
 	report.EarningsPerDay = income / int64(numberOfDaysPerMonth)
 	report.Duplicates = duplicates
 
-	categoriesSlice := maps.Values(categories)
+	categoriesSlice := slices.Collect(maps.Values(categories))
 
 	sort.Slice(categoriesSlice, func(i, j int) bool {
 		return categoriesSlice[i].Amount > categoriesSlice[j].Amount

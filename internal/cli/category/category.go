@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"maps"
 	"os"
+	"slices"
 	"sort"
 	"time"
-
-	"golang.org/x/exp/maps"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
@@ -113,7 +113,7 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
 		}
 	}
 
-	keys := maps.Keys(groupedExpenses)
+	keys := slices.Collect(maps.Keys(groupedExpenses))
 
 	sort.SliceStable(keys, func(i, j int) bool {
 		return groupedExpenses[keys[i]].count > groupedExpenses[keys[j]].count
@@ -140,8 +140,6 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
 	fmt.Fprint(writer, "\n")
 
 	fmt.Fprintf(writer, "There are a total of %d uncategorized expenses", total)
-
-	return
 }
 
 func recategorize(db *sql.DB, categoryMatcher *category.Matcher, expenses []*expenseDB.Expense) error {

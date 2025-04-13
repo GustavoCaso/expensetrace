@@ -209,7 +209,7 @@ func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) 
 		})
 
 		if skipYear {
-			year = year - 1
+			year--
 			timeMonth = time.December
 			skipYear = false
 			continue
@@ -219,7 +219,7 @@ func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) 
 			break
 		}
 
-		timeMonth = timeMonth - 1
+		timeMonth--
 	}
 
 	return reports, nil

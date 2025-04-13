@@ -17,6 +17,7 @@ func createMigrationsTable(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
+	defer statement.Close()
 	_, err = statement.Exec()
 	return err
 }

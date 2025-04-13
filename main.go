@@ -101,10 +101,16 @@ func main() {
 		matcher := categoryPkg.NewMatcher(categories)
 
 		err = command.c.Run(dbInstance, matcher)
-		dbInstance.Close()
 
 		if err != nil {
 			log.Printf("Error: %v", err)
+			os.Exit(1)
+		}
+
+		err = dbInstance.Close()
+
+		if err != nil {
+			log.Printf("Error closing DB: %v", err)
 			os.Exit(1)
 		}
 

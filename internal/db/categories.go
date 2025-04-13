@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"errors"
-	"log"
 
 	"github.com/GustavoCaso/expensetrace/internal/config"
 
@@ -26,6 +25,8 @@ func PopulateCategoriesFromConfig(db *sql.DB, conf *config.Config) error {
 	if err != nil {
 		return err
 	}
+	defer insertStmt.Close()
+
 	for _, category := range conf.Categories {
 		_, err := insertStmt.Exec(category.Name, category.Pattern)
 
@@ -47,6 +48,10 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 		return []Category{}, err
 	}
 
+	if rows.Err() != nil {
+		return []Category{}, rows.Err()
+	}
+
 	defer rows.Close()
 
 	categories := []Category{}
@@ -56,7 +61,7 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 		var id int
 
 		if err := rows.Scan(&id, &category.Name, &category.Pattern); err != nil {
-			log.Fatal(err)
+			return categories, err
 		}
 
 		category.ID = id

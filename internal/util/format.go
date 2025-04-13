@@ -7,7 +7,7 @@ func FormatMoney(value int64, thousand, decimal string) string {
 	var isNegative bool
 
 	if value < 0 {
-		value = value * -1
+		value *= -1
 		isNegative = true
 	}
 
