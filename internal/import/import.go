@@ -1,4 +1,4 @@
-package importUtil
+package importutil
 
 import (
 	"database/sql"
@@ -73,7 +73,6 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 			if len(matches) == 0 {
 				errors = append(errors, fmt.Errorf("amount regex did not find any matches"))
 				return errors
-
 			}
 
 			amount := matches[amountIndex]

@@ -54,17 +54,19 @@ func (e Expense) Category() (string, error) {
 //go:embed templates/*
 var content embed.FS
 
-type ErrInsert struct {
+type InsertError struct {
 	err error
 }
 
-func (e ErrInsert) Error() string {
+func (e InsertError) Error() string {
 	return fmt.Sprintf("error when trying to insert record on table. err: %v", e.err)
 }
 
 func InsertExpenses(db *sql.DB, expenses []*Expense) []error {
 	// Insert records
-	insertStmt, err := db.Prepare("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) values(?, ?, ?, ?, ?, ?, ?)")
+	insertStmt, err := db.Prepare(
+		"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) values(?, ?, ?, ?, ?, ?, ?)",
+	)
 
 	errors := []error{}
 
@@ -73,9 +75,17 @@ func InsertExpenses(db *sql.DB, expenses []*Expense) []error {
 		return errors
 	}
 	for _, expense := range expenses {
-		_, err := insertStmt.Exec(expense.Source, expense.Amount, expense.Description, expense.Type, expense.Date.Unix(), expense.Currency, expense.CategoryID)
+		_, err := insertStmt.Exec(
+			expense.Source,
+			expense.Amount,
+			expense.Description,
+			expense.Type,
+			expense.Date.Unix(),
+			expense.Currency,
+			expense.CategoryID,
+		)
 		if err != nil {
-			errors = append(errors, ErrInsert{
+			errors = append(errors, InsertError{
 				err: err,
 			})
 		}
@@ -236,7 +246,6 @@ func GetFirstExpense(db *sql.DB) (*Expense, error) {
 	return ex, nil
 }
 
-// Get expenses by category ID
 func GetExpensesByCategory(db *sql.DB, categoryID int) ([]*Expense, error) {
 	rows, err := db.Query("SELECT * FROM expenses WHERE category_id = ?", categoryID)
 	if err != nil {

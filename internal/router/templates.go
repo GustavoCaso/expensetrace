@@ -35,7 +35,7 @@ func (t templates) Render(w io.Writer, templateName string, data interface{}) {
 	temp, ok := t[templateName]
 
 	if !ok {
-		w.Write([]byte(fmt.Sprintf("template '%s' is not available", templateName)))
+		_, _ = w.Write([]byte(fmt.Sprintf("template '%s' is not available", templateName)))
 		return
 	}
 	log.Printf("rendering template `%s`\n", templateName)
@@ -49,7 +49,7 @@ func (t templates) Render(w io.Writer, templateName string, data interface{}) {
 	if err != nil {
 		log.Print(err.Error())
 		errorMessage := fmt.Sprintf("Error rendering template '%s': %v", templateName, err.Error())
-		w.Write([]byte(errorMessage))
+		_, _ = w.Write([]byte(errorMessage))
 	}
 }
 
@@ -72,16 +72,16 @@ func embeddedFS() fs.FS {
 	return subTemplateFS
 }
 
-func parseTemplates(fsDir fs.FS) templates {
+func parseTemplates(fsDir fs.FS) (templates, error) {
 	templates := templates{}
 
 	// First, collect all partials with proper naming
 	partials := template.New("partials").Funcs(templateFuncs)
-	fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, err error) error {
 		if !d.IsDir() {
 			b, err := fs.ReadFile(fsDir, filepath)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			// Use a template name that includes the path (excluding the "partials/" prefix)
@@ -90,11 +90,15 @@ func parseTemplates(fsDir fs.FS) templates {
 			// Parse with the unique template name
 			_, err = partials.New(templateName).Parse(string(b))
 			if err != nil {
-				panic(err)
+				return err
 			}
 		}
 		return nil
 	})
+
+	if err != nil {
+		return templates, err
+	}
 
 	// Then create the base template with layout and add partials
 	baseTempl := template.New("base").Funcs(templateFuncs)
@@ -104,7 +108,7 @@ func parseTemplates(fsDir fs.FS) templates {
 		if t.Name() != "partials" { // Skip the root template
 			_, err := baseTempl.AddParseTree(t.Name(), t.Tree)
 			if err != nil {
-				panic(err)
+				return templates, err
 			}
 		}
 	}
@@ -112,39 +116,39 @@ func parseTemplates(fsDir fs.FS) templates {
 	// Parse layout files
 	layoutBytes, err := fs.ReadFile(fsDir, "layout.html")
 	if err != nil {
-		panic(err)
+		return templates, err
 	}
 	baseTempl, err = baseTempl.Parse(string(layoutBytes))
 	if err != nil {
-		panic(err)
+		return templates, err
 	}
 
 	// Also parse nav partial which is needed by layout
 	navBytes, err := fs.ReadFile(fsDir, "partials/nav.html")
 	if err != nil {
-		panic(err)
+		return templates, err
 	}
 	baseTempl, err = baseTempl.Parse(string(navBytes))
 	if err != nil {
-		panic(err)
+		return templates, err
 	}
 
 	// Parse pages with the enhanced base template
-	fs.WalkDir(fsDir, "pages", func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(fsDir, "pages", func(path string, d fs.DirEntry, err error) error {
 		if !d.IsDir() {
 			b, err := fs.ReadFile(fsDir, path)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			pageTempl, err := baseTempl.Clone()
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			pageTempl, err = pageTempl.Parse(string(b))
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			templates[path] = pageTempl
@@ -152,8 +156,12 @@ func parseTemplates(fsDir fs.FS) templates {
 		return nil
 	})
 
+	if err != nil {
+		return templates, err
+	}
+
 	// Also add the partials as standalone templates (for direct rendering)
-	fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, err error) error {
+	_ = fs.WalkDir(fsDir, "partials", func(filepath string, d fs.DirEntry, err error) error {
 		if !d.IsDir() {
 			templateName := strings.TrimPrefix(filepath, "partials/")
 			partialTemplate := partials.Lookup(templateName)
@@ -164,10 +172,10 @@ func parseTemplates(fsDir fs.FS) templates {
 		return nil
 	})
 
-	return templates
+	return templates, nil
 }
 
-func (router *router) parseTemplates() {
+func (router *router) parseTemplates() error {
 	var fs fs.FS
 
 	if router.reload {
@@ -176,7 +184,14 @@ func (router *router) parseTemplates() {
 		fs = embeddedFS()
 	}
 
-	router.templates = parseTemplates(fs)
+	t, err := parseTemplates(fs)
+
+	if err != nil {
+		return err
+	}
+
+	router.templates = t
+	return nil
 }
 
 type liveReloadTemplatesMiddleware struct {
@@ -186,7 +201,7 @@ type liveReloadTemplatesMiddleware struct {
 
 func (l *liveReloadTemplatesMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if l.router.reload {
-		l.router.parseTemplates()
+		_ = l.router.parseTemplates()
 	}
 	l.handler.ServeHTTP(w, r)
 }

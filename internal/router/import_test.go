@@ -69,7 +69,7 @@ func TestImport(t *testing.T) {
 	handler, router := New(database, matcher)
 
 	// Hit home to populate cache
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -89,26 +89,26 @@ func TestImport(t *testing.T) {
 	// create a new form-data header name data and filename data.txt
 	dataPart, err := writer.CreateFormFile("file", "expenses.json")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 
 	// copy file content into multipart section dataPart
 	f, err := os.Open("test_data/import.json")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	_, err = io.Copy(dataPart, f)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 
 	err = writer.Close()
 
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 
-	req = httptest.NewRequest("POST", "/import", body)
+	req = httptest.NewRequest(http.MethodPost, "/import", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w = httptest.NewRecorder()
 
@@ -120,7 +120,7 @@ func TestImport(t *testing.T) {
 	}
 
 	// Hit home again t valiadte the cache has been busted and the reports have being updated
-	req = httptest.NewRequest("GET", "/", nil)
+	req = httptest.NewRequest(http.MethodGet, "/", nil)
 	w = httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)

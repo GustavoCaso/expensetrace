@@ -32,7 +32,7 @@ func PopulateCategoriesFromConfig(db *sql.DB, conf *config.Config) error {
 		if err != nil {
 			if sqliteError, ok := err.(sqlite3.Error); ok {
 				if !(sqliteError.Code == sqlite3.ErrConstraint) {
-					e = errors.Join(e, ErrInsert{
+					e = errors.Join(e, InsertError{
 						err: err,
 					})
 				}

@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestSetFlags(t *testing.T) {
@@ -162,7 +163,12 @@ func TestRecategorize(t *testing.T) {
 		expectedCategoryID := expectedCategories[e.Description]
 
 		if e.CategoryID.Int64 != expectedCategoryID.Int64 {
-			t.Errorf("Expense %q has category ID %d, want %d", e.Description, e.CategoryID.Int64, expectedCategoryID.Int64)
+			t.Errorf(
+				"Expense %q has category ID %d, want %d",
+				e.Description,
+				e.CategoryID.Int64,
+				expectedCategoryID.Int64,
+			)
 		}
 	}
 }

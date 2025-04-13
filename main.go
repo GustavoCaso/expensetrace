@@ -10,7 +10,7 @@ import (
 	categoryPkg "github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	"github.com/GustavoCaso/expensetrace/internal/cli/category"
-	"github.com/GustavoCaso/expensetrace/internal/cli/delete"
+	deleteCmd "github.com/GustavoCaso/expensetrace/internal/cli/delete"
 	importCmd "github.com/GustavoCaso/expensetrace/internal/cli/import"
 	"github.com/GustavoCaso/expensetrace/internal/cli/report"
 	"github.com/GustavoCaso/expensetrace/internal/cli/search"
@@ -29,7 +29,7 @@ type command struct {
 
 var subcommands = map[string]*command{
 	"delete": {
-		c: delete.NewCommand(),
+		c: deleteCmd.NewCommand(),
 	},
 	"category": {
 		c: category.NewCommand(),
@@ -64,7 +64,10 @@ func main() {
 	commandName := os.Args[1]
 	command, ok := subcommands[commandName]
 	if ok {
-		command.flagSet.Parse(os.Args[2:])
+		err := command.flagSet.Parse(os.Args[2:])
+		if err != nil {
+			log.Fatalf("Unable to parse flag arguments: %s", err.Error())
+		}
 
 		conf, err := config.Parse(configPath)
 
@@ -106,14 +109,16 @@ func main() {
 		}
 
 		os.Exit(0)
-	} else {
-		if strings.Contains(commandName, "help") {
-			printHelp()
-
-			os.Exit(0)
-		}
-		log.Fatalf("unsupported comand %s. \nUse 'help' command to print information about supported commands\n", commandName)
 	}
+	if strings.Contains(commandName, "help") {
+		printHelp()
+
+		os.Exit(0)
+	}
+	log.Fatalf(
+		"unsupported comand %s. \nUse 'help' command to print information about supported commands\n",
+		commandName,
+	)
 }
 
 func printHelp() {

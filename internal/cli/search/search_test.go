@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/testutil"
 	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/GustavoCaso/expensetrace/internal/testutil"
 
 	categoryPkg "github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
@@ -287,7 +288,7 @@ func TestExpenseCategory(t *testing.T) {
 			Date:        time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 			Amount:      -1000,
 			Type:        expenseDB.ChargeType,
-			CategoryID:  sql.NullInt64{Int64: int64(id), Valid: true},
+			CategoryID:  sql.NullInt64{Int64: id, Valid: true},
 		},
 	}
 

@@ -44,7 +44,7 @@ func (c reportCommand) SetFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&verbose, "v", false, "show verbose report output")
 }
 
-func (c reportCommand) Run(db *sql.DB, matcher *category.Matcher) error {
+func (c reportCommand) Run(db *sql.DB, _ *category.Matcher) error {
 	now := time.Now()
 	var startDate, endDate time.Time
 	var reportType string

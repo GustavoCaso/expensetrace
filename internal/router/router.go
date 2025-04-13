@@ -14,11 +14,12 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
-	"golang.org/x/exp/maps"
 )
 
 //go:embed templates/static/*
@@ -27,7 +28,6 @@ var staticFS, _ = fs.Sub(static, "templates/static")
 
 type router struct {
 	reload           bool
-	mux              *http.ServeMux
 	matcher          *category.Matcher
 	db               *sql.DB
 	templates        templates
@@ -46,7 +46,11 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 
 	mux := &http.ServeMux{}
 
-	router.parseTemplates()
+	err := router.parseTemplates()
+
+	if err != nil {
+		panic(err)
+	}
 
 	// Routes
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +60,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 			if err != nil {
 				// If we fail to generate reports servers do not start
 				// TODO: fix
-				log.Fatal(fmt.Sprintf("generateReports fail %v", err))
+				log.Fatalf("generateReports fail %v", err)
 			}
 
 			reportKeys := maps.Keys(router.reports)
@@ -82,7 +86,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 		router.homeHandler(w, r)
 	})
 
-	mux.HandleFunc("DELETE /expense/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /expense/{id}", func(_ http.ResponseWriter, _ *http.Request) {
 		// TODO
 	})
 
@@ -111,10 +115,20 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	})
 
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+		if err != nil {
+			log.Println("error r.ParseForm() ", err.Error())
+
+			data := struct {
+				Error error
+			}{
+				Error: err,
+			}
+			router.templates.Render(w, "partials/categories/card.html", data)
+			return
+		}
+
 		categoryID := r.PathValue("id")
-
-		r.ParseForm()
-
 		name := r.FormValue("name")
 		pattern := r.FormValue("pattern")
 

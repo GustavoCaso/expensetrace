@@ -68,7 +68,7 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 
 		if !ok {
 			data = homeData{
-				Error: fmt.Errorf("No report available. %s", reportKey),
+				Error: fmt.Errorf("no report available. %s", reportKey),
 			}
 		} else {
 			data = homeData{

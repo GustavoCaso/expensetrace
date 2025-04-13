@@ -14,11 +14,10 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
-	internalCategory "github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 )
 
-// enhancedCategory extends db.Category with extra UI-friendly fields
+// enhancedCategory extends db.Category with extra UI-friendly fields.
 type enhancedCategory struct {
 	expenseDB.Category
 	AvgAmount       int64
@@ -90,7 +89,7 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 		return
 	}
 
-	category, err := expenseDB.GetCategory(router.db, int64(categoryID))
+	categoryEntry, err := expenseDB.GetCategory(router.db, int64(categoryID))
 
 	if err != nil {
 		categoryIndexError(router, w, err)
@@ -98,20 +97,20 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 	}
 
 	// Get expenses for this category
-	expenses, err := expenseDB.GetExpensesByCategory(router.db, category.ID)
+	expenses, err := expenseDB.GetExpensesByCategory(router.db, categoryEntry.ID)
 
 	if err != nil {
 		categoryIndexError(router, w, err)
 		return
 	}
 
-	enhancedCategory := createEnhancedCategory(category, expenses)
+	enhancedCategory := createEnhancedCategory(categoryEntry, expenses)
 
-	if (pattern != "" && category.Pattern != pattern) || (name != "" && category.Name != name) {
+	if (pattern != "" && categoryEntry.Pattern != pattern) || (name != "" && categoryEntry.Name != name) {
 		patternChanged := false
 		updated := false
 
-		if pattern != "" && category.Pattern != pattern {
+		if pattern != "" && categoryEntry.Pattern != pattern {
 			_, err = regexp.Compile(pattern)
 
 			if err != nil {
@@ -126,7 +125,7 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 			patternChanged = true
 		}
 
-		if name != "" && category.Name != name || patternChanged {
+		if name != "" && categoryEntry.Name != name || patternChanged {
 			err = expenseDB.UpdateCategory(router.db, categoryID, name, pattern)
 
 			if err != nil {
@@ -149,7 +148,7 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 				return
 			}
 
-			matcher := internalCategory.NewMatcher(categories)
+			matcher := category.NewMatcher(categories)
 			router.matcher = matcher
 
 			if patternChanged {
@@ -270,7 +269,18 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 }
 
 func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	err := r.ParseForm()
+	if err != nil {
+		log.Println("error r.ParseForm() ", err.Error())
+
+		data := struct {
+			Error error
+		}{
+			Error: err,
+		}
+		router.templates.Render(w, "pages/categories/uncategorized.html", data)
+		return
+	}
 
 	expenseDescription := r.FormValue("description")
 	categoryID, err := strconv.Atoi(r.FormValue("categoryID"))
@@ -341,7 +351,18 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 }
 
 func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	err := r.ParseForm()
+	if err != nil {
+		log.Println("error r.ParseForm() ", err.Error())
+
+		data := struct {
+			Error error
+		}{
+			Error: err,
+		}
+		router.templates.Render(w, "partials/categories/new_result.html", data)
+		return
+	}
 
 	name := r.FormValue("name")
 	pattern := r.FormValue("pattern")
@@ -359,7 +380,9 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	}
 
 	if name == "" || pattern == "" {
-		data.Error = fmt.Errorf("category must include name and a valid regex pattern. Ensure that you populate the name and pattern input")
+		data.Error = fmt.Errorf(
+			"category must include name and a valid regex pattern. Ensure that you populate the name and pattern input",
+		)
 
 		router.templates.Render(w, "partials/categories/new_result.html", data)
 		return
@@ -403,7 +426,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			return
 		}
 
-		sqlCategoryID := sql.NullInt64{Int64: int64(categoryID), Valid: true}
+		sqlCategoryID := sql.NullInt64{Int64: categoryID, Valid: true}
 
 		for _, ex := range expenses {
 			ex.CategoryID = sqlCategoryID

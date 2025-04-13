@@ -9,8 +9,16 @@ func TestDropDB(t *testing.T) {
 	database := setupTestDB(t)
 
 	// Insert test expense
-	_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
-		"test", 1000, "Test expense", ChargeType, time.Now().Unix(), "USD", nil)
+	_, err := database.Exec(
+		"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+		"test",
+		1000,
+		"Test expense",
+		ChargeType,
+		time.Now().Unix(),
+		"USD",
+		nil,
+	)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}

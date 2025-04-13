@@ -7,8 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GustavoCaso/expensetrace/internal/db"
+	// import sqlite driver.
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/GustavoCaso/expensetrace/internal/db"
 )
 
 func SetupTestDB(t *testing.T) *sql.DB {

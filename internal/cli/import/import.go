@@ -1,4 +1,4 @@
-package importCmd
+package importcmd
 
 import (
 	"database/sql"

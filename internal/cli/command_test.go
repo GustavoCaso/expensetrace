@@ -9,7 +9,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/category"
 )
 
-// mockCommand implements the Command interface for testing
+// mockCommand implements the Command interface for testing.
 type mockCommand struct {
 	description string
 	runError    error
@@ -23,7 +23,7 @@ func (c mockCommand) Description() string {
 	return c.description
 }
 
-func (c mockCommand) Run(db *sql.DB, matcher *category.Matcher) error {
+func (c mockCommand) Run(_ *sql.DB, _ *category.Matcher) error {
 	return c.runError
 }
 

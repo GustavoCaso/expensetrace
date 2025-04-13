@@ -1,13 +1,14 @@
-package importUtil
+package importutil
 
 import (
 	"strings"
 	"testing"
 
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestImportCSV(t *testing.T) {

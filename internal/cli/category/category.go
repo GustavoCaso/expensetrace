@@ -29,7 +29,12 @@ func (c categoryCommand) Description() string {
 }
 
 func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
-	fs.StringVar(&actionFlag, "a", "inspect", "What action to perform. Supported values are: inspect, recategorize, migrate")
+	fs.StringVar(
+		&actionFlag,
+		"a",
+		"inspect",
+		"What action to perform. Supported values are: inspect, recategorize, migrate",
+	)
 	fs.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")
 }
 
@@ -59,9 +64,7 @@ func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 
 			defer f.Close()
 		}
-		if err := inspect(output, expenses); err != nil {
-			return err
-		}
+		inspect(output, expenses)
 	case "recategorize", "migrate":
 		if err := recategorize(db, matcher, expenses); err != nil {
 			return err
@@ -83,10 +86,10 @@ type reportExpense struct {
 	amounts []int64
 }
 
-func inspect(writer io.Writer, expenses []*expenseDB.Expense) error {
+func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
 	if len(expenses) == 0 {
 		log.Println("No expenses without category 🎉")
-		return nil
+		return
 	}
 
 	groupedExpenses := map[string]reportExpense{}
@@ -125,7 +128,12 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) error {
 		total += count
 
 		for i, date := range groupedExpenses[k].dates {
-			fmt.Fprintf(writer, "	[%s] %s€\n", date.Format("2006-01-02"), util.FormatMoney(expense.amounts[i], ".", ","))
+			fmt.Fprintf(
+				writer,
+				"	[%s] %s€\n",
+				date.Format("2006-01-02"),
+				util.FormatMoney(expense.amounts[i], ".", ","),
+			)
 		}
 	}
 
@@ -133,7 +141,7 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) error {
 
 	fmt.Fprintf(writer, "There are a total of %d uncategorized expenses", total)
 
-	return nil
+	return
 }
 
 func recategorize(db *sql.DB, categoryMatcher *category.Matcher, expenses []*expenseDB.Expense) error {

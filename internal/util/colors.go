@@ -17,7 +17,6 @@ func ColorOutput(text string, colorOptions ...string) string {
 		if o, ok := colorsOptions[option]; ok {
 			attributes = append(attributes, o)
 		}
-
 	}
 	c := color.New(attributes...)
 	return c.Sprint(text)

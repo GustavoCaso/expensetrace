@@ -39,8 +39,16 @@ func TestCreateExpenseTable(t *testing.T) {
 	database := setupTestDB(t)
 
 	// Verify table exists by trying to insert a record
-	_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
-		"test", 1000, "Test expense", ChargeType, time.Now().Unix(), "USD", nil)
+	_, err := database.Exec(
+		"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+		"test",
+		1000,
+		"Test expense",
+		ChargeType,
+		time.Now().Unix(),
+		"USD",
+		nil,
+	)
 	if err != nil {
 		t.Errorf("Failed to insert test expense: %v", err)
 	}
@@ -130,8 +138,16 @@ func TestGetExpenses(t *testing.T) {
 	}
 
 	for _, exp := range testExpenses {
-		_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
-			exp.source, exp.amount, exp.description, exp.expenseType, now.Unix(), exp.currency, exp.categoryID)
+		_, err := database.Exec(
+			"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+			exp.source,
+			exp.amount,
+			exp.description,
+			exp.expenseType,
+			now.Unix(),
+			exp.currency,
+			exp.categoryID,
+		)
 		if err != nil {
 			t.Fatalf("Failed to insert test expense: %v", err)
 		}
@@ -200,8 +216,16 @@ func TestGetExpensesFromDateRange(t *testing.T) {
 	}
 
 	for _, exp := range testExpenses {
-		_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
-			exp.source, exp.amount, exp.description, exp.expenseType, exp.date.Unix(), exp.currency, exp.categoryID)
+		_, err := database.Exec(
+			"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+			exp.source,
+			exp.amount,
+			exp.description,
+			exp.expenseType,
+			exp.date.Unix(),
+			exp.currency,
+			exp.categoryID,
+		)
 		if err != nil {
 			t.Fatalf("Failed to insert test expense: %v", err)
 		}
@@ -242,8 +266,16 @@ func TestGetExpensesWithoutCategory(t *testing.T) {
 	}
 
 	for _, exp := range testExpenses {
-		_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
-			exp.source, exp.amount, exp.description, exp.expenseType, now.Unix(), exp.currency, exp.categoryID)
+		_, err := database.Exec(
+			"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+			exp.source,
+			exp.amount,
+			exp.description,
+			exp.expenseType,
+			now.Unix(),
+			exp.currency,
+			exp.categoryID,
+		)
 		if err != nil {
 			t.Fatalf("Failed to insert test expense: %v", err)
 		}
@@ -289,8 +321,16 @@ func TestSearchExpenses(t *testing.T) {
 	}
 
 	for _, exp := range testExpenses {
-		_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
-			exp.source, exp.amount, exp.description, exp.expenseType, now.Unix(), exp.currency, exp.categoryID)
+		_, err := database.Exec(
+			"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+			exp.source,
+			exp.amount,
+			exp.description,
+			exp.expenseType,
+			now.Unix(),
+			exp.currency,
+			exp.categoryID,
+		)
 		if err != nil {
 			t.Fatalf("Failed to insert test expense: %v", err)
 		}
@@ -306,7 +346,8 @@ func TestSearchExpenses(t *testing.T) {
 	}
 
 	for _, exp := range expenses {
-		if exp.Description != "Test expense 1" && exp.Description != "Test expense 2" && exp.Description != "Test expense 3" {
+		if exp.Description != "Test expense 1" && exp.Description != "Test expense 2" &&
+			exp.Description != "Test expense 3" {
 			t.Errorf("Unexpected expense description: %s", exp.Description)
 		}
 	}

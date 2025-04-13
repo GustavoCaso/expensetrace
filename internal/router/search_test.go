@@ -53,7 +53,7 @@ func TestSearchHandler(t *testing.T) {
 
 	// Create test request
 	body := strings.NewReader("keyword=restaurant")
-	req := httptest.NewRequest("POST", "/search", body)
+	req := httptest.NewRequest(http.MethodPost, "/search", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 

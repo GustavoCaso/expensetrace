@@ -7,16 +7,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
-	"github.com/GustavoCaso/expensetrace/internal/cli"
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
-	"github.com/GustavoCaso/expensetrace/internal/report"
-	"github.com/GustavoCaso/expensetrace/internal/util"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/term"
+
+	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/cli"
+	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/report"
+	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
 var modelStyle = lipgloss.NewStyle().
@@ -135,8 +136,6 @@ func reportsKeyMap() reportsKeymap {
 type model struct {
 	reports []wrapper
 
-	current *wrapper
-
 	reportsTable reportsTable
 	focusReport  focusReport
 	help         help.Model
@@ -181,7 +180,7 @@ func initialModel(db *sql.DB, width int, height int) (model, error) {
 func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) {
 	reports := []wrapper{}
 	skipYear := false
-	timeMonth := time.Month(month)
+	timeMonth := month
 	ex, err := expenseDB.GetFirstExpense(db)
 	if err != nil {
 		return reports, err
@@ -299,7 +298,7 @@ func (m *model) SetWidth(width int) {
 	m.width = width
 }
 
-func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) error {
+func (c tuiCommand) Run(db *sql.DB, _ *category.Matcher) error {
 	w, h, err := term.GetSize(os.Stdout.Fd())
 	if err != nil {
 		return fmt.Errorf("failed to get terminal size: %w", err)

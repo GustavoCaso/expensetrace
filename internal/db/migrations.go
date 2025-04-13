@@ -30,19 +30,28 @@ func DropTables(db *sql.DB) error {
 	// drop tables
 	_, err = tx.Exec("DROP TABLE IF EXISTS expenses;")
 	if err != nil {
-		tx.Rollback()
+		rErr := tx.Rollback()
+		if rErr != nil {
+			return rErr
+		}
 		return err
 	}
 
 	_, err = tx.Exec("DROP TABLE IF EXISTS categories;")
 	if err != nil {
-		tx.Rollback()
+		rErr := tx.Rollback()
+		if rErr != nil {
+			return rErr
+		}
 		return err
 	}
 
 	_, err = tx.Exec("DROP TABLE IF EXISTS schema_migrations;")
 	if err != nil {
-		tx.Rollback()
+		rErr := tx.Rollback()
+		if rErr != nil {
+			return rErr
+		}
 		return err
 	}
 
@@ -162,7 +171,10 @@ func ApplyMigrations(db *sql.DB) error {
 
 			// Apply migration
 			if err := migration.up(tx); err != nil {
-				tx.Rollback()
+				rErr := tx.Rollback()
+				if rErr != nil {
+					return rErr
+				}
 				return fmt.Errorf("migration %d failed: %w", migration.version, err)
 			}
 
@@ -172,7 +184,10 @@ func ApplyMigrations(db *sql.DB) error {
 				migration.version, time.Now().Unix(),
 			)
 			if err != nil {
-				tx.Rollback()
+				rErr := tx.Rollback()
+				if rErr != nil {
+					return rErr
+				}
 				return fmt.Errorf("failed to record migration %d: %w",
 					migration.version, err)
 			}

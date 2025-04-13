@@ -3,8 +3,9 @@ package db
 import (
 	"testing"
 
-	"github.com/GustavoCaso/expensetrace/internal/config"
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/GustavoCaso/expensetrace/internal/config"
 )
 
 func TestCreateCategoriesTable(t *testing.T) {

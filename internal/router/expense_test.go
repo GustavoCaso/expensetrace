@@ -62,7 +62,7 @@ func TestExpensesHandler(t *testing.T) {
 	handler, _ := New(database, matcher)
 
 	// Create test request
-	req := httptest.NewRequest("GET", "/expenses", nil)
+	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
 	w := httptest.NewRecorder()
 
 	// Serve request
