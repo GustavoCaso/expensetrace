@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -31,7 +32,7 @@ type expense struct {
 }
 
 func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *category.Matcher) []error {
-	errors := []error{}
+	errs := []error{}
 	expenses := []*expenseDB.Expense{}
 
 	fileFormat := path.Ext(filename)
@@ -48,18 +49,18 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 		r := csv.NewReader(reader)
 		for {
 			record, err := r.Read()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			if err != nil {
-				errors = append(errors, err)
-				return errors
+				errs = append(errs, err)
+				return errs
 			}
 
 			t, err := time.Parse("02/01/2006", record[1])
 			if err != nil {
-				errors = append(errors, err)
-				return errors
+				errs = append(errs, err)
+				return errs
 			}
 
 			description := strings.ToLower(record[2])
@@ -71,8 +72,8 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 
 			matches := re.FindStringSubmatch(record[3])
 			if len(matches) == 0 {
-				errors = append(errors, fmt.Errorf("amount regex did not find any matches"))
-				return errors
+				errs = append(errs, errors.New("amount regex did not find any matches"))
+				return errs
 			}
 
 			amount := matches[amountIndex]
@@ -87,8 +88,8 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 			}
 			parsedAmount, err := strconv.ParseInt(amountStr, 10, 64)
 			if err != nil {
-				errors = append(errors, err)
-				return errors
+				errs = append(errs, err)
+				return errs
 			}
 
 			var et expenseDB.ExpenseType
@@ -115,8 +116,8 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 
 		err := json.NewDecoder(reader).Decode(&e)
 		if err != nil {
-			errors = append(errors, err)
-			return errors
+			errs = append(errs, err)
+			return errs
 		}
 
 		for _, expense := range e {
@@ -148,8 +149,8 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 		}
 
 	default:
-		errors = append(errors, fmt.Errorf("unsupported file format: %s", fileFormat))
-		return errors
+		errs = append(errs, fmt.Errorf("unsupported file format: %s", fileFormat))
+		return errs
 	}
 
 	return expenseDB.InsertExpenses(db, expenses)

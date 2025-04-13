@@ -2,8 +2,8 @@ package cli
 
 import (
 	"database/sql"
+	"errors"
 	"flag"
-	"fmt"
 	"testing"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
@@ -56,7 +56,7 @@ func TestCommandInterface(t *testing.T) {
 	// Test command with error
 	cmdWithError := mockCommand{
 		description: "Error command",
-		runError:    fmt.Errorf("test error"),
+		runError:    errors.New("test error"),
 	}
 
 	err = cmdWithError.Run(nil, nil)

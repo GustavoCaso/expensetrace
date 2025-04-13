@@ -2,6 +2,7 @@ package router
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -23,7 +24,7 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		var errorMessage string
-		if err == http.ErrMissingFile {
+		if errors.Is(err, http.ErrMissingFile) {
 			errorMessage = "No file submitted"
 		} else {
 			errorMessage = "Error retrieving the file"

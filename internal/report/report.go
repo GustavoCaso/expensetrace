@@ -3,6 +3,7 @@ package report
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"time"
 
 	"golang.org/x/exp/maps"
@@ -63,7 +64,7 @@ func Generate(startDate, endDate time.Time, expenses []*expenseDB.Expense, repor
 	if reportType == "monthly" {
 		report.Title = fmt.Sprintf("%s %d", startDate.Month().String(), startDate.Year())
 	} else {
-		report.Title = fmt.Sprintf("%d", startDate.Year())
+		report.Title = strconv.Itoa(startDate.Year())
 	}
 
 	return report

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"html/template"
@@ -88,7 +89,7 @@ func (c searchCommand) SetFlags(fs *flag.FlagSet) {
 
 func (c searchCommand) Run(db *sql.DB, _ *categoryPkg.Matcher) error {
 	if keyword == "" {
-		return fmt.Errorf("you must provide a keyword to use for the search")
+		return errors.New("you must provide a keyword to use for the search")
 	}
 
 	expenses, err := expenseDB.SearchExpenses(db, keyword)

@@ -2,6 +2,7 @@ package router
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -380,7 +381,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	}
 
 	if name == "" || pattern == "" {
-		data.Error = fmt.Errorf(
+		data.Error = errors.New(
 			"category must include name and a valid regex pattern. Ensure that you populate the name and pattern input",
 		)
 

@@ -320,7 +320,7 @@ func (c tuiCommand) Run(db *sql.DB, _ *category.Matcher) error {
 
 	p := tea.NewProgram(model, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
-		return fmt.Errorf("Error running TUI: %w", err)
+		return fmt.Errorf("error running TUI: %w", err)
 	}
 
 	return nil

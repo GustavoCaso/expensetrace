@@ -2,6 +2,7 @@ package importcmd
 
 import (
 	"database/sql"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -30,7 +31,7 @@ func (c importCommand) SetFlags(fs *flag.FlagSet) {
 
 func (c importCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	if importFile == "" {
-		return fmt.Errorf("you must provide a file to import")
+		return errors.New("you must provide a file to import")
 	}
 
 	file, err := os.Open(importFile)
