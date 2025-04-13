@@ -11,7 +11,6 @@ require (
 	github.com/charmbracelet/x/term v0.2.1
 	github.com/fatih/color v1.17.0
 	github.com/mattn/go-sqlite3 v1.14.22
-	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	gopkg.in/yaml.v3 v3.0.1
 )
 
