@@ -70,7 +70,7 @@ func TestParseENV(t *testing.T) {
 	}
 	defer os.Remove(tmpfile.Name())
 
-	if _, err = tmpfile.Write([]byte(content)); err != nil {
+	if _, err = tmpfile.WriteString(content); err != nil {
 		t.Fatalf("Failed to write to temporary file: %v", err)
 	}
 	if err = tmpfile.Close(); err != nil {
@@ -105,7 +105,7 @@ func TestParseValidate(t *testing.T) {
 	}
 	defer os.Remove(tmpfile.Name())
 
-	if _, err = tmpfile.Write([]byte(content)); err != nil {
+	if _, err = tmpfile.WriteString(content); err != nil {
 		t.Fatalf("Failed to write to temporary file: %v", err)
 	}
 	if err = tmpfile.Close(); err != nil {
@@ -147,7 +147,7 @@ categories:
 	}
 	defer os.Remove(tmpfile.Name())
 
-	if _, err = tmpfile.Write([]byte(content)); err != nil {
+	if _, err = tmpfile.WriteString(content); err != nil {
 		t.Fatalf("Failed to write to temporary file: %v", err)
 	}
 	if err = tmpfile.Close(); err != nil {

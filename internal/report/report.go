@@ -36,6 +36,10 @@ type Report struct {
 	Verbose               bool
 }
 
+const (
+	percentageOfTotal = 100
+)
+
 func Generate(startDate, endDate time.Time, expenses []*expenseDB.Expense, reportType string) Report {
 	var report Report
 
@@ -47,7 +51,7 @@ func Generate(startDate, endDate time.Time, expenses []*expenseDB.Expense, repor
 	report.EndDate = endDate
 	savings := income - (spending)*-1
 	report.Savings = savings
-	report.SavingsPercentage = (float32(savings) / float32(income)) * 100
+	report.SavingsPercentage = (float32(savings) / float32(income)) * percentageOfTotal
 	numberOfDaysPerMonth := calendarDays(startDate, endDate)
 	report.AverageSpendingPerDay = (spending) * -1 / int64(numberOfDaysPerMonth)
 	report.EarningsPerDay = income / int64(numberOfDaysPerMonth)
@@ -108,10 +112,10 @@ func Categories(expenses []*expenseDB.Expense) (map[string]Category, []string, i
 		// Calculate percentage of total
 		if category.Amount < 0 && spending < 0 {
 			// For expense categories
-			category.PercentageOfTotal = float64(category.Amount*-100) / float64(spending*-1)
+			category.PercentageOfTotal = float64(category.Amount*-percentageOfTotal) / float64(spending*-1)
 		} else if category.Amount > 0 && income > 0 {
 			// For income categories
-			category.PercentageOfTotal = float64(category.Amount*100) / float64(income)
+			category.PercentageOfTotal = float64(category.Amount*percentageOfTotal) / float64(income)
 		}
 
 		// Find most recent transaction
@@ -145,14 +149,14 @@ func addExpenseToCategory(categories map[string]Category, ex *expenseDB.Expense)
 		categories[categoryName] = c
 	} else {
 		amount := ex.Amount
-		c := Category{
+		cat := Category{
 			Amount: amount,
 			Name:   categoryName,
 			Expenses: []*expenseDB.Expense{
 				ex,
 			},
 		}
-		categories[categoryName] = c
+		categories[categoryName] = cat
 	}
 }
 
@@ -172,12 +176,16 @@ func expeseCategory(ex *expenseDB.Expense) string {
 	return category
 }
 
+const (
+	hoursInDay = 24
+)
+
 // calendarDays returns the calendar difference between times (t2 - t1) as days.
 func calendarDays(t1, t2 time.Time) int {
 	y, m, d := t2.Date()
 	u2 := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 	y, m, d = t1.In(t2.Location()).Date()
 	u1 := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
-	days := u2.Sub(u1) / (24 * time.Hour)
+	days := u2.Sub(u1) / (hoursInDay * time.Hour)
 	return int(days)
 }

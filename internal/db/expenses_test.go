@@ -266,7 +266,7 @@ func TestGetExpensesWithoutCategory(t *testing.T) {
 	}
 
 	for _, exp := range testExpenses {
-		_, err := database.Exec(
+		_, err = database.Exec(
 			"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
 			exp.source,
 			exp.amount,

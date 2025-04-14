@@ -50,6 +50,10 @@ const (
 	focusedDetail
 )
 
+const (
+	numberOfPanels = 2
+)
+
 type reportsKeymap struct {
 	Enter key.Binding
 	Up    key.Binding
@@ -167,7 +171,7 @@ func initialModel(db *sql.DB, width int, height int) (model, error) {
 		focusKeymap:   focusKeyMap(),
 
 		reportsTable: newReports(reports, width),
-		focusReport:  newfocusReport(width/2, height/2),
+		focusReport:  newfocusReport(width/focusColumns, height/focusColumns),
 		help:         help.New(),
 
 		width:  width,
@@ -254,8 +258,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	m.reportsTable.UpdateDimensions(m.width, m.height/2)
-	m.focusReport.UpdateDimensions(m.width/2, m.height/2)
+	m.reportsTable.UpdateDimensions(m.width, m.height/numberOfPanels)
+	m.focusReport.UpdateDimensions(m.width/numberOfPanels, m.height/numberOfPanels)
 
 	return m, cmd
 }

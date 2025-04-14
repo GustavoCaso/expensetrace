@@ -36,6 +36,7 @@ type router struct {
 	reportsOnce      *sync.Once
 }
 
+//nolint:revive // We return the private router struct to allow testing some internal functions
 func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	router := &router{
 		reload:      os.Getenv("LIVERELOAD") == "true",
@@ -46,10 +47,10 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 
 	mux := &http.ServeMux{}
 
-	err := router.parseTemplates()
+	parseError := router.parseTemplates()
 
-	if err != nil {
-		panic(err)
+	if parseError != nil {
+		panic(parseError)
 	}
 
 	// Routes
@@ -115,7 +116,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	})
 
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
-		err = r.ParseForm()
+		err := r.ParseForm()
 		if err != nil {
 			log.Println("error r.ParseForm() ", err.Error())
 
@@ -181,10 +182,10 @@ func (router *router) generateReports() error {
 
 		firstDay, lastDay := util.GetMonthDates(int(month), year)
 
-		expenses, err := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
+		expenses, expenseErr := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
 
-		if err != nil {
-			return err
+		if expenseErr != nil {
+			return expenseErr
 		}
 
 		result := report.Generate(firstDay, lastDay, expenses, "monthly")

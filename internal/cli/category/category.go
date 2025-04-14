@@ -21,6 +21,12 @@ import (
 var actionFlag string
 var outputLocation string
 
+const (
+	actionInspect      = "inspect"
+	actionRecategorize = "recategorize"
+	actionMigrate      = "migrate"
+)
+
 type categoryCommand struct {
 }
 
@@ -32,7 +38,7 @@ func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
 	fs.StringVar(
 		&actionFlag,
 		"a",
-		"inspect",
+		actionInspect,
 		"What action to perform. Supported values are: inspect, recategorize, migrate",
 	)
 	fs.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")
@@ -41,7 +47,7 @@ func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
 func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	var expenses []*expenseDB.Expense
 	var expenseErr error
-	if actionFlag == "migrate" {
+	if actionFlag == actionMigrate {
 		expenses, expenseErr = expenseDB.GetExpenses(db)
 	} else {
 		expenses, expenseErr = expenseDB.GetExpensesWithoutCategory(db)
@@ -51,7 +57,7 @@ func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	}
 
 	switch actionFlag {
-	case "inspect":
+	case actionInspect:
 		var output io.Writer
 		output = os.Stdout
 		if outputLocation != "" {
@@ -65,7 +71,7 @@ func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 			defer f.Close()
 		}
 		inspect(output, expenses)
-	case "recategorize", "migrate":
+	case actionRecategorize, actionMigrate:
 		if err := recategorize(db, matcher, expenses); err != nil {
 			return err
 		}

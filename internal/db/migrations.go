@@ -78,11 +78,9 @@ func ApplyMigrations(db *sql.DB) error {
 
 	// Define migrations
 	migrations := []struct {
-		version int
-		up      func(*sql.Tx) error
+		up func(*sql.Tx) error
 	}{
 		{
-			version: 1,
 			up: func(tx *sql.Tx) error {
 				// Create Expense Table
 				_, err := tx.Exec(`
@@ -102,7 +100,6 @@ func ApplyMigrations(db *sql.DB) error {
 			},
 		},
 		{
-			version: 2,
 			up: func(tx *sql.Tx) error {
 				// Create Categories Table
 				_, err := tx.Exec(`
@@ -117,7 +114,6 @@ func ApplyMigrations(db *sql.DB) error {
 			},
 		},
 		{
-			version: 3,
 			up: func(tx *sql.Tx) error {
 				// Set all category_id from 0 to NULL
 				// That way we can run the next migration
@@ -130,7 +126,6 @@ func ApplyMigrations(db *sql.DB) error {
 			},
 		},
 		{
-			version: 4,
 			up: func(tx *sql.Tx) error {
 				// Add foreign key constraint to expenses table
 				_, err := tx.Exec(`
@@ -159,15 +154,18 @@ func ApplyMigrations(db *sql.DB) error {
 	}
 
 	// Apply pending migrations
-	for _, migration := range migrations {
-		if migration.version > currentVersion {
-			log.Printf("Applying migration %d...", migration.version)
+	for i, migration := range migrations {
+		// Check if migration is already applied
+		migrationVersion := i + 1
+		//nolint:nestif // No need to extract this code to a function as is clear
+		if migrationVersion > currentVersion {
+			log.Printf("Applying migration %d...", migrationVersion)
 
 			// Begin transaction for this migration
 			tx, err := db.Begin()
 			if err != nil {
 				return fmt.Errorf("failed to begin transaction for migration %d: %w",
-					migration.version, err)
+					migrationVersion, err)
 			}
 
 			// Apply migration
@@ -176,13 +174,13 @@ func ApplyMigrations(db *sql.DB) error {
 				if rErr != nil {
 					return rErr
 				}
-				return fmt.Errorf("migration %d failed: %w", migration.version, err)
+				return fmt.Errorf("migration %d failed: %w", migrationVersion, err)
 			}
 
 			// Record migration
 			_, err = tx.Exec(
 				"INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
-				migration.version, time.Now().Unix(),
+				migrationVersion, time.Now().Unix(),
 			)
 			if err != nil {
 				rErr := tx.Rollback()
@@ -190,16 +188,16 @@ func ApplyMigrations(db *sql.DB) error {
 					return rErr
 				}
 				return fmt.Errorf("failed to record migration %d: %w",
-					migration.version, err)
+					migrationVersion, err)
 			}
 
 			// Commit transaction
 			if err = tx.Commit(); err != nil {
 				return fmt.Errorf("failed to commit migration %d: %w",
-					migration.version, err)
+					migrationVersion, err)
 			}
 
-			log.Printf("Migration %d applied successfully", migration.version)
+			log.Printf("Migration %d applied successfully", migrationVersion)
 		}
 	}
 

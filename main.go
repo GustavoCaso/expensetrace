@@ -65,6 +65,7 @@ func main() {
 
 	commandName := os.Args[1]
 	command, ok := subcommands[commandName]
+	//nolint:nestif // No need to extract this code to a function as is clear
 	if ok {
 		err := command.flagSet.Parse(os.Args[2:])
 		if err != nil {

@@ -136,19 +136,19 @@ func parseTemplates(fsDir fs.FS) (templates, error) {
 	// Parse pages with the enhanced base template
 	err = fs.WalkDir(fsDir, "pages", func(path string, d fs.DirEntry, _ error) error {
 		if !d.IsDir() {
-			b, err := fs.ReadFile(fsDir, path)
-			if err != nil {
-				return err
+			b, readErr := fs.ReadFile(fsDir, path)
+			if readErr != nil {
+				return readErr
 			}
 
-			pageTempl, err := baseTempl.Clone()
-			if err != nil {
-				return err
+			pageTempl, cloneErr := baseTempl.Clone()
+			if cloneErr != nil {
+				return cloneErr
 			}
 
-			pageTempl, err = pageTempl.Parse(string(b))
-			if err != nil {
-				return err
+			pageTempl, parseErr := pageTempl.Parse(string(b))
+			if parseErr != nil {
+				return parseErr
 			}
 
 			t[path] = pageTempl

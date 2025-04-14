@@ -12,8 +12,12 @@ import (
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
 )
 
+const (
+	maxMemory = 32 << 20 // 32MB
+)
+
 func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(32 << 20)
+	err := r.ParseMultipartForm(maxMemory)
 
 	if err != nil {
 		fmt.Fprint(w, "error r.ParseMultipartForm() ", err.Error())

@@ -13,6 +13,10 @@ const (
 	expensesView
 )
 
+const (
+	focusColumns = 2
+)
+
 type focusReport struct {
 	category table.Model
 	expenses []table.Model
@@ -116,7 +120,7 @@ func (d focusReport) View() string {
 }
 
 func createCategoryColumns(width int) []table.Column {
-	w := width / 2
+	w := width / focusColumns
 
 	return []table.Column{
 		{Title: "Category", Width: w},
@@ -125,7 +129,7 @@ func createCategoryColumns(width int) []table.Column {
 }
 
 func createExpenseColumns(width int) []table.Column {
-	w := width / 2
+	w := width / focusColumns
 
 	return []table.Column{
 		{Title: "Description", Width: w},

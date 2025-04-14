@@ -26,14 +26,21 @@ func (c webCommand) Description() string {
 }
 
 var port string
+var timeout int
+
+const (
+	defaultPort    = "8080"
+	defaultTimeout = 3
+)
 
 func (c webCommand) SetFlags(fs *flag.FlagSet) {
 	port = os.Getenv("EXPENSETRACE_PORT")
 	if port == "" {
-		port = "8080"
+		port = defaultPort
 	}
 
 	fs.StringVar(&port, "p", port, "port")
+	fs.IntVar(&timeout, "t", defaultTimeout, "timeout")
 }
 
 func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
@@ -42,7 +49,7 @@ func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%s", port),
-		ReadHeaderTimeout: 3 * time.Second,
+		ReadHeaderTimeout: time.Duration(timeout) * time.Second,
 		Handler:           handler,
 	}
 	return server.ListenAndServe()
