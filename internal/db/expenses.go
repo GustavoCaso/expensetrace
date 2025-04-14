@@ -54,17 +54,19 @@ func (e Expense) Category() (string, error) {
 //go:embed templates/*
 var content embed.FS
 
-type ErrInsert struct {
+type InsertError struct {
 	err error
 }
 
-func (e ErrInsert) Error() string {
+func (e InsertError) Error() string {
 	return fmt.Sprintf("error when trying to insert record on table. err: %v", e.err)
 }
 
 func InsertExpenses(db *sql.DB, expenses []*Expense) []error {
 	// Insert records
-	insertStmt, err := db.Prepare("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) values(?, ?, ?, ?, ?, ?, ?)")
+	insertStmt, err := db.Prepare(
+		"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) values(?, ?, ?, ?, ?, ?, ?)",
+	)
 
 	errors := []error{}
 
@@ -72,10 +74,20 @@ func InsertExpenses(db *sql.DB, expenses []*Expense) []error {
 		errors = append(errors, err)
 		return errors
 	}
+	defer insertStmt.Close()
+
 	for _, expense := range expenses {
-		_, err := insertStmt.Exec(expense.Source, expense.Amount, expense.Description, expense.Type, expense.Date.Unix(), expense.Currency, expense.CategoryID)
+		_, err = insertStmt.Exec(
+			expense.Source,
+			expense.Amount,
+			expense.Description,
+			expense.Type,
+			expense.Date.Unix(),
+			expense.Currency,
+			expense.CategoryID,
+		)
 		if err != nil {
-			errors = append(errors, ErrInsert{
+			errors = append(errors, InsertError{
 				err: err,
 			})
 		}
@@ -90,15 +102,19 @@ func GetExpenses(db *sql.DB) ([]*Expense, error) {
 		return []*Expense{}, err
 	}
 
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
+	}
+
 	defer rows.Close()
 
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
 
-		if err != nil {
-			return []*Expense{}, err
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 
 		expenses = append(expenses, ex)
@@ -141,15 +157,19 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]*Ex
 		return []*Expense{}, err
 	}
 
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
+	}
+
 	defer rows.Close()
 
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
 
-		if err != nil {
-			return []*Expense{}, err
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 
 		expenses = append(expenses, ex)
@@ -164,14 +184,18 @@ func GetExpensesWithoutCategory(db *sql.DB) ([]*Expense, error) {
 		return []*Expense{}, err
 	}
 
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
+	}
+
 	defer rows.Close()
 
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
-		if err != nil {
-			return []*Expense{}, err
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 		expenses = append(expenses, ex)
 	}
@@ -186,15 +210,19 @@ func SearchExpenses(db *sql.DB, keyword string) ([]*Expense, error) {
 		return []*Expense{}, err
 	}
 
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
+	}
+
 	defer rows.Close()
 
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
 
-		if err != nil {
-			return []*Expense{}, err
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 
 		expenses = append(expenses, ex)
@@ -210,14 +238,18 @@ func SearchExpensesByDescription(db *sql.DB, description string) ([]*Expense, er
 		return []*Expense{}, err
 	}
 
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
+	}
+
 	defer rows.Close()
 
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
-		if err != nil {
-			return []*Expense{}, err
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 		expenses = append(expenses, ex)
 	}
@@ -236,11 +268,14 @@ func GetFirstExpense(db *sql.DB) (*Expense, error) {
 	return ex, nil
 }
 
-// Get expenses by category ID
 func GetExpensesByCategory(db *sql.DB, categoryID int) ([]*Expense, error) {
 	rows, err := db.Query("SELECT * FROM expenses WHERE category_id = ?", categoryID)
 	if err != nil {
 		return []*Expense{}, err
+	}
+
+	if rows.Err() != nil {
+		return []*Expense{}, rows.Err()
 	}
 
 	defer rows.Close()
@@ -248,9 +283,9 @@ func GetExpensesByCategory(db *sql.DB, categoryID int) ([]*Expense, error) {
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
-		if err != nil {
-			return []*Expense{}, err
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 		expenses = append(expenses, ex)
 	}

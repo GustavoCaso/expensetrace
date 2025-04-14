@@ -9,8 +9,16 @@ func TestDropDB(t *testing.T) {
 	database := setupTestDB(t)
 
 	// Insert test expense
-	_, err := database.Exec("INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
-		"test", 1000, "Test expense", ChargeType, time.Now().Unix(), "USD", nil)
+	_, err := database.Exec(
+		"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
+		"test",
+		1000,
+		"Test expense",
+		ChargeType,
+		time.Now().Unix(),
+		"USD",
+		nil,
+	)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
@@ -28,18 +36,42 @@ func TestDropDB(t *testing.T) {
 	}
 
 	// Verify tables were deleted
-	_, err = database.Query("SELECT * FROM expenses")
+	rows, err := database.Query("SELECT * FROM expenses")
 	if err == nil {
 		t.Error("Expected error when querying expenses table, got nil")
 	}
 
-	_, err = database.Query("SELECT * FROM categories")
+	if rows != nil {
+		defer rows.Close()
+
+		if rows.Err() != nil {
+			t.Errorf("Unexpected error %s", rows.Err())
+		}
+	}
+
+	rows, err = database.Query("SELECT * FROM categories")
 	if err == nil {
 		t.Error("Expected error when querying category table, got nil")
 	}
 
-	_, err = database.Query("SELECT * FROM schema_migrations")
+	if rows != nil {
+		defer rows.Close()
+
+		if rows.Err() != nil {
+			t.Errorf("Unexpected error %s", rows.Err())
+		}
+	}
+
+	rows, err = database.Query("SELECT * FROM schema_migrations")
 	if err == nil {
 		t.Error("Expected error when querying schema_migrations table, got nil")
+	}
+
+	if rows != nil {
+		defer rows.Close()
+
+		if rows.Err() != nil {
+			t.Errorf("Unexpected error %s", rows.Err())
+		}
 	}
 }

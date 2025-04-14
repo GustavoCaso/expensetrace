@@ -1,4 +1,4 @@
-package importCmd
+package importcmd
 
 import (
 	"database/sql"
@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func createTestFile(t *testing.T, content string) string {
@@ -125,7 +126,7 @@ Test Source,05/01/2024,Small income,10.50,USD`
 		var desc, currency string
 		var amount float64
 		var categoryID sql.NullInt64
-		err := rows.Scan(&timestamp, &desc, &amount, &currency, &categoryID)
+		err = rows.Scan(&timestamp, &desc, &amount, &currency, &categoryID)
 		if err != nil {
 			t.Fatalf("Failed to scan row %d: %v", i+1, err)
 		}

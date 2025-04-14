@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"maps"
 	"os"
+	"slices"
 	"sort"
 	"time"
-
-	"golang.org/x/exp/maps"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
@@ -21,6 +21,12 @@ import (
 var actionFlag string
 var outputLocation string
 
+const (
+	actionInspect      = "inspect"
+	actionRecategorize = "recategorize"
+	actionMigrate      = "migrate"
+)
+
 type categoryCommand struct {
 }
 
@@ -29,24 +35,29 @@ func (c categoryCommand) Description() string {
 }
 
 func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
-	fs.StringVar(&actionFlag, "a", "inspect", "What action to perform. Supported values are: inspect, recategorize, migrate")
+	fs.StringVar(
+		&actionFlag,
+		"a",
+		actionInspect,
+		"What action to perform. Supported values are: inspect, recategorize, migrate",
+	)
 	fs.StringVar(&outputLocation, "o", "", "Where to print the inspect output result")
 }
 
 func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	var expenses []*expenseDB.Expense
-	var err error
-	if actionFlag == "migrate" {
-		expenses, err = expenseDB.GetExpenses(db)
+	var expenseErr error
+	if actionFlag == actionMigrate {
+		expenses, expenseErr = expenseDB.GetExpenses(db)
 	} else {
-		expenses, err = expenseDB.GetExpensesWithoutCategory(db)
+		expenses, expenseErr = expenseDB.GetExpensesWithoutCategory(db)
 	}
-	if err != nil {
-		return fmt.Errorf("unable to get expenses: %w", err)
+	if expenseErr != nil {
+		return fmt.Errorf("unable to get expenses: %w", expenseErr)
 	}
 
 	switch actionFlag {
-	case "inspect":
+	case actionInspect:
 		var output io.Writer
 		output = os.Stdout
 		if outputLocation != "" {
@@ -59,10 +70,8 @@ func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 
 			defer f.Close()
 		}
-		if err := inspect(output, expenses); err != nil {
-			return err
-		}
-	case "recategorize", "migrate":
+		inspect(output, expenses)
+	case actionRecategorize, actionMigrate:
 		if err := recategorize(db, matcher, expenses); err != nil {
 			return err
 		}
@@ -83,10 +92,10 @@ type reportExpense struct {
 	amounts []int64
 }
 
-func inspect(writer io.Writer, expenses []*expenseDB.Expense) error {
+func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
 	if len(expenses) == 0 {
 		log.Println("No expenses without category 🎉")
-		return nil
+		return
 	}
 
 	groupedExpenses := map[string]reportExpense{}
@@ -110,7 +119,7 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) error {
 		}
 	}
 
-	keys := maps.Keys(groupedExpenses)
+	keys := slices.Collect(maps.Keys(groupedExpenses))
 
 	sort.SliceStable(keys, func(i, j int) bool {
 		return groupedExpenses[keys[i]].count > groupedExpenses[keys[j]].count
@@ -125,15 +134,18 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) error {
 		total += count
 
 		for i, date := range groupedExpenses[k].dates {
-			fmt.Fprintf(writer, "	[%s] %s€\n", date.Format("2006-01-02"), util.FormatMoney(expense.amounts[i], ".", ","))
+			fmt.Fprintf(
+				writer,
+				"	[%s] %s€\n",
+				date.Format("2006-01-02"),
+				util.FormatMoney(expense.amounts[i], ".", ","),
+			)
 		}
 	}
 
 	fmt.Fprint(writer, "\n")
 
 	fmt.Fprintf(writer, "There are a total of %d uncategorized expenses", total)
-
-	return nil
 }
 
 func recategorize(db *sql.DB, categoryMatcher *category.Matcher, expenses []*expenseDB.Expense) error {

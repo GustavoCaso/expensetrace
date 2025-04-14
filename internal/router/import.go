@@ -2,6 +2,7 @@ package router
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -11,14 +12,23 @@ import (
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
 )
 
+const (
+	maxMemory = 32 << 20 // 32MB
+)
+
 func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseMultipartForm(32 << 20)
+	err := r.ParseMultipartForm(maxMemory)
+
+	if err != nil {
+		fmt.Fprint(w, "error r.ParseMultipartForm() ", err.Error())
+		return
+	}
 
 	file, header, err := r.FormFile("file")
 
 	if err != nil {
 		var errorMessage string
-		if err == http.ErrMissingFile {
+		if errors.Is(err, http.ErrMissingFile) {
 			errorMessage = "No file submitted"
 		} else {
 			errorMessage = "Error retrieving the file"
@@ -30,7 +40,11 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Copy the file data to my buffer
 	var buf bytes.Buffer
-	io.Copy(&buf, file)
+	_, err = io.Copy(&buf, file)
+	if err != nil {
+		fmt.Fprint(w, err)
+		return
+	}
 	log.Printf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len())
 	errors := importUtil.Import(header.Filename, &buf, router.db, router.matcher)
 	if len(errors) > 0 {

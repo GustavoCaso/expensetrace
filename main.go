@@ -10,7 +10,7 @@ import (
 	categoryPkg "github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	"github.com/GustavoCaso/expensetrace/internal/cli/category"
-	"github.com/GustavoCaso/expensetrace/internal/cli/delete"
+	deleteCmd "github.com/GustavoCaso/expensetrace/internal/cli/delete"
 	importCmd "github.com/GustavoCaso/expensetrace/internal/cli/import"
 	"github.com/GustavoCaso/expensetrace/internal/cli/report"
 	"github.com/GustavoCaso/expensetrace/internal/cli/search"
@@ -29,7 +29,7 @@ type command struct {
 
 var subcommands = map[string]*command{
 	"delete": {
-		c: delete.NewCommand(),
+		c: deleteCmd.NewCommand(),
 	},
 	"category": {
 		c: category.NewCommand(),
@@ -54,7 +54,9 @@ var subcommands = map[string]*command{
 func main() {
 	initFlagSets()
 
-	if len(os.Args) < 2 {
+	minFlagsNum := 2
+
+	if len(os.Args) < minFlagsNum {
 		fmt.Printf("subcommand is required\n")
 		printHelp()
 
@@ -63,8 +65,12 @@ func main() {
 
 	commandName := os.Args[1]
 	command, ok := subcommands[commandName]
+	//nolint:nestif // No need to extract this code to a function as is clear
 	if ok {
-		command.flagSet.Parse(os.Args[2:])
+		err := command.flagSet.Parse(os.Args[2:])
+		if err != nil {
+			log.Fatalf("Unable to parse flag arguments: %s", err.Error())
+		}
 
 		conf, err := config.Parse(configPath)
 
@@ -98,22 +104,30 @@ func main() {
 		matcher := categoryPkg.NewMatcher(categories)
 
 		err = command.c.Run(dbInstance, matcher)
-		dbInstance.Close()
 
 		if err != nil {
 			log.Printf("Error: %v", err)
 			os.Exit(1)
 		}
 
-		os.Exit(0)
-	} else {
-		if strings.Contains(commandName, "help") {
-			printHelp()
+		err = dbInstance.Close()
 
-			os.Exit(0)
+		if err != nil {
+			log.Printf("Error closing DB: %v", err)
+			os.Exit(1)
 		}
-		log.Fatalf("unsupported comand %s. \nUse 'help' command to print information about supported commands\n", commandName)
+
+		os.Exit(0)
 	}
+	if strings.Contains(commandName, "help") {
+		printHelp()
+
+		os.Exit(0)
+	}
+	log.Fatalf(
+		"unsupported comand %s. \nUse 'help' command to print information about supported commands\n",
+		commandName,
+	)
 }
 
 func printHelp() {

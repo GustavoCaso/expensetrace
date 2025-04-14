@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestSetFlags(t *testing.T) {
@@ -82,7 +83,7 @@ func TestRun(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Test that the server is responding
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 

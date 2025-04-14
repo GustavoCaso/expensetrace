@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"maps"
 	"net/http"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,7 +20,6 @@ import (
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
-	"golang.org/x/exp/maps"
 )
 
 //go:embed templates/static/*
@@ -27,7 +28,6 @@ var staticFS, _ = fs.Sub(static, "templates/static")
 
 type router struct {
 	reload           bool
-	mux              *http.ServeMux
 	matcher          *category.Matcher
 	db               *sql.DB
 	templates        templates
@@ -36,6 +36,7 @@ type router struct {
 	reportsOnce      *sync.Once
 }
 
+//nolint:revive // We return the private router struct to allow testing some internal functions
 func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	router := &router{
 		reload:      os.Getenv("LIVERELOAD") == "true",
@@ -46,7 +47,11 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 
 	mux := &http.ServeMux{}
 
-	router.parseTemplates()
+	parseError := router.parseTemplates()
+
+	if parseError != nil {
+		panic(parseError)
+	}
 
 	// Routes
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
@@ -56,10 +61,10 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 			if err != nil {
 				// If we fail to generate reports servers do not start
 				// TODO: fix
-				log.Fatal(fmt.Sprintf("generateReports fail %v", err))
+				log.Fatalf("generateReports fail %v", err)
 			}
 
-			reportKeys := maps.Keys(router.reports)
+			reportKeys := slices.Collect(maps.Keys(router.reports))
 
 			sort.SliceStable(reportKeys, func(i, j int) bool {
 				s1 := strings.Split(reportKeys[i], "-")
@@ -82,7 +87,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 		router.homeHandler(w, r)
 	})
 
-	mux.HandleFunc("DELETE /expense/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /expense/{id}", func(_ http.ResponseWriter, _ *http.Request) {
 		// TODO
 	})
 
@@ -111,10 +116,20 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	})
 
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+		if err != nil {
+			log.Println("error r.ParseForm() ", err.Error())
+
+			data := struct {
+				Error error
+			}{
+				Error: err,
+			}
+			router.templates.Render(w, "partials/categories/card.html", data)
+			return
+		}
+
 		categoryID := r.PathValue("id")
-
-		r.ParseForm()
-
 		name := r.FormValue("name")
 		pattern := r.FormValue("pattern")
 
@@ -139,7 +154,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	//wrap entire mux with live reload middleware
+	// wrap entire mux with live reload middleware
 	wrappedMux := newLiveReloadMiddleware(router, mux)
 
 	return wrappedMux, router
@@ -167,10 +182,10 @@ func (router *router) generateReports() error {
 
 		firstDay, lastDay := util.GetMonthDates(int(month), year)
 
-		expenses, err := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
+		expenses, expenseErr := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
 
-		if err != nil {
-			return err
+		if expenseErr != nil {
+			return expenseErr
 		}
 
 		result := report.Generate(firstDay, lastDay, expenses, "monthly")
@@ -178,7 +193,7 @@ func (router *router) generateReports() error {
 		reports[fmt.Sprintf("%d-%d", year, month)] = result
 
 		if skipYear {
-			year = year - 1
+			year--
 			month = time.December
 			skipYear = false
 			continue
@@ -188,7 +203,7 @@ func (router *router) generateReports() error {
 			break
 		}
 
-		month = month - 1
+		month--
 	}
 
 	router.reports = reports

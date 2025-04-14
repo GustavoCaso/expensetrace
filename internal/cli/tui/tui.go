@@ -7,16 +7,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
-	"github.com/GustavoCaso/expensetrace/internal/cli"
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
-	"github.com/GustavoCaso/expensetrace/internal/report"
-	"github.com/GustavoCaso/expensetrace/internal/util"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/term"
+
+	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/cli"
+	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/report"
+	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
 var modelStyle = lipgloss.NewStyle().
@@ -47,6 +48,10 @@ type focusState int
 const (
 	focusedMain focusState = iota
 	focusedDetail
+)
+
+const (
+	numberOfPanels = 2
 )
 
 type reportsKeymap struct {
@@ -135,8 +140,6 @@ func reportsKeyMap() reportsKeymap {
 type model struct {
 	reports []wrapper
 
-	current *wrapper
-
 	reportsTable reportsTable
 	focusReport  focusReport
 	help         help.Model
@@ -160,8 +163,6 @@ func initialModel(db *sql.DB, width int, height int) (model, error) {
 		return model{}, err
 	}
 
-	reportsTable := newReports(reports, width)
-
 	return model{
 		reports:   reports,
 		focusMode: focusedMain,
@@ -169,8 +170,8 @@ func initialModel(db *sql.DB, width int, height int) (model, error) {
 		reportsKeyMap: reportsKeyMap(),
 		focusKeymap:   focusKeyMap(),
 
-		reportsTable: reportsTable,
-		focusReport:  newfocusReport(width/2, height/2),
+		reportsTable: newReports(reports, width),
+		focusReport:  newfocusReport(width/focusColumns, height/focusColumns),
 		help:         help.New(),
 
 		width:  width,
@@ -181,7 +182,7 @@ func initialModel(db *sql.DB, width int, height int) (model, error) {
 func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) {
 	reports := []wrapper{}
 	skipYear := false
-	timeMonth := time.Month(month)
+	timeMonth := month
 	ex, err := expenseDB.GetFirstExpense(db)
 	if err != nil {
 		return reports, err
@@ -197,10 +198,10 @@ func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) 
 
 		firstDay, lastDay := util.GetMonthDates(int(timeMonth), year)
 
-		expenses, err := expenseDB.GetExpensesFromDateRange(db, firstDay, lastDay)
+		expenses, expensesErr := expenseDB.GetExpensesFromDateRange(db, firstDay, lastDay)
 
-		if err != nil {
-			return reports, err
+		if expensesErr != nil {
+			return reports, expensesErr
 		}
 
 		result := report.Generate(firstDay, lastDay, expenses, "monthly")
@@ -210,7 +211,7 @@ func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) 
 		})
 
 		if skipYear {
-			year = year - 1
+			year--
 			timeMonth = time.December
 			skipYear = false
 			continue
@@ -220,7 +221,7 @@ func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) 
 			break
 		}
 
-		timeMonth = timeMonth - 1
+		timeMonth--
 	}
 
 	return reports, nil
@@ -257,8 +258,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	m.reportsTable.UpdateDimensions(m.width, m.height/2)
-	m.focusReport.UpdateDimensions(m.width/2, m.height/2)
+	m.reportsTable.UpdateDimensions(m.width, m.height/numberOfPanels)
+	m.focusReport.UpdateDimensions(m.width/numberOfPanels, m.height/numberOfPanels)
 
 	return m, cmd
 }
@@ -299,29 +300,29 @@ func (m *model) SetWidth(width int) {
 	m.width = width
 }
 
-func (c tuiCommand) Run(db *sql.DB, matcher *category.Matcher) error {
+func (c tuiCommand) Run(db *sql.DB, _ *category.Matcher) error {
 	w, h, err := term.GetSize(os.Stdout.Fd())
 	if err != nil {
 		return fmt.Errorf("failed to get terminal size: %w", err)
 	}
 
 	if len(os.Getenv("EXPENSETRACE_DEBUG")) > 0 {
-		f, err := tea.LogToFile("debug.log", "debug")
-		if err != nil {
-			return fmt.Errorf("failed to log to file: %w", err)
+		f, logErr := tea.LogToFile("debug.log", "debug")
+		if logErr != nil {
+			return fmt.Errorf("failed to log to file: %w", logErr)
 		}
 		defer f.Close()
 	}
 
-	model, err := initialModel(db, w, h)
+	m, err := initialModel(db, w, h)
 
 	if err != nil {
 		return fmt.Errorf("failed to create initia model: %w", err)
 	}
 
-	p := tea.NewProgram(model, tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		return fmt.Errorf("Error running TUI: %w", err)
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	if _, err = p.Run(); err != nil {
+		return fmt.Errorf("error running TUI: %w", err)
 	}
 
 	return nil

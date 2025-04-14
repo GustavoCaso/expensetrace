@@ -3,10 +3,11 @@ package tui
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/table"
+
 	"github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
-	"github.com/charmbracelet/bubbles/table"
 )
 
 type wrapper struct {
@@ -36,7 +37,11 @@ func (w wrapper) ToFocusRows() []table.Row {
 		var categoryAmount string
 
 		if category.Amount < 0 {
-			categoryAmount = util.ColorOutput(fmt.Sprintf("%s€", util.FormatMoney(category.Amount, ".", ",")), "red", "underline")
+			categoryAmount = util.ColorOutput(
+				fmt.Sprintf("%s€", util.FormatMoney(category.Amount, ".", ",")),
+				"red",
+				"underline",
+			)
 		} else {
 			categoryAmount = util.ColorOutput(fmt.Sprintf("%s€", util.FormatMoney(category.Amount, ".", ",")), "green")
 		}
@@ -61,7 +66,11 @@ func (w wrapper) ExpensesToRow(expenses []*db.Expense, expending bool) []table.R
 		var expenseAmount string
 
 		if expending {
-			expenseAmount = util.ColorOutput(fmt.Sprintf("%s€", util.FormatMoney(expense.Amount, ".", ",")), "red", "underline")
+			expenseAmount = util.ColorOutput(
+				fmt.Sprintf("%s€", util.FormatMoney(expense.Amount, ".", ",")),
+				"red",
+				"underline",
+			)
 		} else {
 			expenseAmount = util.ColorOutput(fmt.Sprintf("%s€", util.FormatMoney(expense.Amount, ".", ",")), "green")
 		}

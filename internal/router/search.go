@@ -10,7 +10,12 @@ import (
 )
 
 func (router *router) searchHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	err := r.ParseForm()
+
+	if err != nil {
+		fmt.Fprint(w, "error r.ParseForm() ", err.Error())
+		return
+	}
 
 	query := r.FormValue("q")
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"html/template"
@@ -12,11 +13,12 @@ import (
 	"path"
 	"sort"
 
+	"github.com/fatih/color"
+
 	categoryPkg "github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/util"
-	"github.com/fatih/color"
 )
 
 // content holds our static content.
@@ -42,7 +44,9 @@ func (c category) Display(verbose bool) string {
 	var buffer = bytes.Buffer{}
 
 	if value < 0 {
-		buffer.WriteString(fmt.Sprintf("%s: %s€", c.name, colorOutput(util.FormatMoney(value, ".", ","), "red", "underline")))
+		buffer.WriteString(
+			fmt.Sprintf("%s: %s€", c.name, colorOutput(util.FormatMoney(value, ".", ","), "red", "underline")),
+		)
 	} else {
 		buffer.WriteString(fmt.Sprintf("%s: %s€", c.name, colorOutput(util.FormatMoney(value, ".", ","), "green", "bold")))
 	}
@@ -50,7 +54,14 @@ func (c category) Display(verbose bool) string {
 	if verbose {
 		buffer.WriteString("\n")
 		for _, ex := range c.expenses {
-			buffer.WriteString(fmt.Sprintf("%s %s %s€\n", ex.Date.Format("2006-01-02"), ex.Description, util.FormatMoney(ex.Amount, ".", ",")))
+			buffer.WriteString(
+				fmt.Sprintf(
+					"%s %s %s€\n",
+					ex.Date.Format("2006-01-02"),
+					ex.Description,
+					util.FormatMoney(ex.Amount, ".", ","),
+				),
+			)
 		}
 	}
 
@@ -76,9 +87,9 @@ func (c searchCommand) SetFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&verbose, "v", false, "show verbose report output")
 }
 
-func (c searchCommand) Run(db *sql.DB, matcher *categoryPkg.Matcher) error {
+func (c searchCommand) Run(db *sql.DB, _ *categoryPkg.Matcher) error {
 	if keyword == "" {
-		return fmt.Errorf("you must provide a keyword to use for the search")
+		return errors.New("you must provide a keyword to use for the search")
 	}
 
 	expenses, err := expenseDB.SearchExpenses(db, keyword)
@@ -101,7 +112,7 @@ func (c searchCommand) Run(db *sql.DB, matcher *categoryPkg.Matcher) error {
 			c.expenses = append(c.expenses, ex)
 			categories[categoryName] = c
 		} else {
-			c := category{
+			cat := category{
 				amount:       ex.Amount,
 				name:         categoryName,
 				categoryType: ex.Type,
@@ -109,7 +120,7 @@ func (c searchCommand) Run(db *sql.DB, matcher *categoryPkg.Matcher) error {
 					ex,
 				},
 			}
-			categories[categoryName] = c
+			categories[categoryName] = cat
 		}
 	}
 
@@ -130,9 +141,8 @@ func expeseCategory(ex *expenseDB.Expense) string {
 	if err != nil || c == "" {
 		if ex.Type == expenseDB.IncomeType {
 			return "uncategorized income"
-		} else {
-			return "uncategorized charge"
 		}
+		return "uncategorized charge"
 	}
 
 	return c
@@ -153,7 +163,6 @@ func colorOutput(text string, colorOptions ...string) string {
 		if o, ok := colorsOptions[option]; ok {
 			attributes = append(attributes, o)
 		}
-
 	}
 	c := color.New(attributes...)
 	return c.Sprint(text)

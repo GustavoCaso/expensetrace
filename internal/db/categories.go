@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"errors"
-	"log"
 
 	"github.com/GustavoCaso/expensetrace/internal/config"
 
@@ -26,16 +25,16 @@ func PopulateCategoriesFromConfig(db *sql.DB, conf *config.Config) error {
 	if err != nil {
 		return err
 	}
+	defer insertStmt.Close()
+
 	for _, category := range conf.Categories {
-		_, err := insertStmt.Exec(category.Name, category.Pattern)
+		_, err = insertStmt.Exec(category.Name, category.Pattern)
 
 		if err != nil {
-			if sqliteError, ok := err.(sqlite3.Error); ok {
-				if !(sqliteError.Code == sqlite3.ErrConstraint) {
-					e = errors.Join(e, ErrInsert{
-						err: err,
-					})
-				}
+			if errors.Is(err, sqlite3.Error{Code: sqlite3.ErrConstraint}) {
+				e = errors.Join(e, InsertError{
+					err: err,
+				})
 			}
 		}
 	}
@@ -49,6 +48,10 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 		return []Category{}, err
 	}
 
+	if rows.Err() != nil {
+		return []Category{}, rows.Err()
+	}
+
 	defer rows.Close()
 
 	categories := []Category{}
@@ -57,8 +60,8 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 		var category Category
 		var id int
 
-		if err := rows.Scan(&id, &category.Name, &category.Pattern); err != nil {
-			log.Fatal(err)
+		if err = rows.Scan(&id, &category.Name, &category.Pattern); err != nil {
+			return categories, err
 		}
 
 		category.ID = id

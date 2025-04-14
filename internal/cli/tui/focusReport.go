@@ -13,6 +13,10 @@ const (
 	expensesView
 )
 
+const (
+	focusColumns = 2
+)
+
 type focusReport struct {
 	category table.Model
 	expenses []table.Model
@@ -73,16 +77,15 @@ func (d focusReport) Update(msg tea.Msg) (focusReport, tea.Cmd) {
 		d.category = category
 
 		return d, cmd
-	} else {
-		d.category.Blur()
-		expenseTable := d.expenses[d.category.Cursor()]
-		expenseTable.Focus()
-
-		expensesTableUpdated, cmd := expenseTable.Update(msg)
-		d.expenses[d.category.Cursor()] = expensesTableUpdated
-
-		return d, cmd
 	}
+	d.category.Blur()
+	expenseTable := d.expenses[d.category.Cursor()]
+	expenseTable.Focus()
+
+	expensesTableUpdated, cmd := expenseTable.Update(msg)
+	d.expenses[d.category.Cursor()] = expensesTableUpdated
+
+	return d, cmd
 }
 
 func (d *focusReport) UpdateDimensions(width, height int) {
@@ -102,14 +105,22 @@ func (d focusReport) View() string {
 	expenseTable.SetHeight(d.height)
 
 	if d.view == categoryView {
-		return lipgloss.JoinHorizontal(lipgloss.Top, focusedModelStyle.Render(categoryTable.View()), modelStyle.Render(expenseTable.View()))
+		return lipgloss.JoinHorizontal(
+			lipgloss.Top,
+			focusedModelStyle.Render(categoryTable.View()),
+			modelStyle.Render(expenseTable.View()),
+		)
 	}
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, modelStyle.Render(categoryTable.View()), focusedModelStyle.Render(expenseTable.View()))
+	return lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		modelStyle.Render(categoryTable.View()),
+		focusedModelStyle.Render(expenseTable.View()),
+	)
 }
 
 func createCategoryColumns(width int) []table.Column {
-	w := width / 2
+	w := width / focusColumns
 
 	return []table.Column{
 		{Title: "Category", Width: w},
@@ -118,7 +129,7 @@ func createCategoryColumns(width int) []table.Column {
 }
 
 func createExpenseColumns(width int) []table.Column {
-	w := width / 2
+	w := width / focusColumns
 
 	return []table.Column{
 		{Title: "Description", Width: w},

@@ -7,8 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GustavoCaso/expensetrace/internal/db"
+	// import sqlite driver.
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/GustavoCaso/expensetrace/internal/db"
 )
 
 func SetupTestDB(t *testing.T) *sql.DB {
@@ -33,7 +35,7 @@ func SetupTestDB(t *testing.T) *sql.DB {
 	}
 
 	t.Cleanup(func() {
-		if err := database.Close(); err != nil {
+		if err = database.Close(); err != nil {
 			t.Errorf("Failed to close test database: %v", err)
 		}
 	})

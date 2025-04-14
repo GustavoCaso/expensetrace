@@ -15,16 +15,16 @@ categories:
   - name: "Transport"
     pattern: "uber|taxi|transit"
 `
-	tmpfile, err := os.CreateTemp("", "test-config-*.yaml")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "test-config-*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tmpfile.Name())
 
-	if _, err := tmpfile.Write([]byte(content)); err != nil {
+	if _, err = tmpfile.WriteString(content); err != nil {
 		t.Fatalf("Failed to write to temporary file: %v", err)
 	}
-	if err := tmpfile.Close(); err != nil {
+	if err = tmpfile.Close(); err != nil {
 		t.Fatalf("Failed to close temporary file: %v", err)
 	}
 
@@ -64,16 +64,16 @@ categories:
 func TestParseENV(t *testing.T) {
 	// Create a temporary test config file
 	content := ``
-	tmpfile, err := os.CreateTemp("", "test-config-*.yaml")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "test-config-*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tmpfile.Name())
 
-	if _, err := tmpfile.Write([]byte(content)); err != nil {
+	if _, err = tmpfile.WriteString(content); err != nil {
 		t.Fatalf("Failed to write to temporary file: %v", err)
 	}
-	if err := tmpfile.Close(); err != nil {
+	if err = tmpfile.Close(); err != nil {
 		t.Fatalf("Failed to close temporary file: %v", err)
 	}
 
@@ -99,16 +99,16 @@ func TestParseENV(t *testing.T) {
 func TestParseValidate(t *testing.T) {
 	// Create a temporary test config file
 	content := ``
-	tmpfile, err := os.CreateTemp("", "test-config-*.yaml")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "test-config-*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tmpfile.Name())
 
-	if _, err := tmpfile.Write([]byte(content)); err != nil {
+	if _, err = tmpfile.WriteString(content); err != nil {
 		t.Fatalf("Failed to write to temporary file: %v", err)
 	}
-	if err := tmpfile.Close(); err != nil {
+	if err = tmpfile.Close(); err != nil {
 		t.Fatalf("Failed to close temporary file: %v", err)
 	}
 
@@ -141,16 +141,16 @@ categories:
     pattern: "uber|taxi|transit"
     invalid: field: here
 `
-	tmpfile, err := os.CreateTemp("", "test-config-*.yaml")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "test-config-*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tmpfile.Name())
 
-	if _, err := tmpfile.Write([]byte(content)); err != nil {
+	if _, err = tmpfile.WriteString(content); err != nil {
 		t.Fatalf("Failed to write to temporary file: %v", err)
 	}
-	if err := tmpfile.Close(); err != nil {
+	if err = tmpfile.Close(); err != nil {
 		t.Fatalf("Failed to close temporary file: %v", err)
 	}
 

@@ -7,6 +7,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+const (
+	reportsColumns = 4
+)
+
 type reportsTable struct {
 	width  int
 	height int
@@ -63,7 +67,7 @@ func (r reportsTable) View() string {
 }
 
 func createReportsColumns(width int) []table.Column {
-	w := width / 4
+	w := width / reportsColumns
 
 	return []table.Column{
 		{Title: "Month", Width: w},

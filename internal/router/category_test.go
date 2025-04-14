@@ -28,7 +28,7 @@ func TestCategoriesHandler(t *testing.T) {
 	handler, _ := New(database, matcher)
 
 	// Create test request
-	req := httptest.NewRequest("GET", "/categories", nil)
+	req := httptest.NewRequest(http.MethodGet, "/categories", nil)
 	w := httptest.NewRecorder()
 
 	// Serve request
@@ -71,7 +71,7 @@ func TestUncategorizedHandler(t *testing.T) {
 	handler, _ := New(database, matcher)
 
 	// Create test request
-	req := httptest.NewRequest("GET", "/uncategorized", nil)
+	req := httptest.NewRequest(http.MethodGet, "/uncategorized", nil)
 	w := httptest.NewRecorder()
 
 	// Serve request
@@ -118,7 +118,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 
 	// Create test request
 	body := strings.NewReader("name=Entertainment&pattern=cinema|movie|theater")
-	req := httptest.NewRequest("POST", "/category", body)
+	req := httptest.NewRequest(http.MethodPost, "/category", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
@@ -138,11 +138,11 @@ func TestCreateCategoryHandler(t *testing.T) {
 	}
 
 	found := false
-	var categoryId int
+	var categoryID int
 	for _, c := range categories {
 		if c.Name == "Entertainment" && c.Pattern == "cinema|movie|theater" {
 			found = true
-			categoryId = c.ID
+			categoryID = c.ID
 			break
 		}
 	}
@@ -162,7 +162,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 		t.Fatalf("Failed more expenses than it should: %v", err)
 	}
 
-	if expensesUpdated[0].CategoryID.Int64 != int64(categoryId) {
+	if expensesUpdated[0].CategoryID.Int64 != int64(categoryID) {
 		t.Fatal("Expense did not update the category ID")
 	}
 
@@ -188,13 +188,19 @@ func TestUpdateHandler(t *testing.T) {
 			true,
 			func(t *testing.T, updatedCategory db.Category, updatedExpenses []*db.Expense) {
 				if updatedCategory.Pattern != "test_pattern" {
-					t.Fatalf("Category was not updated properly. Expected pattern to be `test_pattern` but was %s", updatedCategory.Pattern)
+					t.Fatalf(
+						"Category was not updated properly. Expected pattern to be `test_pattern` but was %s",
+						updatedCategory.Pattern,
+					)
 				}
 
 				for _, ex := range updatedExpenses {
 					if ex.Description == "cinema" {
 						if ex.CategoryID.Valid {
-							t.Fatalf("Expense was not properly updated. Category ID must be NULL. Got %d", ex.CategoryID.Int64)
+							t.Fatalf(
+								"Expense was not properly updated. Category ID must be NULL. Got %d",
+								ex.CategoryID.Int64,
+							)
 						}
 					}
 				}
@@ -206,12 +212,20 @@ func TestUpdateHandler(t *testing.T) {
 			true,
 			func(t *testing.T, updatedCategory db.Category, updatedExpenses []*db.Expense) {
 				if updatedCategory.Pattern != "restaurant|bars|cinema|gym" {
-					t.Fatalf("Category was not updated properly. Expected pattern to be `restaurant|bars|cinema|gym` but was %s", updatedCategory.Pattern)
+					t.Fatalf(
+						"Category was not updated properly. Expected pattern to be `restaurant|bars|cinema|gym` but was %s",
+						updatedCategory.Pattern,
+					)
 				}
 
 				for _, ex := range updatedExpenses {
 					if int(ex.CategoryID.Int64) != updatedCategory.ID {
-						t.Fatalf("Expense %s was incoreectly updated. Category ID must be %d. Got %d", ex.Description, updatedCategory.ID, ex.CategoryID.Int64)
+						t.Fatalf(
+							"Expense %s was incoreectly updated. Category ID must be %d. Got %d",
+							ex.Description,
+							updatedCategory.ID,
+							ex.CategoryID.Int64,
+						)
 					}
 				}
 			},
@@ -222,12 +236,20 @@ func TestUpdateHandler(t *testing.T) {
 			false,
 			func(t *testing.T, updatedCategory db.Category, updatedExpenses []*db.Expense) {
 				if updatedCategory.Name != "Enjoyment" {
-					t.Fatalf("Category was not updated properly. Expected name to be `Enjoyment` but was %s", updatedCategory.Name)
+					t.Fatalf(
+						"Category was not updated properly. Expected name to be `Enjoyment` but was %s",
+						updatedCategory.Name,
+					)
 				}
 				for _, ex := range updatedExpenses {
 					if ex.Description == "cinema" {
 						if int(ex.CategoryID.Int64) != updatedCategory.ID {
-							t.Fatalf("Expense %s was incoreectly updated. Category ID must be %d. Got %d", ex.Description, updatedCategory.ID, ex.CategoryID.Int64)
+							t.Fatalf(
+								"Expense %s was incoreectly updated. Category ID must be %d. Got %d",
+								ex.Description,
+								updatedCategory.ID,
+								ex.CategoryID.Int64,
+							)
 						}
 					}
 
@@ -267,7 +289,7 @@ func TestUpdateHandler(t *testing.T) {
 					Amount:      -123456,
 					Type:        db.ChargeType,
 					Currency:    "USD",
-					CategoryID:  sql.NullInt64{Int64: int64(categoryID), Valid: true},
+					CategoryID:  sql.NullInt64{Int64: categoryID, Valid: true},
 				},
 				// id 2
 				{
@@ -295,7 +317,7 @@ func TestUpdateHandler(t *testing.T) {
 
 			// Create test request
 			body := strings.NewReader(tt.body)
-			req := httptest.NewRequest("PUT", fmt.Sprintf("/category/%d", categoryID), body)
+			req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/category/%d", categoryID), body)
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			w := httptest.NewRecorder()
 
@@ -375,7 +397,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 
 	// Create test request
 	body := strings.NewReader(fmt.Sprintf("description=cinema&categoryID=%d", categoryID))
-	req := httptest.NewRequest("POST", "/category/uncategorized/update", body)
+	req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/update", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
