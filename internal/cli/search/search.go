@@ -112,7 +112,7 @@ func (c searchCommand) Run(db *sql.DB, _ *categoryPkg.Matcher) error {
 			c.expenses = append(c.expenses, ex)
 			categories[categoryName] = c
 		} else {
-			c := category{
+			cat := category{
 				amount:       ex.Amount,
 				name:         categoryName,
 				categoryType: ex.Type,
@@ -120,7 +120,7 @@ func (c searchCommand) Run(db *sql.DB, _ *categoryPkg.Matcher) error {
 					ex,
 				},
 			}
-			categories[categoryName] = c
+			categories[categoryName] = cat
 		}
 	}
 

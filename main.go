@@ -54,7 +54,9 @@ var subcommands = map[string]*command{
 func main() {
 	initFlagSets()
 
-	if len(os.Args) < 2 {
+	minFlagsNum := 2
+
+	if len(os.Args) < minFlagsNum {
 		fmt.Printf("subcommand is required\n")
 		printHelp()
 

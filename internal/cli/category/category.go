@@ -40,14 +40,14 @@ func (c categoryCommand) SetFlags(fs *flag.FlagSet) {
 
 func (c categoryCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	var expenses []*expenseDB.Expense
-	var err error
+	var expenseErr error
 	if actionFlag == "migrate" {
-		expenses, err = expenseDB.GetExpenses(db)
+		expenses, expenseErr = expenseDB.GetExpenses(db)
 	} else {
-		expenses, err = expenseDB.GetExpensesWithoutCategory(db)
+		expenses, expenseErr = expenseDB.GetExpensesWithoutCategory(db)
 	}
-	if err != nil {
-		return fmt.Errorf("unable to get expenses: %w", err)
+	if expenseErr != nil {
+		return fmt.Errorf("unable to get expenses: %w", expenseErr)
 	}
 
 	switch actionFlag {

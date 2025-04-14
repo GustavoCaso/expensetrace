@@ -77,7 +77,7 @@ func InsertExpenses(db *sql.DB, expenses []*Expense) []error {
 	defer insertStmt.Close()
 
 	for _, expense := range expenses {
-		_, err := insertStmt.Exec(
+		_, err = insertStmt.Exec(
 			expense.Source,
 			expense.Amount,
 			expense.Description,
@@ -111,10 +111,10 @@ func GetExpenses(db *sql.DB) ([]*Expense, error) {
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
 
-		if err != nil {
-			return []*Expense{}, err
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 
 		expenses = append(expenses, ex)
@@ -166,10 +166,10 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]*Ex
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
 
-		if err != nil {
-			return []*Expense{}, err
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 
 		expenses = append(expenses, ex)
@@ -193,9 +193,9 @@ func GetExpensesWithoutCategory(db *sql.DB) ([]*Expense, error) {
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
-		if err != nil {
-			return []*Expense{}, err
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 		expenses = append(expenses, ex)
 	}
@@ -219,10 +219,10 @@ func SearchExpenses(db *sql.DB, keyword string) ([]*Expense, error) {
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
 
-		if err != nil {
-			return []*Expense{}, err
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 
 		expenses = append(expenses, ex)
@@ -247,9 +247,9 @@ func SearchExpensesByDescription(db *sql.DB, description string) ([]*Expense, er
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
-		if err != nil {
-			return []*Expense{}, err
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 		expenses = append(expenses, ex)
 	}
@@ -283,9 +283,9 @@ func GetExpensesByCategory(db *sql.DB, categoryID int) ([]*Expense, error) {
 	expenses := []*Expense{}
 
 	for rows.Next() {
-		ex, err := expenseFromRow(db, rows.Scan)
-		if err != nil {
-			return []*Expense{}, err
+		ex, expenseErr := expenseFromRow(db, rows.Scan)
+		if expenseErr != nil {
+			return []*Expense{}, expenseErr
 		}
 		expenses = append(expenses, ex)
 	}

@@ -65,11 +65,11 @@ func expensesGroupByYearAndMonth(expenses []*expenseDB.Expense) (expensesByYear,
 		expenseYear := expense.Date.Year()
 		expenseMonth := expense.Date.Month().String()
 
-		year, ok := groupedExpenses[expenseYear]
+		year, okYear := groupedExpenses[expenseYear]
 
-		if ok {
-			month, ok := year[expenseMonth]
-			if ok {
+		if okYear {
+			month, okMonth := year[expenseMonth]
+			if okMonth {
 				month = append(month, expense)
 			} else {
 				month = []*expenseDB.Expense{
@@ -80,11 +80,11 @@ func expensesGroupByYearAndMonth(expenses []*expenseDB.Expense) (expensesByYear,
 			year[expenseMonth] = month
 		} else {
 			years = append(years, expenseYear)
-			year := map[string][]*expenseDB.Expense{}
-			year[expenseMonth] = []*expenseDB.Expense{
+			newYear := map[string][]*expenseDB.Expense{}
+			newYear[expenseMonth] = []*expenseDB.Expense{
 				expense,
 			}
-			groupedExpenses[expenseYear] = year
+			groupedExpenses[expenseYear] = newYear
 		}
 	}
 

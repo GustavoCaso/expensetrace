@@ -159,8 +159,6 @@ func initialModel(db *sql.DB, width int, height int) (model, error) {
 		return model{}, err
 	}
 
-	reportsTable := newReports(reports, width)
-
 	return model{
 		reports:   reports,
 		focusMode: focusedMain,
@@ -168,7 +166,7 @@ func initialModel(db *sql.DB, width int, height int) (model, error) {
 		reportsKeyMap: reportsKeyMap(),
 		focusKeymap:   focusKeyMap(),
 
-		reportsTable: reportsTable,
+		reportsTable: newReports(reports, width),
 		focusReport:  newfocusReport(width/2, height/2),
 		help:         help.New(),
 
@@ -196,10 +194,10 @@ func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) 
 
 		firstDay, lastDay := util.GetMonthDates(int(timeMonth), year)
 
-		expenses, err := expenseDB.GetExpensesFromDateRange(db, firstDay, lastDay)
+		expenses, expensesErr := expenseDB.GetExpensesFromDateRange(db, firstDay, lastDay)
 
-		if err != nil {
-			return reports, err
+		if expensesErr != nil {
+			return reports, expensesErr
 		}
 
 		result := report.Generate(firstDay, lastDay, expenses, "monthly")
@@ -305,21 +303,21 @@ func (c tuiCommand) Run(db *sql.DB, _ *category.Matcher) error {
 	}
 
 	if len(os.Getenv("EXPENSETRACE_DEBUG")) > 0 {
-		f, err := tea.LogToFile("debug.log", "debug")
-		if err != nil {
-			return fmt.Errorf("failed to log to file: %w", err)
+		f, logErr := tea.LogToFile("debug.log", "debug")
+		if logErr != nil {
+			return fmt.Errorf("failed to log to file: %w", logErr)
 		}
 		defer f.Close()
 	}
 
-	model, err := initialModel(db, w, h)
+	m, err := initialModel(db, w, h)
 
 	if err != nil {
 		return fmt.Errorf("failed to create initia model: %w", err)
 	}
 
-	p := tea.NewProgram(model, tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	if _, err = p.Run(); err != nil {
 		return fmt.Errorf("error running TUI: %w", err)
 	}
 

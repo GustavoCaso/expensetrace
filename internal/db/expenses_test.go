@@ -27,7 +27,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	}
 
 	t.Cleanup(func() {
-		if err := database.Close(); err != nil {
+		if err = database.Close(); err != nil {
 			t.Errorf("Failed to close test expenses database: %v", err)
 		}
 	})
@@ -138,7 +138,7 @@ func TestGetExpenses(t *testing.T) {
 	}
 
 	for _, exp := range testExpenses {
-		_, err := database.Exec(
+		_, err = database.Exec(
 			"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
 			exp.source,
 			exp.amount,
@@ -216,7 +216,7 @@ func TestGetExpensesFromDateRange(t *testing.T) {
 	}
 
 	for _, exp := range testExpenses {
-		_, err := database.Exec(
+		_, err = database.Exec(
 			"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
 			exp.source,
 			exp.amount,
@@ -321,7 +321,7 @@ func TestSearchExpenses(t *testing.T) {
 	}
 
 	for _, exp := range testExpenses {
-		_, err := database.Exec(
+		_, err = database.Exec(
 			"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
 			exp.source,
 			exp.amount,

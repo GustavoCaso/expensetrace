@@ -56,7 +56,7 @@ func DropTables(db *sql.DB) error {
 		return err
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit deletion: %w", err)
 	}
 
@@ -171,7 +171,7 @@ func ApplyMigrations(db *sql.DB) error {
 			}
 
 			// Apply migration
-			if err := migration.up(tx); err != nil {
+			if err = migration.up(tx); err != nil {
 				rErr := tx.Rollback()
 				if rErr != nil {
 					return rErr
@@ -194,7 +194,7 @@ func ApplyMigrations(db *sql.DB) error {
 			}
 
 			// Commit transaction
-			if err := tx.Commit(); err != nil {
+			if err = tx.Commit(); err != nil {
 				return fmt.Errorf("failed to commit migration %d: %w",
 					migration.version, err)
 			}

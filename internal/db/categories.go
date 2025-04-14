@@ -28,7 +28,7 @@ func PopulateCategoriesFromConfig(db *sql.DB, conf *config.Config) error {
 	defer insertStmt.Close()
 
 	for _, category := range conf.Categories {
-		_, err := insertStmt.Exec(category.Name, category.Pattern)
+		_, err = insertStmt.Exec(category.Name, category.Pattern)
 
 		if err != nil {
 			if errors.Is(err, sqlite3.Error{Code: sqlite3.ErrConstraint}) {
@@ -60,7 +60,7 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 		var category Category
 		var id int
 
-		if err := rows.Scan(&id, &category.Name, &category.Pattern); err != nil {
+		if err = rows.Scan(&id, &category.Name, &category.Pattern); err != nil {
 			return categories, err
 		}
 

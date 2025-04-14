@@ -105,7 +105,7 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 		return
 	}
 
-	enhancedCategory := createEnhancedCategory(categoryEntry, expenses)
+	enhancedCat := createEnhancedCategory(categoryEntry, expenses)
 
 	if (pattern != "" && categoryEntry.Pattern != pattern) || (name != "" && categoryEntry.Name != name) {
 		patternChanged := false
@@ -115,12 +115,12 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 			_, err = regexp.Compile(pattern)
 
 			if err != nil {
-				enhancedCategory.Errors = true
-				enhancedCategory.ErrorStrings = map[string]string{
+				enhancedCat.Errors = true
+				enhancedCat.ErrorStrings = map[string]string{
 					"pattern": fmt.Sprintf("invalid pattern %v", err),
 				}
 
-				router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
+				router.templates.Render(w, "partials/categories/card.html", enhancedCat)
 				return
 			}
 			patternChanged = true
@@ -130,12 +130,12 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 			err = expenseDB.UpdateCategory(router.db, categoryID, name, pattern)
 
 			if err != nil {
-				enhancedCategory.Errors = true
-				enhancedCategory.ErrorStrings = map[string]string{
+				enhancedCat.Errors = true
+				enhancedCat.ErrorStrings = map[string]string{
 					"name": fmt.Sprintf("failed to updated category %v", err),
 				}
 
-				router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
+				router.templates.Render(w, "partials/categories/card.html", enhancedCat)
 				return
 			}
 
@@ -199,15 +199,15 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 			}
 		}
 
-		enhancedCategory.Category.Name = name
-		enhancedCategory.Category.Pattern = pattern
+		enhancedCat.Category.Name = name
+		enhancedCat.Category.Pattern = pattern
 
 		if updated {
 			router.resetCache()
 		}
 	}
 
-	router.templates.Render(w, "partials/categories/card.html", enhancedCategory)
+	router.templates.Render(w, "partials/categories/card.html", enhancedCat)
 }
 
 type reportExpense struct {

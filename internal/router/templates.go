@@ -73,7 +73,7 @@ func embeddedFS() fs.FS {
 }
 
 func parseTemplates(fsDir fs.FS) (templates, error) {
-	templates := templates{}
+	t := templates{}
 
 	// First, collect all partials with proper naming
 	partials := template.New("partials").Funcs(templateFuncs)
@@ -97,18 +97,18 @@ func parseTemplates(fsDir fs.FS) (templates, error) {
 	})
 
 	if err != nil {
-		return templates, err
+		return t, err
 	}
 
 	// Then create the base template with layout and add partials
 	baseTempl := template.New("base").Funcs(templateFuncs)
 
 	// Add all partials to the base template
-	for _, t := range partials.Templates() {
-		if t.Name() != "partials" { // Skip the root template
-			_, err := baseTempl.AddParseTree(t.Name(), t.Tree)
+	for _, template := range partials.Templates() {
+		if template.Name() != "partials" { // Skip the root template
+			_, err = baseTempl.AddParseTree(template.Name(), template.Tree)
 			if err != nil {
-				return templates, err
+				return t, err
 			}
 		}
 	}
@@ -116,21 +116,21 @@ func parseTemplates(fsDir fs.FS) (templates, error) {
 	// Parse layout files
 	layoutBytes, err := fs.ReadFile(fsDir, "layout.html")
 	if err != nil {
-		return templates, err
+		return t, err
 	}
 	baseTempl, err = baseTempl.Parse(string(layoutBytes))
 	if err != nil {
-		return templates, err
+		return t, err
 	}
 
 	// Also parse nav partial which is needed by layout
 	navBytes, err := fs.ReadFile(fsDir, "partials/nav.html")
 	if err != nil {
-		return templates, err
+		return t, err
 	}
 	baseTempl, err = baseTempl.Parse(string(navBytes))
 	if err != nil {
-		return templates, err
+		return t, err
 	}
 
 	// Parse pages with the enhanced base template
@@ -151,13 +151,13 @@ func parseTemplates(fsDir fs.FS) (templates, error) {
 				return err
 			}
 
-			templates[path] = pageTempl
+			t[path] = pageTempl
 		}
 		return nil
 	})
 
 	if err != nil {
-		return templates, err
+		return t, err
 	}
 
 	// Also add the partials as standalone templates (for direct rendering)
@@ -166,13 +166,13 @@ func parseTemplates(fsDir fs.FS) (templates, error) {
 			templateName := strings.TrimPrefix(filepath, "partials/")
 			partialTemplate := partials.Lookup(templateName)
 			if partialTemplate != nil {
-				templates[filepath] = partialTemplate
+				t[filepath] = partialTemplate
 			}
 		}
 		return nil
 	})
 
-	return templates, nil
+	return t, nil
 }
 
 func (router *router) parseTemplates() error {

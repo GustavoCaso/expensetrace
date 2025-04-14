@@ -115,7 +115,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	})
 
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
-		err := r.ParseForm()
+		err = r.ParseForm()
 		if err != nil {
 			log.Println("error r.ParseForm() ", err.Error())
 

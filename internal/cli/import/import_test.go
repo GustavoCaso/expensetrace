@@ -126,7 +126,7 @@ Test Source,05/01/2024,Small income,10.50,USD`
 		var desc, currency string
 		var amount float64
 		var categoryID sql.NullInt64
-		err := rows.Scan(&timestamp, &desc, &amount, &currency, &categoryID)
+		err = rows.Scan(&timestamp, &desc, &amount, &currency, &categoryID)
 		if err != nil {
 			t.Fatalf("Failed to scan row %d: %v", i+1, err)
 		}
