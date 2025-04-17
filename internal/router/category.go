@@ -233,7 +233,7 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 
 	groupedExpenses := map[string]reportExpense{}
 	totalExpenses := 0
-	var totalAmount int64 = 0
+	var totalAmount int64
 
 	for _, ex := range expenses {
 		if r, ok := groupedExpenses[ex.Description]; ok {
