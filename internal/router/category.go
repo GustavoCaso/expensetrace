@@ -216,6 +216,7 @@ type reportExpense struct {
 	Count   int
 	Dates   []time.Time
 	Amounts []int64
+	Total   int64
 }
 
 func (router *router) uncategorizedHandler(w http.ResponseWriter) {
@@ -231,16 +232,20 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 	}
 
 	groupedExpenses := map[string]reportExpense{}
+	totalExpenses := 0
+	var totalAmount int64 = 0
 
 	for _, ex := range expenses {
 		if r, ok := groupedExpenses[ex.Description]; ok {
 			r.Count++
 			r.Dates = append(r.Dates, ex.Date)
 			r.Amounts = append(r.Amounts, ex.Amount)
+			r.Total += ex.Amount
 			groupedExpenses[ex.Description] = r
 		} else {
 			groupedExpenses[ex.Description] = reportExpense{
 				Count: 1,
+				Total: ex.Amount,
 				Dates: []time.Time{
 					ex.Date,
 				},
@@ -249,6 +254,9 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 				},
 			}
 		}
+
+		totalExpenses++
+		totalAmount += ex.Amount
 	}
 
 	keys := slices.Collect(maps.Keys(groupedExpenses))
@@ -261,11 +269,15 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 		Keys            []string
 		GroupedExpenses map[string]reportExpense
 		Categories      []expenseDB.Category
+		TotalExpenses   int
+		TotalAmount     int64
 		Error           error
 	}{
 		Keys:            keys,
 		GroupedExpenses: groupedExpenses,
 		Categories:      router.matcher.Categories(),
+		TotalExpenses:   totalExpenses,
+		TotalAmount:     totalAmount,
 		Error:           nil,
 	}
 	router.templates.Render(w, "pages/categories/uncategorized.html", data)

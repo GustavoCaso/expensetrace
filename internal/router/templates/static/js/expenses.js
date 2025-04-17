@@ -135,4 +135,26 @@ document.addEventListener('DOMContentLoaded', function () {
       toggleBtn.textContent = 'Need help with patterns?'
     }
   });
+
+  // Toggle transactions display in uncategorized expenses
+  document.addEventListener('click', function (event) {
+    const toggleBtn = event.target.closest('.toggle-transactions');
+    if (toggleBtn) {
+      const targetId = toggleBtn.getAttribute('data-target');
+      const transactionsList = document.getElementById(targetId);
+
+      if (transactionsList) {
+        const isCollapsed = transactionsList.classList.contains('collapsed');
+
+        if (isCollapsed) {
+          transactionsList.classList.remove('collapsed');
+          toggleBtn.textContent = 'Hide transactions';
+        } else {
+          transactionsList.classList.add('collapsed');
+          const count = transactionsList.children.length;
+          toggleBtn.textContent = `Show ${count} more transactions`;
+        }
+      }
+    }
+  });
 });
