@@ -1,56 +1,135 @@
-
 {{define "title"}}Uncategorized Expenses{{end}}
 
 {{define "main"}}  
-
   {{ if eq .Error nil }}
-    {{template "categories/nav"}}
+    {{template "categories/nav" "uncategorized"}}
   
     <div id="uncategorized">
-      <ul class="uncategorized-list">
-        {{range $key := .Keys}}
-          {{$expense := index $.GroupedExpenses $key}}
-            <div class="uncategorized-group">
-              <div class="uncategorized-summary">
-                <p>{{$key}} - Total: {{$expense.Count}}</p> 
-            
-                <form>
-                  <input name="description" value={{$key}} type="hidden">
-                  <select 
-                    class="category-select"
-                    name="categoryID" 
-                    hx-post="/category/uncategorized/update" 
-                    hx-target="#uncategorized" 
-                    hx-swap="outerHTML">
-                    <option value="">-- categorize --</option>
-                    {{ range $category := $.Categories }}
-                      <option value={{$category.ID}}>{{$category.Name}}</option>
-                    {{ end }}
-                  </select>
+      {{ if eq (len .Keys) 0 }}
+        <div class="empty-state">
+          <div class="empty-icon">🎉</div>
+          <h3>All Expenses Categorized!</h3>
+          <p>You've successfully categorized all your expenses. Check out your reports to see insights about your spending habits.</p>
+          <a href="/" class="btn-primary">View Reports</a>
+        </div>
+      {{ else }}
+        <div class="categories-stats">
+          <div class="stats-card">
+            <h3>Different Transactions</h3>
+            <div class="stats-number">{{len .Keys}}</div>
+          </div>
+          <div class="stats-card">
+            <h3>Total Expenses</h3>
+            <div class="stats-number">{{.TotalExpenses}}</div>
+          </div>
+          <div class="stats-card">
+            <h3>Total Amount</h3>
+            <div class="stats-number">{{formatMoney .TotalAmount "." ","}}€</div>
+          </div>
+        </div>
+
+
+        <div class="uncategorized-instructions">
+          <p>These expenses haven't been automatically categorized. Select a category to organize them.</p>
+        </div>
+
+        <div class="categories-grid">
+          {{range $key := .Keys}}
+            {{$expense := index $.GroupedExpenses $key}}
+            <div class="category-card" id="expense-group-{{$key}}">
+              <div class="category-card-header">
+                <h3>{{$key}}</h3>
+              </div>
+              
+              <div class="category-meta">
+                <div class="meta-item">
+                  <span class="meta-label">Transactions:</span>
+                  <span class="meta-value">
+                    {{$expense.Count}} transaction{{if gt $expense.Count 1}}s{{end}}
+                  </span>
+                </div>
+                
+                <div class="meta-item">
+                  <span class="meta-label">Total:</span>
+                  <span class="meta-value {{if gt $expense.Total 0}}income{{else}}expense{{end}}">
+                    {{formatMoney $expense.Total "." ","}}€
+                  </span>
+                </div>
+              </div> 
+                
+              <div class="transactions-preview">
+                {{$maxShow := 3}}
+                {{$remaining := sub $expense.Count $maxShow}}
+                
+                {{range $index, $date := $expense.Dates}}
+                  {{if lt $index $maxShow}}
+                    {{$amount := index $expense.Amounts $index}}
+                    <div class="transaction-item">
+                      <span class="transaction-date">{{$date.Format "2006-01-02"}}</span>
+                      <span class="transaction-amount {{if gt $amount 0}}income{{else}}expense{{end}}">
+                        {{formatMoney $amount "." ","}}€
+                      </span>
+                    </div>
+                  {{end}}
+                {{end}}
+                
+                {{if gt $remaining 0}}
+                  <div class="more-transactions">
+                    <button class="btn-small toggle-transactions" 
+                            data-target="transactions-{{$key}}">
+                      Show {{$remaining}} more transactions
+                    </button>
+                  </div>
+                {{end}}
+              </div>
+              
+              <div id="transactions-{{$key}}" class="all-transactions collapsed">
+                {{range $index, $date := $expense.Dates}}
+                  {{if ge $index $maxShow}}
+                    {{$amount := index $expense.Amounts $index}}
+                    <div class="transaction-item">
+                      <span class="transaction-date">{{$date.Format "2006-01-02"}}</span>
+                      <span class="transaction-amount {{if gt $amount 0}}income{{else}}expense{{end}}">
+                        {{formatMoney $amount "." ","}}€
+                      </span>
+                    </div>
+                  {{end}}
+                {{end}}
+              </div>
+              
+              <div class="category-actions">
+                <form hx-post="/category/uncategorized/update" 
+                      hx-target="#expense-group-{{$key}}"
+                      hx-swap="outerHTML">
+                  <input name="description" value="{{$key}}" type="hidden">
+                  <div class="select-with-label">
+                    <label for="category-select-{{$key}}">Assign category:</label>
+                    <div class="select-wrapper">
+                      <select id="category-select-{{$key}}"
+                              class="category-select"
+                              name="categoryID">
+                        <option value="">-- Select a category --</option>
+                        {{ range $category := $.Categories }}
+                          <option value={{$category.ID}}>{{$category.Name}}</option>
+                        {{ end }}
+                      </select>
+                      <button type="submit" class="btn-primary btn-assign">
+                        <span class="btn-text">Assign</span>
+                      </button>
+                    </div>
+                  </div>
                 </form>
               </div>
-
-              {{range $index, $date := $expense.Dates}}
-                {{$amount := index $expense.Amounts $index}}
-                {{if gt $amount 0}}
-                  <li class="uncategorized-item">
-                    <span class="uncategorized-date">{{$date.Format "2006-01-02"}}</span>
-                    <span class="income"><b>{{formatMoney $amount "." ","}}€</b></span>
-                  </li>
-                {{else}}
-                  <li class="uncategorized-item">
-                    <span class="uncategorized-date">{{$date.Format "2006-01-02"}}</span>
-                    <span class="expense"><b>{{formatMoney $amount "." ","}}€</b></span>
-                  </li>
-                {{end}}
-              {{end}}
             </div>
           {{end}}
-      </ul>
+        </div>
+      {{end}}
     </div>
   {{ else }}
-    <h2>There was an error</h2>
-    <p>{{.Error}}</p>
-    <button class="btn-primary" hx-get="/categories" hx-target="#page" hx-swap="outerHTML">Retry</button>
+    <div class="error-message">
+      <h2>There was an error</h2>
+      <p>{{.Error}}</p>
+      <button class="btn-primary" hx-get="/categories" hx-target="#page" hx-swap="outerHTML">Retry</button>
+    </div>
   {{ end }}
 {{end}}
