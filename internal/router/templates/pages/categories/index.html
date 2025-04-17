@@ -1,7 +1,7 @@
 {{define "title"}}Categories{{end}}
 
 {{define "main"}}
-  {{template "categories/nav"}}
+  {{template "categories/nav" "index"}}
 
   <div id="category-content">
     {{ if eq .Error nil }}
