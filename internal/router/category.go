@@ -12,6 +12,7 @@ import (
 	"slices"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
@@ -219,6 +220,7 @@ type uncategorizedInfo struct {
 		Amount int64
 	}
 	Total int64
+	Slug  string
 }
 
 func (router *router) uncategorizedHandler(w http.ResponseWriter) {
@@ -262,6 +264,7 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 						Amount: ex.Amount,
 					},
 				},
+				Slug: slugify(ex.Description),
 			}
 		}
 
@@ -297,6 +300,23 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 		Error:            nil,
 	}
 	router.templates.Render(w, "pages/categories/uncategorized.html", data)
+}
+
+var specialCharactersRegex = regexp.MustCompile(`[^a-z0-9\-]`)
+var multipleHyphenRegex = regexp.MustCompile(`[^a-z0-9\-]`)
+
+func slugify(s string) string {
+	// Convert to lowercase
+	s = strings.ToLower(s)
+	// Replace spaces with hyphens
+	s = strings.ReplaceAll(s, " ", "-")
+	// Remove special characters
+	s = specialCharactersRegex.ReplaceAllString(s, "")
+	// Replace multiple hyphens with a single one
+	s = multipleHyphenRegex.ReplaceAllString(s, "-")
+	// Remove leading and trailing hyphens
+	s = strings.Trim(s, "-")
+	return s
 }
 
 func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.Request) {
