@@ -35,7 +35,7 @@
 
         <div class="categories-grid">
           {{range $key := .Keys}}
-            {{$expense := index $.GroupedExpenses $key}}
+            {{$uncategorized := index $.UncategorizeInfo $key}}
             <div class="category-card" id="expense-group-{{$key}}">
               <div class="category-card-header">
                 <h3>{{$key}}</h3>
@@ -45,29 +45,28 @@
                 <div class="meta-item">
                   <span class="meta-label">Transactions:</span>
                   <span class="meta-value">
-                    {{$expense.Count}} transaction{{if gt $expense.Count 1}}s{{end}}
+                    {{$uncategorized.Count}} transaction{{if gt $uncategorized.Count 1}}s{{end}}
                   </span>
                 </div>
                 
                 <div class="meta-item">
                   <span class="meta-label">Total:</span>
-                  <span class="meta-value {{if gt $expense.Total 0}}income{{else}}expense{{end}}">
-                    {{formatMoney $expense.Total "." ","}}€
+                  <span class="meta-value {{if gt $uncategorized.Total 0}}income{{else}}expense{{end}}">
+                    {{formatMoney $uncategorized.Total "." ","}}€
                   </span>
                 </div>
               </div> 
                 
               <div class="transactions-preview">
                 {{$maxShow := 3}}
-                {{$remaining := sub $expense.Count $maxShow}}
+                {{$remaining := sub $uncategorized.Count $maxShow}}
                 
-                {{range $index, $date := $expense.Dates}}
+                {{range $index, $expense := $uncategorized.Expenses}}
                   {{if lt $index $maxShow}}
-                    {{$amount := index $expense.Amounts $index}}
                     <div class="transaction-item">
-                      <span class="transaction-date">{{$date.Format "2006-01-02"}}</span>
-                      <span class="transaction-amount {{if gt $amount 0}}income{{else}}expense{{end}}">
-                        {{formatMoney $amount "." ","}}€
+                      <span class="transaction-date">{{$expense.Date.Format "2006-01-02"}}</span>
+                      <span class="transaction-amount {{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
+                        {{formatMoney $expense.Amount "." ","}}€
                       </span>
                     </div>
                   {{end}}
@@ -84,13 +83,12 @@
               </div>
               
               <div id="transactions-{{$key}}" class="all-transactions collapsed">
-                {{range $index, $date := $expense.Dates}}
+                {{range $index, $expense := $uncategorized.Expenses}}
                   {{if ge $index $maxShow}}
-                    {{$amount := index $expense.Amounts $index}}
                     <div class="transaction-item">
-                      <span class="transaction-date">{{$date.Format "2006-01-02"}}</span>
-                      <span class="transaction-amount {{if gt $amount 0}}income{{else}}expense{{end}}">
-                        {{formatMoney $amount "." ","}}€
+                      <span class="transaction-date">{{$expense.Date.Format "2006-01-02"}}</span>
+                      <span class="transaction-amount {{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
+                        {{formatMoney $expense.Amount "." ","}}€
                       </span>
                     </div>
                   {{end}}
