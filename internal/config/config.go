@@ -11,10 +11,14 @@ type Category struct {
 	Name    string `yaml:"name"`
 	Pattern string `yaml:"pattern"`
 }
+type Categories struct {
+	Expense []Category `yaml:"expense"`
+	Income  []Category `yaml:"income"`
+}
 
 type Config struct {
 	DB         string     `yaml:"db"`
-	Categories []Category `yaml:"categories"`
+	Categories Categories `yaml:"categories"`
 }
 
 func (c *Config) parseEnv() {

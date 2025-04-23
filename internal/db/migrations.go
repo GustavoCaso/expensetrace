@@ -78,9 +78,11 @@ func ApplyMigrations(db *sql.DB) error {
 
 	// Define migrations
 	migrations := []struct {
-		up func(*sql.Tx) error
+		name string
+		up   func(*sql.Tx) error
 	}{
 		{
+			name: "Create expenses table",
 			up: func(tx *sql.Tx) error {
 				// Create Expense Table
 				_, err := tx.Exec(`
@@ -100,6 +102,7 @@ func ApplyMigrations(db *sql.DB) error {
 			},
 		},
 		{
+			name: "Create categories table",
 			up: func(tx *sql.Tx) error {
 				// Create Categories Table
 				_, err := tx.Exec(`
@@ -114,6 +117,7 @@ func ApplyMigrations(db *sql.DB) error {
 			},
 		},
 		{
+			name: "Set category_id to NULL",
 			up: func(tx *sql.Tx) error {
 				// Set all category_id from 0 to NULL
 				// That way we can run the next migration
@@ -126,6 +130,7 @@ func ApplyMigrations(db *sql.DB) error {
 			},
 		},
 		{
+			name: "Set foreign key constraints expenses <-> categories",
 			up: func(tx *sql.Tx) error {
 				// Add foreign key constraint to expenses table
 				_, err := tx.Exec(`
@@ -150,7 +155,67 @@ func ApplyMigrations(db *sql.DB) error {
 				return err
 			},
 		},
-		// Add more migrations as your schema evolves
+		{
+			name: "Add type column to categories",
+			up: func(tx *sql.Tx) error {
+				// 1. First add the column with a default value of 0 (expense)
+				_, alterErr := tx.Exec(`
+						ALTER TABLE categories ADD COLUMN type INTEGER NOT NULL DEFAULT 0;
+				`)
+				if alterErr != nil {
+					return alterErr
+				}
+
+				// 2. Fetch all categories to analyze them
+				rows, err := tx.Query("SELECT id, name, pattern FROM categories")
+				if err != nil {
+					return err
+				}
+				defer rows.Close()
+
+				type categoryInfo struct {
+					id      int
+					name    string
+					pattern string
+				}
+
+				var categories []categoryInfo
+				for rows.Next() {
+					var cat categoryInfo
+					if scanError := rows.Scan(&cat.id, &cat.name, &cat.pattern); scanError != nil {
+						return scanError
+					}
+					categories = append(categories, cat)
+				}
+				if rowsErr := rows.Err(); rowsErr != nil {
+					return rowsErr
+				}
+
+				// 3. For each category, analyze transactions to determine if it's income or expense
+				for _, cat := range categories {
+					// Analyze the transactions in this category
+					expenseTotalRow := tx.QueryRow(`
+						SELECT SUM(amount) FROM expenses WHERE category_id = ?
+					`, cat.id)
+					var totalAmount int64
+					if totalErr := expenseTotalRow.Scan(&totalAmount); totalErr != nil {
+						return totalErr
+					}
+
+					categoryType := 0 // Default to expense
+					if totalAmount > 0 {
+						categoryType = 1
+					}
+
+					_, err = tx.Exec("UPDATE categories SET type = ? WHERE id = ?", categoryType, cat.id)
+					if err != nil {
+						return err
+					}
+				}
+
+				return nil
+			},
+		},
 	}
 
 	// Apply pending migrations
@@ -159,7 +224,7 @@ func ApplyMigrations(db *sql.DB) error {
 		migrationVersion := i + 1
 		//nolint:nestif // No need to extract this code to a function as is clear
 		if migrationVersion > currentVersion {
-			log.Printf("Applying migration %d...", migrationVersion)
+			log.Printf("Applying migration (%d) '%s'", migrationVersion, migration.name)
 
 			// Begin transaction for this migration
 			tx, err := db.Begin()

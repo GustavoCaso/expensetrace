@@ -9,16 +9,23 @@ import (
 	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
+type CategoryType int
+
+const (
+	ExpenseCategoryType CategoryType = iota
+	IncomeCategoryType
+)
+
 type Category struct {
 	ID      int
 	Name    string
 	Pattern string
-	Total   int
+	Type    CategoryType
 }
 
 func PopulateCategoriesFromConfig(db *sql.DB, conf *config.Config) error {
 	// Insert records
-	insertStmt, err := db.Prepare("INSERT INTO categories(name, pattern) values(?, ?)")
+	insertStmt, err := db.Prepare("INSERT INTO categories(name, pattern, type) values(?, ?, ?)")
 
 	var e error
 
@@ -27,8 +34,20 @@ func PopulateCategoriesFromConfig(db *sql.DB, conf *config.Config) error {
 	}
 	defer insertStmt.Close()
 
-	for _, category := range conf.Categories {
-		_, err = insertStmt.Exec(category.Name, category.Pattern)
+	for _, category := range conf.Categories.Expense {
+		_, err = insertStmt.Exec(category.Name, category.Pattern, ExpenseCategoryType)
+
+		if err != nil {
+			if errors.Is(err, sqlite3.Error{Code: sqlite3.ErrConstraint}) {
+				e = errors.Join(e, InsertError{
+					err: err,
+				})
+			}
+		}
+	}
+
+	for _, category := range conf.Categories.Income {
+		_, err = insertStmt.Exec(category.Name, category.Pattern, IncomeCategoryType)
 
 		if err != nil {
 			if errors.Is(err, sqlite3.Error{Code: sqlite3.ErrConstraint}) {
@@ -57,14 +76,11 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 	categories := []Category{}
 
 	for rows.Next() {
-		var category Category
-		var id int
+		category, categoryErr := categoryFromRow(rows.Scan)
 
-		if err = rows.Scan(&id, &category.Name, &category.Pattern); err != nil {
-			return categories, err
+		if categoryErr != nil {
+			return categories, categoryErr
 		}
-
-		category.ID = id
 
 		categories = append(categories, category)
 	}
@@ -74,20 +90,7 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 
 func GetCategory(db *sql.DB, categoryID int64) (Category, error) {
 	row := db.QueryRow("SELECT * FROM categories WHERE id=$1", categoryID)
-	var id int
-	var name string
-	var pattern string
-	err := row.Scan(&id, &name, &pattern)
-
-	if err != nil {
-		return Category{}, err
-	}
-
-	return Category{
-		ID:      id,
-		Name:    name,
-		Pattern: pattern,
-	}, nil
+	return categoryFromRow(row.Scan)
 }
 
 func UpdateCategory(db *sql.DB, categoryID int, name, pattern string) error {
@@ -103,4 +106,19 @@ func CreateCategory(db *sql.DB, name, pattern string) (int64, error) {
 	}
 
 	return result.LastInsertId()
+}
+
+func categoryFromRow(scan func(dest ...any) error) (Category, error) {
+	cat := Category{}
+	var id int
+	var categoryType int
+
+	if err := scan(&id, &cat.Name, &cat.Pattern, &categoryType); err != nil {
+		return cat, err
+	}
+
+	cat.ID = id
+	cat.Type = CategoryType(categoryType)
+
+	return cat, nil
 }

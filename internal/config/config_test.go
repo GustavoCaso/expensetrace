@@ -3,25 +3,44 @@ package config
 import (
 	"os"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestParse(t *testing.T) {
 	// Create a temporary test config file
-	content := `
-db: "test.db"
-categories:
-  - name: "Food"
-    pattern: "restaurant|food|grocery"
-  - name: "Transport"
-    pattern: "uber|taxi|transit"
-`
+	config := Config{
+		DB: "test.db",
+		Categories: Categories{
+			Expense: []Category{
+				{
+					Name:    "Food",
+					Pattern: "restaurant|food|grocery",
+				},
+				{
+					Name:    "Transport",
+					Pattern: "uber|taxi|transit",
+				},
+			},
+			Income: []Category{
+				{
+					Name:    "Salary",
+					Pattern: "salary|income",
+				},
+			},
+		},
+	}
+	content, err := yaml.Marshal(config)
+	if err != nil {
+		t.Fatalf("Failed to marshal config: %v", err)
+	}
 	tmpfile, err := os.CreateTemp(t.TempDir(), "test-config-*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tmpfile.Name())
 
-	if _, err = tmpfile.WriteString(content); err != nil {
+	if _, err = tmpfile.Write(content); err != nil {
 		t.Fatalf("Failed to write to temporary file: %v", err)
 	}
 	if err = tmpfile.Close(); err != nil {
@@ -39,25 +58,31 @@ categories:
 		t.Errorf("Expected DB path 'test.db', got '%s'", conf.DB)
 	}
 
-	// Verify categories
-	if len(conf.Categories) != 2 {
-		t.Fatalf("Expected 2 categories, got %d", len(conf.Categories))
+	// Verify expense categories
+	// Expenses categories
+	if len(conf.Categories.Expense) != len(config.Categories.Expense) {
+		t.Fatalf(
+			"Expected %d expense categories, got %d",
+			len(config.Categories.Expense),
+			len(conf.Categories.Expense),
+		)
 	}
 
-	// Verify first category
-	if conf.Categories[0].Name != "Food" {
-		t.Errorf("Expected category name 'Food', got '%s'", conf.Categories[0].Name)
-	}
-	if conf.Categories[0].Pattern != "restaurant|food|grocery" {
-		t.Errorf("Expected category pattern 'restaurant|food|grocery', got '%s'", conf.Categories[0].Pattern)
+	for i, expected := range config.Categories.Expense {
+		if conf.Categories.Expense[i] != expected {
+			t.Errorf("Category[%d] = %+v, want %+v", i, conf.Categories.Expense[i], expected)
+		}
 	}
 
-	// Verify second category
-	if conf.Categories[1].Name != "Transport" {
-		t.Errorf("Expected category name 'Transport', got '%s'", conf.Categories[1].Name)
+	// Expenses categories
+	if len(conf.Categories.Income) != len(config.Categories.Income) {
+		t.Fatalf("Expected %d income categories, got %d", len(config.Categories.Income), len(conf.Categories.Income))
 	}
-	if conf.Categories[1].Pattern != "uber|taxi|transit" {
-		t.Errorf("Expected category pattern 'uber|taxi|transit', got '%s'", conf.Categories[1].Pattern)
+
+	for i, expected := range config.Categories.Income {
+		if conf.Categories.Income[i] != expected {
+			t.Errorf("Category[%d] = %+v, want %+v", i, conf.Categories.Income[i], expected)
+		}
 	}
 }
 
@@ -90,9 +115,14 @@ func TestParseENV(t *testing.T) {
 		t.Errorf("Expected DB path 'test.db', got '%s'", conf.DB)
 	}
 
-	// Verify categories
-	if len(conf.Categories) != 0 {
-		t.Fatalf("Expected 0 categories, got %d", len(conf.Categories))
+	// Verify expense categories
+	if len(conf.Categories.Expense) != 0 {
+		t.Fatalf("Expected 0 expense categories, got %d", len(conf.Categories.Expense))
+	}
+
+	// Verify income categories
+	if len(conf.Categories.Income) != 0 {
+		t.Fatalf("Expected 0 income categories, got %d", len(conf.Categories.Income))
 	}
 }
 
