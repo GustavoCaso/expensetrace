@@ -107,9 +107,16 @@
                               class="category-select"
                               name="categoryID">
                         <option value="">-- Select a category --</option>
-                        {{ range $category := $.Categories }}
-                          <option value={{$category.ID}}>{{$category.Name}}</option>
-                        {{ end }}
+                        <optgroup label="Expense Categories">
+                          {{ range $category := $.ExpenseCategories }}
+                            <option value={{$category.ID}}>{{$category.Name}}</option>
+                          {{ end }}
+                        </optgroup>
+                        <optgroup label="Income Categories">
+                          {{ range $category := $.IncomeCategories }}
+                            <option value={{$category.ID}}>{{$category.Name}}</option>
+                          {{ end }}
+                        </optgroup>
                       </select>
                       <button type="submit" class="btn-primary btn-assign">
                         <span class="btn-text">Assign</span>

@@ -42,6 +42,27 @@ func (c Matcher) Categories() []db.Category {
 	return c.categories
 }
 
+// Get expense categories
+func (c Matcher) ExpenseCategories() []db.Category {
+	return c.categoriesByType(db.ExpenseCategoryType)
+}
+
+// Get income categories
+func (c Matcher) IncomeCategories() []db.Category {
+	return c.categoriesByType(db.IncomeCategoryType)
+}
+
+// Get all categories of a specific type
+func (c Matcher) categoriesByType(categoryType db.CategoryType) []db.Category {
+	result := []db.Category{}
+	for _, cat := range c.categories {
+		if cat.Type == categoryType {
+			result = append(result, cat)
+		}
+	}
+	return result
+}
+
 func (c Matcher) Match(s string) (sql.NullInt64, string) {
 	for _, matcher := range c.matchers {
 		if matcher.re.MatchString(s) {

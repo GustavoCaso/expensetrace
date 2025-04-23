@@ -285,19 +285,21 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 	}
 
 	data := struct {
-		Keys             []string
-		UncategorizeInfo map[string]uncategorizedInfo
-		Categories       []expenseDB.Category
-		TotalExpenses    int
-		TotalAmount      int64
-		Error            error
+		Keys              []string
+		UncategorizeInfo  map[string]uncategorizedInfo
+		ExpenseCategories []expenseDB.Category
+		IncomeCategories  []expenseDB.Category
+		TotalExpenses     int
+		TotalAmount       int64
+		Error             error
 	}{
-		Keys:             keys,
-		UncategorizeInfo: uncategorizeInfo,
-		Categories:       router.matcher.Categories(),
-		TotalExpenses:    totalExpenses,
-		TotalAmount:      totalAmount,
-		Error:            nil,
+		Keys:              keys,
+		UncategorizeInfo:  uncategorizeInfo,
+		ExpenseCategories: router.matcher.ExpenseCategories(),
+		IncomeCategories:  router.matcher.IncomeCategories(),
+		TotalExpenses:     totalExpenses,
+		TotalAmount:       totalAmount,
+		Error:             nil,
 	}
 	router.templates.Render(w, "pages/categories/uncategorized.html", data)
 }

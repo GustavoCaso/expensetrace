@@ -16,6 +16,35 @@ body {
   font-size: 16px;
 }
 
+/* Select CSS */
+select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #1f2937;
+  background-color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+select optgroup {
+  font-weight: 600;
+  color: #4b5563;
+  padding: 0.5rem 0;
+}
+
+select option {
+  padding: 0.5rem;
+  color: #1f2937;
+}
+
 /* Colors */
 .income {
   color: #10b981;
