@@ -1,13 +1,11 @@
 {{define "title"}}Create New Category{{end}}
 
 {{define "main"}}
-  {{template "categories/nav"}}
+  {{template "categories/nav" "new"}}
   
   <div id="category-content">
     <div class="create-category-container">
       <div class="category-form-container">
-        <h2>Create New Category</h2>
-        
         <form id="category-new" class="category-form">
           <div class="form-group">
             <label for="category-name">Category Name</label>
