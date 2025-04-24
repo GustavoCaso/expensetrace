@@ -83,7 +83,11 @@ func (router *router) categoriesHandler(w http.ResponseWriter) {
 	router.templates.Render(w, "pages/categories/index.html", data)
 }
 
-func (router *router) updateCategoryHandler(id, name, pattern string, w http.ResponseWriter) {
+func (router *router) updateCategoryHandler(
+	id, name, pattern string,
+	categoryType expenseDB.CategoryType,
+	w http.ResponseWriter,
+) {
 	categoryID, err := strconv.Atoi(id)
 
 	if err != nil {
@@ -108,12 +112,10 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 
 	enhancedCat := createEnhancedCategory(categoryEntry, expenses)
 
-	//nolint:nestif // No need to extract this code to a function for now as is clear
+	updated := false
+	patternChanged := false
 	if (pattern != "" && categoryEntry.Pattern != pattern) ||
-		(name != "" && categoryEntry.Name != name) {
-		patternChanged := false
-		updated := false
-
+		(name != "" && categoryEntry.Name != name || categoryEntry.Type != categoryType) {
 		if pattern != "" && categoryEntry.Pattern != pattern {
 			_, err = regexp.Compile(pattern)
 
@@ -129,85 +131,85 @@ func (router *router) updateCategoryHandler(id, name, pattern string, w http.Res
 			patternChanged = true
 		}
 
-		if name != "" && categoryEntry.Name != name || patternChanged {
-			err = expenseDB.UpdateCategory(router.db, categoryID, name, pattern)
+		err = expenseDB.UpdateCategory(router.db, categoryID, name, pattern, categoryType)
 
-			if err != nil {
-				enhancedCat.Errors = true
-				enhancedCat.ErrorStrings = map[string]string{
-					"name": fmt.Sprintf("failed to updated category %v", err),
-				}
-
-				router.templates.Render(w, "partials/categories/card.html", enhancedCat)
-				return
+		if err != nil {
+			enhancedCat.Errors = true
+			enhancedCat.ErrorStrings = map[string]string{
+				"name": fmt.Sprintf("failed to updated category %v", err),
 			}
 
-			updated = true
+			router.templates.Render(w, "partials/categories/card.html", enhancedCat)
+			return
 		}
 
-		if updated {
-			categories, categoryErr := expenseDB.GetCategories(router.db)
-			if err != nil {
-				categoryIndexError(router, w, categoryErr)
+		updated = true
+	}
+
+	//nolint:nestif // No need to extract this code to a function for now as is clear
+	if updated {
+		categories, categoryErr := expenseDB.GetCategories(router.db)
+		if err != nil {
+			categoryIndexError(router, w, categoryErr)
+			return
+		}
+
+		matcher := category.NewMatcher(categories)
+		router.matcher = matcher
+
+		if patternChanged {
+			allExpenses, expensesErr := expenseDB.GetExpenses(router.db)
+
+			if expensesErr != nil {
+				categoryIndexError(router, w, expensesErr)
 				return
 			}
 
-			matcher := category.NewMatcher(categories)
-			router.matcher = matcher
+			toUpdated := []*expenseDB.Expense{}
 
-			if patternChanged {
-				allExpenses, expensesErr := expenseDB.GetExpenses(router.db)
-
-				if expensesErr != nil {
-					categoryIndexError(router, w, expensesErr)
-					return
-				}
-
-				toUpdated := []*expenseDB.Expense{}
-
-				for _, ex := range allExpenses {
-					id, _ := matcher.Match(ex.Description)
-					if id.Valid {
-						if ex.CategoryID.Valid {
-							// Update exiting expense with a new category
-							if id.Int64 != ex.CategoryID.Int64 {
-								ex.CategoryID = id
-								toUpdated = append(toUpdated, ex)
-							}
-							// Update exiting expense without category with category
-						} else {
+			for _, ex := range allExpenses {
+				id, _ := matcher.Match(ex.Description)
+				if id.Valid {
+					if ex.CategoryID.Valid {
+						// Update exiting expense with a new category
+						if id.Int64 != ex.CategoryID.Int64 {
 							ex.CategoryID = id
 							toUpdated = append(toUpdated, ex)
 						}
+						// Update exiting expense without category with category
 					} else {
-						if ex.CategoryID.Valid {
-							// Changing a category pattern could render exiting expenses to have category NULL
-							ex.CategoryID = sql.NullInt64{}
-							toUpdated = append(toUpdated, ex)
-						}
+						ex.CategoryID = id
+						toUpdated = append(toUpdated, ex)
 					}
-				}
-
-				if len(toUpdated) > 0 {
-					updated, updateErr := expenseDB.UpdateExpenses(router.db, toUpdated)
-					if updateErr != nil {
-						categoryIndexError(router, w, updateErr)
-						return
-					}
-
-					if int(updated) != len(toUpdated) {
-						fmt.Println("not all categories were updated")
+				} else {
+					if ex.CategoryID.Valid {
+						// Changing a category pattern could render exiting expenses to have category NULL
+						ex.CategoryID = sql.NullInt64{}
+						toUpdated = append(toUpdated, ex)
 					}
 				}
 			}
-		}
 
-		enhancedCat.Category.Name = name
-		enhancedCat.Category.Pattern = pattern
+			if len(toUpdated) > 0 {
+				updated, updateErr := expenseDB.UpdateExpenses(router.db, toUpdated)
+				if updateErr != nil {
+					categoryIndexError(router, w, updateErr)
+					return
+				}
 
-		if updated {
-			router.resetCache()
+				if int(updated) != len(toUpdated) {
+					fmt.Println("not all categories were updated")
+				}
+			}
 		}
+	}
+
+	enhancedCat.Category.Name = name
+	enhancedCat.Category.Pattern = pattern
+	enhancedCat.Category.Type = categoryType
+
+	if updated {
+		router.resetCache()
 	}
 
 	router.templates.Render(w, "partials/categories/card.html", enhancedCat)
@@ -285,19 +287,21 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 	}
 
 	data := struct {
-		Keys             []string
-		UncategorizeInfo map[string]uncategorizedInfo
-		Categories       []expenseDB.Category
-		TotalExpenses    int
-		TotalAmount      int64
-		Error            error
+		Keys              []string
+		UncategorizeInfo  map[string]uncategorizedInfo
+		ExpenseCategories []expenseDB.Category
+		IncomeCategories  []expenseDB.Category
+		TotalExpenses     int
+		TotalAmount       int64
+		Error             error
 	}{
-		Keys:             keys,
-		UncategorizeInfo: uncategorizeInfo,
-		Categories:       router.matcher.Categories(),
-		TotalExpenses:    totalExpenses,
-		TotalAmount:      totalAmount,
-		Error:            nil,
+		Keys:              keys,
+		UncategorizeInfo:  uncategorizeInfo,
+		ExpenseCategories: router.matcher.ExpenseCategories(),
+		IncomeCategories:  router.matcher.IncomeCategories(),
+		TotalExpenses:     totalExpenses,
+		TotalAmount:       totalAmount,
+		Error:             nil,
 	}
 	router.templates.Render(w, "pages/categories/uncategorized.html", data)
 }
@@ -417,6 +421,11 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 
 	name := r.FormValue("name")
 	pattern := r.FormValue("pattern")
+	categoryTypeStr := r.FormValue("type")
+	categoryType := expenseDB.ExpenseCategoryType // Default to expense
+	if categoryTypeStr == "1" {
+		categoryType = expenseDB.IncomeCategoryType
+	}
 
 	data := struct {
 		Name    string
@@ -468,7 +477,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	total := len(toUpdated)
 
 	if create && total > 0 {
-		categoryID, createErr := expenseDB.CreateCategory(router.db, name, pattern)
+		categoryID, createErr := expenseDB.CreateCategory(router.db, name, pattern, categoryType)
 
 		if createErr != nil {
 			data.Error = createErr

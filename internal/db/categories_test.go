@@ -22,9 +22,14 @@ func TestPopulateCategoriesFromConfig(t *testing.T) {
 	db := setupTestDB(t)
 
 	conf := &config.Config{
-		Categories: []config.Category{
-			{Name: "Food", Pattern: "restaurant|food"},
-			{Name: "Transport", Pattern: "uber|taxi"},
+		Categories: config.Categories{
+			Expense: []config.Category{
+				{Name: "Food", Pattern: "restaurant|food"},
+				{Name: "Transport", Pattern: "uber|taxi"},
+			},
+			Income: []config.Category{
+				{Name: "Salary", Pattern: "salary|income"},
+			},
 		},
 	}
 
@@ -39,17 +44,39 @@ func TestPopulateCategoriesFromConfig(t *testing.T) {
 		t.Errorf("Failed to get categories: %v", err)
 	}
 
-	if len(categories) != 2 {
-		t.Errorf("Expected 2 categories, got %d", len(categories))
+	if len(categories) != 3 {
+		t.Errorf("Expected 3 categories, got %d", len(categories))
+	}
+
+	// Verify expense categories
+	expectedCategories := []Category{
+		{
+			Name:    "Food",
+			Pattern: "restaurant|food",
+			Type:    ExpenseCategoryType,
+		},
+		{
+			Name:    "Transport",
+			Pattern: "uber|taxi",
+			Type:    ExpenseCategoryType,
+		},
+		{
+			Name:    "Salary",
+			Pattern: "salary|income",
+			Type:    IncomeCategoryType,
+		},
 	}
 
 	// Verify category contents
 	for i, cat := range categories {
-		if cat.Name != conf.Categories[i].Name {
-			t.Errorf("Category[%d].Name = %v, want %v", i, cat.Name, conf.Categories[i].Name)
+		if cat.Name != expectedCategories[i].Name {
+			t.Errorf("Category[%d].Name = %v, want %v", i, cat.Name, expectedCategories[i].Name)
 		}
-		if cat.Pattern != conf.Categories[i].Pattern {
-			t.Errorf("Category[%d].Pattern = %v, want %v", i, cat.Pattern, conf.Categories[i].Pattern)
+		if cat.Pattern != expectedCategories[i].Pattern {
+			t.Errorf("Category[%d].Pattern = %v, want %v", i, cat.Pattern, expectedCategories[i].Pattern)
+		}
+		if cat.Type != expectedCategories[i].Type {
+			t.Errorf("Category[%d].Type = %v, want %v", i, cat.Type, expectedCategories[i].Type)
 		}
 	}
 }
@@ -125,7 +152,7 @@ func TestGetCategory(t *testing.T) {
 func TestCreateCategory(t *testing.T) {
 	db := setupTestDB(t)
 
-	id, err := CreateCategory(db, "Test", "test.*")
+	id, err := CreateCategory(db, "Test", "test.*", ExpenseCategoryType)
 	if err != nil {
 		t.Errorf("Failed to create category: %v", err)
 	}

@@ -267,7 +267,12 @@ func TestUpdateHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			database := testutil.SetupTestDB(t)
 			// Create test categories
-			categoryID, err := db.CreateCategory(database, "Entertainment", "restaurant|bars|cinema")
+			categoryID, err := db.CreateCategory(
+				database,
+				"Entertainment",
+				"restaurant|bars|cinema",
+				db.ExpenseCategoryType,
+			)
 			if err != nil {
 				t.Fatalf("Failed to create Category: %v", err)
 			}
@@ -361,7 +366,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 	database := testutil.SetupTestDB(t)
 
 	// Create test categories
-	categoryID, err := db.CreateCategory(database, "Entertainment", "restaurant|bars")
+	categoryID, err := db.CreateCategory(database, "Entertainment", "restaurant|bars", db.ExpenseCategoryType)
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}

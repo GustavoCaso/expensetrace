@@ -132,8 +132,13 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 		categoryID := r.PathValue("id")
 		name := r.FormValue("name")
 		pattern := r.FormValue("pattern")
+		categoryTypeStr := r.FormValue("type")
+		categoryType := expenseDB.ExpenseCategoryType // Default to expense
+		if categoryTypeStr == "1" {
+			categoryType = expenseDB.IncomeCategoryType
+		}
 
-		router.updateCategoryHandler(categoryID, name, pattern, w)
+		router.updateCategoryHandler(categoryID, name, pattern, categoryType, w)
 	})
 
 	mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {

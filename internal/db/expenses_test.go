@@ -132,7 +132,7 @@ func TestGetExpenses(t *testing.T) {
 	}
 
 	// Create Category 1
-	_, err := CreateCategory(database, "Test", "*")
+	_, err := CreateCategory(database, "Test", "*", ExpenseCategoryType)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -210,7 +210,7 @@ func TestGetExpensesFromDateRange(t *testing.T) {
 	}
 
 	// Create Category 1
-	_, err := CreateCategory(database, "Test", "*")
+	_, err := CreateCategory(database, "Test", "*", ExpenseCategoryType)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -260,7 +260,7 @@ func TestGetExpensesWithoutCategory(t *testing.T) {
 	}
 
 	// Create Category 1
-	_, err := CreateCategory(database, "Test", "*")
+	_, err := CreateCategory(database, "Test", "*", ExpenseCategoryType)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -315,7 +315,7 @@ func TestSearchExpenses(t *testing.T) {
 	}
 
 	// Create Category 1
-	_, err := CreateCategory(database, "Test", "*")
+	_, err := CreateCategory(database, "Test", "*", ExpenseCategoryType)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
