@@ -152,7 +152,7 @@ func TestGetCategory(t *testing.T) {
 func TestCreateCategory(t *testing.T) {
 	db := setupTestDB(t)
 
-	id, err := CreateCategory(db, "Test", "test.*")
+	id, err := CreateCategory(db, "Test", "test.*", ExpenseCategoryType)
 	if err != nil {
 		t.Errorf("Failed to create category: %v", err)
 	}

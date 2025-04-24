@@ -93,13 +93,19 @@ func GetCategory(db *sql.DB, categoryID int64) (Category, error) {
 	return categoryFromRow(row.Scan)
 }
 
-func UpdateCategory(db *sql.DB, categoryID int, name, pattern string) error {
-	_, err := db.Exec("UPDATE categories SET name = ?, pattern = ? WHERE id = ?;", name, pattern, categoryID)
+func UpdateCategory(db *sql.DB, categoryID int, name, pattern string, categoryType CategoryType) error {
+	_, err := db.Exec(
+		"UPDATE categories SET name = ?, pattern = ?, type = ? WHERE id = ?;",
+		name,
+		pattern,
+		categoryType,
+		categoryID,
+	)
 	return err
 }
 
-func CreateCategory(db *sql.DB, name, pattern string) (int64, error) {
-	result, err := db.Exec("INSERT INTO categories(name, pattern) values(?, ?)", name, pattern)
+func CreateCategory(db *sql.DB, name, pattern string, categoryType CategoryType) (int64, error) {
+	result, err := db.Exec("INSERT INTO categories(name, pattern, type) values(?, ?, ?)", name, pattern, categoryType)
 
 	if err != nil {
 		return 0, err

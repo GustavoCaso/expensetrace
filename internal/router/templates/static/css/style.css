@@ -701,6 +701,47 @@ form button:hover {
   font-weight: 600;
 }
 
+.category-type-badge {
+  font-size: 0.7rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.category-type-badge.income {
+  background-color: #d1fae5;
+}
+
+.category-type-badge.expense {
+  background-color: #fee2e2;
+}
+
+/* Radio buttons for category type */
+.radio-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.25rem;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+}
+
+.radio-label input[type="radio"] {
+  margin: 0;
+}
+
+.radio-label span {
+  font-size: 0.9375rem;
+}
+
 /* Reports components */
 .report-options {
   display: flex;

@@ -2,6 +2,11 @@
   <div class="category-card" id="category-{{.ID}}">
     <div class="category-card-header">
       <h3>{{.Name}}</h3>
+      {{if eq .Type 1}}
+        <span class="category-type-badge income">Income</span>
+      {{else}}
+        <span class="category-type-badge expense">Expense</span>
+      {{end}}
       <div class="category-actions">
         <button class="btn-icon toggle-details-swap" data-content="category-content-{{.ID}}" data-target="category-edit-{{.ID}}">
           <span class="icon">✏️</span>
@@ -47,6 +52,19 @@
             <input type="text" id="category-edit-pattern-{{.ID}}" 
               name="name" value="{{.Pattern}}" required>
           {{end}}
+        </div>
+        <div class="form-group">
+          <label>Category Type</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="type" value="0" {{if eq .Type 0}}checked{{end}}>
+              <span>Expense</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="type" value="1" {{if eq .Type 1}}checked{{end}}>
+              <span>Income</span>
+            </label>
+          </div>
         </div>
         <div class="form-actions">
           <button type="submit" class="btn-primary">Save</button>
