@@ -1,0 +1,38 @@
+{{define "reports/chart"}}
+<div class="savings-chart-container">    
+    <div class="chart-controls">
+        <button id="prev-period" class="chart-nav-btn">
+            <span class="nav-icon">←</span> Previous
+        </button>
+        <div class="period-selector">
+          <span id="current-period"></span>
+        </div>
+        <button id="next-period" class="chart-nav-btn">
+            Next <span class="nav-icon">→</span>
+        </button>
+    </div>
+    
+    <div class="canvas-container">
+        <!-- The canvas for our chart -->
+        <canvas id="finance-chart" width="1000" height="400" data-finance="{{.ChartData | json}}"></canvas>
+        
+        <!-- Tooltip for data points -->
+        <div id="chart-tooltip" class="chart-tooltip"></div>
+    </div>
+    
+    <div class="chart-legend">
+        <div class="legend-item">
+            <span class="legend-color income-color"></span>
+            <span class="legend-label">Income</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color expense-color"></span>
+            <span class="legend-label">Spending</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color savings-color"></span>
+            <span class="legend-label">Savings</span>
+        </div>
+    </div>
+</div>
+{{end}}
