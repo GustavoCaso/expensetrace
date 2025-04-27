@@ -1,0 +1,221 @@
+/* Form elements */
+
+/* Form base */
+form {
+  width: 100%;
+}
+
+/* Form groups/rows */
+.form-group {
+  margin-bottom: var(--spacing-4);
+}
+
+/* Labels */
+label,
+.form-group label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-700);
+  margin-bottom: var(--spacing-1);
+}
+
+/* Text inputs */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="file"],
+textarea,
+select {
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--border-radius);
+  background-color: white;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  color: var(--color-gray-800);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Input file specific styling */
+input[type="file"] {
+  padding: var(--spacing-3);
+  background-color: var(--color-gray-50);
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+}
+
+/* Select styles */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: var(--spacing-8);
+  /* Space for the arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--spacing-3) center;
+  background-size: 16px 16px;
+}
+
+select option {
+  padding: var(--spacing-2);
+}
+
+select optgroup {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-600);
+}
+
+/* Radio and checkbox containers */
+.radio-group,
+.checkbox-group {
+  display: flex;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-1);
+}
+
+/* Radio and checkbox labels */
+.radio-label,
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.radio-label input,
+.checkbox-label input {
+  margin: 0;
+}
+
+/* Input help text */
+.input-help {
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
+}
+
+/* Error states */
+.error-input,
+input.error-input,
+select.error-input,
+textarea.error-input {
+  border-color: var(--color-danger);
+}
+
+.error-input:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-group-error {
+  display: block;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  margin-top: var(--spacing-1);
+  padding-left: var(--spacing-2);
+  border-left: 3px solid var(--color-danger);
+}
+
+/* Validation feedback */
+.validation-feedback {
+  min-height: 1.5rem;
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+/* Form with background */
+.form-with-bg {
+  background-color: var(--color-gray-50);
+  padding: var(--spacing-6);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-6);
+}
+
+/* Form actions (buttons container) */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-6);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+
+  .radio-group,
+  .checkbox-group {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+}
+
+/* Search form specific */
+#expenses-search-form,
+#search-form {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+}
+
+@media (max-width: 640px) {
+
+  #expenses-search-form,
+  #search-form {
+    flex-direction: column;
+  }
+}
+
+/* Pattern form specific styles */
+.pattern-quick-reference {
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-4);
+  background-color: var(--color-gray-50);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-gray-200);
+}
+
+.create-category-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-8);
+}
+
+@media (max-width: 768px) {
+  .create-category-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Select with attached button */
+.select-with-label {
+  margin-bottom: var(--spacing-2);
+}
+
+.select-wrapper {
+  display: flex;
+  gap: var(--spacing-2);
+}
