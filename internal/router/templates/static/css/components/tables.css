@@ -124,17 +124,6 @@
   color: var(--color-danger);
 }
 
-/* Category badges in tables */
-.expense-category {
-  background-color: var(--color-gray-200);
-  color: var(--color-gray-600);
-  font-size: var(--font-size-xs);
-  padding: var(--spacing-0-5) var(--spacing-2);
-  border-radius: var(--border-radius-full);
-  margin-left: var(--spacing-2);
-  white-space: nowrap;
-}
-
 /* Table with expandable rows */
 .expandable-row-trigger {
   cursor: pointer;

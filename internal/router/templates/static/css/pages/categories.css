@@ -5,27 +5,6 @@
   margin-bottom: var(--spacing-6);
 }
 
-/* Category type badge */
-.category-type-badge {
-  font-size: var(--font-size-xs);
-  padding: var(--spacing-0-5) var(--spacing-2);
-  border-radius: var(--border-radius-full);
-  font-weight: var(--font-weight-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-left: var(--spacing-2);
-}
-
-.category-type-badge.income {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
-}
-
-.category-type-badge.expense {
-  background-color: var(--color-danger-light);
-  color: var(--color-danger);
-}
-
 /* Pattern code display */
 .pattern-code {
   display: block;

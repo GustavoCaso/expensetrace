@@ -364,7 +364,7 @@
   opacity: 1;
 }
 
-.toggle-content .collapsed {
+.toggle-content.collapsed {
   max-height: 0;
   opacity: 0;
   margin-top: 0;
@@ -385,11 +385,6 @@
 
 .toggle-details[aria-expanded="true"]:after {
   transform: rotate(180deg);
-}
-
-/* Transaction details */
-.category-details {
-  margin-top: var(--spacing-4);
 }
 
 /* Responsive adjustments */

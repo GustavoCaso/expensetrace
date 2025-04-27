@@ -195,18 +195,6 @@
   transform: rotate(-90deg);
 }
 
-/* Collapsible content */
-.expense-content,
-.expense-list {
-  overflow: hidden;
-  transition: max-height var(--transition-normal) ease-out;
-}
-
-.expense-content.collapsed,
-.expense-list.collapsed {
-  max-height: 0;
-}
-
 /* Pagination navigation */
 .pagination {
   display: flex;

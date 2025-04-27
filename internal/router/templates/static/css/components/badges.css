@@ -1,0 +1,22 @@
+.badge {
+  background-color: var(--color-gray-200);
+  color: var(--color-gray-600);
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-0-5) var(--spacing-2);
+  border-radius: var(--border-radius-full);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: var(--spacing-2);
+  white-space: nowrap;
+}
+
+.badge.income {
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.badge.expense {
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+}

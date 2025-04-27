@@ -3,9 +3,9 @@
     <div class="card-header">
       <h3 class="card-title">{{.Name}}</h3>
       {{if eq .Type 1}}
-        <span class="category-type-badge income">Income</span>
+        <span class="badge income">Income</span>
       {{else}}
-        <span class="category-type-badge expense">Expense</span>
+        <span class="badge expense">Expense</span>
       {{end}}
       <div class="card-actions">
         <button class="btn-icon toggle-details-swap" data-content="category-content-{{.ID}}" data-target="category-edit-{{.ID}}">

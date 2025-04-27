@@ -114,6 +114,10 @@
   transition: max-height var(--transition-normal) ease-out;
 }
 
+.expense-list.collapsed {
+  max-height: 0;
+}
+
 
 /* Individual expense items */
 .expense-item {
@@ -131,28 +135,6 @@
 
 .expense-item:last-child {
   border-bottom: none;
-}
-
-/* Expense item components */
-.expense-date {
-  color: var(--color-gray-500);
-  font-size: var(--font-size-sm);
-  flex: 0 0 110px;
-}
-
-.expense-description {
-  flex: 1;
-  margin: 0 var(--spacing-4);
-}
-
-.expense-category {
-  background-color: var(--color-gray-200);
-  color: var(--color-gray-600);
-  font-size: var(--font-size-xs);
-  padding: var(--spacing-0-5) var(--spacing-2);
-  border-radius: var(--border-radius-full);
-  margin-left: var(--spacing-2);
-  white-space: nowrap;
 }
 
 /* Amount styling */
@@ -198,10 +180,6 @@
     align-items: flex-start;
     gap: var(--spacing-2);
     padding: var(--spacing-4);
-  }
-
-  .expense-date {
-    flex: auto;
   }
 
   .expense-description {
