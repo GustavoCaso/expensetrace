@@ -1,57 +1,5 @@
 /* Import page specific styles */
 
-/* Main import container */
-#import-container {
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-/* Import form */
-#import-form {
-  background-color: var(--color-gray-50);
-  padding: var(--spacing-6);
-  border-radius: var(--border-radius-lg);
-  margin-bottom: var(--spacing-8);
-  box-shadow: var(--shadow);
-}
-
-#import-form .form-group {
-  margin-bottom: var(--spacing-4);
-}
-
-#import-form label {
-  display: block;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-gray-700);
-  margin-bottom: var(--spacing-2);
-}
-
-#import-form input[type="file"] {
-  background-color: white;
-  border: 1px solid var(--color-gray-200);
-  padding: var(--spacing-3);
-  border-radius: var(--border-radius);
-  width: 100%;
-  color: var(--color-gray-600);
-  font-size: var(--font-size-sm);
-}
-
-#import-form button {
-  background-color: var(--color-primary);
-  color: white;
-  border: none;
-  padding: var(--spacing-3) var(--spacing-6);
-  border-radius: var(--border-radius);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-}
-
-#import-form button:hover {
-  background-color: var(--color-primary-dark);
-}
-
 /* Form results */
 #form-results {
   margin-top: var(--spacing-6);
@@ -218,15 +166,4 @@
   border-top: 3px solid var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
-}
-
-/* Responsive adjustments */
-@media (max-width: 640px) {
-  #import-form {
-    padding: var(--spacing-4);
-  }
-
-  #import-form button {
-    width: 100%;
-  }
 }
