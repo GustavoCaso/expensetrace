@@ -136,10 +136,7 @@
       {{end}}
     </div>
   {{ else }}
-    <div class="error-message">
-      <h2>There was an error</h2>
-      <p>{{.Error}}</p>
-      <button class="btn-primary" hx-get="/categories" hx-target="#page" hx-swap="outerHTML">Retry</button>
-    </div>
+    {{template "error" .Error}}
+    <button class="btn-primary" hx-get="/categories" hx-target="#page" hx-swap="outerHTML">Retry</button>
   {{ end }}
 {{end}}

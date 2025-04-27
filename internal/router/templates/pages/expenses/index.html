@@ -60,7 +60,7 @@
       </ul>
     </div>
   {{ else }}
-    <h2>There was an error: {{.Error}}</h2>
+    {{template "error" .Error}}
   {{ end }}
 {{end}}
  
