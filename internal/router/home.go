@@ -30,9 +30,6 @@ func (router *router) generateChartData() []chartDataPoint {
 
 	for _, key := range router.sortedReportKeys {
 		parts := strings.Split(key, "-")
-		if len(parts) != 2 {
-			continue
-		}
 
 		r := router.reports[key]
 		chartData = append(chartData, chartDataPoint{
