@@ -1,13 +1,13 @@
 {{define "categories/card"}}
-  <div class="category-card" id="category-{{.ID}}">
-    <div class="category-card-header">
-      <h3>{{.Name}}</h3>
+  <div class="card" id="category-{{.ID}}">
+    <div class="card-header">
+      <h3 class="card-title">{{.Name}}</h3>
       {{if eq .Type 1}}
         <span class="category-type-badge income">Income</span>
       {{else}}
         <span class="category-type-badge expense">Expense</span>
       {{end}}
-      <div class="category-actions">
+      <div class="card-actions">
         <button class="btn-icon toggle-details-swap" data-content="category-content-{{.ID}}" data-target="category-edit-{{.ID}}">
           <span class="icon">✏️</span>
         </button>

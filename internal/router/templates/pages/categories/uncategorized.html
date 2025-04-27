@@ -13,17 +13,17 @@
           <a href="/" class="btn-primary">View Reports</a>
         </div>
       {{ else }}
-        <div class="categories-stats">
-          <div class="stats-card">
-            <h3>Different Transactions</h3>
+        <div class="card-grid">
+          <div class="card ta-center">
+            <h3 class="card-title">Different Transactions</h3>
             <div class="stats-number">{{len .Keys}}</div>
           </div>
-          <div class="stats-card">
-            <h3>Total Expenses</h3>
+          <div class="card ta-center">
+            <h3 class="card-title">Total Expenses</h3>
             <div class="stats-number">{{.TotalExpenses}}</div>
           </div>
-          <div class="stats-card">
-            <h3>Total Amount</h3>
+          <div class="card ta-center">
+            <h3 class="card-title">Total Amount</h3>
             <div class="stats-number">{{formatMoney .TotalAmount "." ","}}€</div>
           </div>
         </div>
@@ -33,12 +33,12 @@
           <p>These expenses haven't been automatically categorized. Select a category to organize them.</p>
         </div>
 
-        <div class="categories-grid">
+        <div class="card-grid">
           {{range $key := .Keys}}
             {{$uncategorized := index $.UncategorizeInfo $key}}
-            <div class="category-card" id="expense-group-{{$uncategorized.Slug}}">
-              <div class="category-card-header">
-                <h3>{{$key}}</h3>
+            <div class="card" id="expense-group-{{$uncategorized.Slug}}">
+              <div class="card-header">
+                <h3 class="card-title">{{$key}}</h3>
                 {{if gt $uncategorized.Total 0}}
                   <span class="category-type-badge income">Income</span>
                 {{else}}
@@ -100,7 +100,7 @@
                 {{end}}
               </div>
               
-              <div class="category-actions">
+              <div class="card-actions">
                 <form hx-post="/category/uncategorized/update" 
                       hx-target="#page" 
                       hx-swap="outerHTML show:window:top">

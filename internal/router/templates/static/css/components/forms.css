@@ -198,18 +198,6 @@ textarea.error-input {
   border: 1px solid var(--color-gray-200);
 }
 
-.create-category-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-8);
-}
-
-@media (max-width: 768px) {
-  .create-category-container {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* Select with attached button */
 .select-with-label {
   margin-bottom: var(--spacing-2);

@@ -158,6 +158,10 @@
   display: grid;
 }
 
+.ta-center {
+  text-align: center;
+}
+
 /* Flex utilities */
 .flex-col {
   flex-direction: column;

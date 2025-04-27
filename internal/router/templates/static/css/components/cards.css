@@ -1,17 +1,27 @@
 /* Card components */
 
 /* Base card */
-.card,
-.category-card,
-.summary-card,
-.stats-card,
-.pattern-test-results,
-.category-form-container,
-.pattern-results {
+.card {
   background-color: white;
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow);
   padding: var(--spacing-6);
+}
+
+.card .collapsed {
+  display: none;
+}
+
+.card.success {
+  border-left: 3px solid var(--color-success);
+}
+
+.card.error {
+  border-left: 3px solid var(--color-danger);
+}
+
+.card.no-matches {
+  border-left: 3px solid var(--color-warning);
 }
 
 /* Card header */
@@ -26,21 +36,9 @@
 
 /* Card title */
 .card-title {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-gray-800);
-  margin: 0;
-}
-
-/* Stats cards */
-.stats-card {
-  text-align: center;
-}
-
-.stats-card h3 {
-  color: var(--color-gray-600);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-medium);
+  color: var(--color-gray-600);
   margin-bottom: var(--spacing-2);
 }
 
@@ -50,58 +48,9 @@
   color: var(--color-gray-800);
 }
 
-.stats-card-grid,
-.categories-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--spacing-4);
-  margin-bottom: var(--spacing-8);
-}
-
 /* Summary cards */
 .summary-card {
   text-align: center;
-}
-
-.summary-card h3 {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-gray-600);
-  margin-bottom: var(--spacing-2);
-}
-
-.card-amount {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-semibold);
-  margin-bottom: var(--spacing-2);
-}
-
-.income-card .card-amount {
-  color: var(--color-success);
-}
-
-.expense-card .card-amount {
-  color: var(--color-danger);
-}
-
-.savings-card .card-amount {
-  color: var(--color-success);
-}
-
-.deficit-card .card-amount {
-  color: var(--color-danger);
-}
-
-.card-comparison,
-.card-percentage {
-  font-size: var(--font-size-sm);
-  color: var(--color-gray-600);
-}
-
-/* Category cards */
-.category-card {
-  display: flex;
-  flex-direction: column;
 }
 
 .category-meta {
@@ -142,11 +91,9 @@
 }
 
 /* Card grids */
-.card-grid,
-.categories-grid,
-.report-cards {
+.card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: var(--spacing-6);
   margin-bottom: var(--spacing-6);
 }
@@ -158,29 +105,11 @@
   transition: max-height var(--transition-normal) ease-out;
 }
 
-.category-actions,
+.card-actions,
 .result-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-4);
-}
-
-/* Result cards for pattern testing */
-.pattern-test-results {
-  margin-bottom: var(--spacing-4);
-  transition: all var(--transition-normal) ease;
-}
-
-.pattern-test-results.success {
-  border-left: 3px solid var(--color-success);
-}
-
-.pattern-test-results.error {
-  border-left: 3px solid var(--color-danger);
-}
-
-.pattern-test-results.no-matches {
-  border-left: 3px solid var(--color-warning);
 }
 
 /* Empty states */
@@ -205,10 +134,7 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-
-  .card-grid,
-  .categories-grid,
-  .report-cards {
+  .card-grid {
     grid-template-columns: 1fr;
   }
 }

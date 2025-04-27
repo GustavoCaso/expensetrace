@@ -4,8 +4,8 @@
   {{template "categories/nav" "new"}}
   
   <div id="category-content">
-    <div class="create-category-container">
-      <div class="category-form-container">
+    <div class="card-grid gap-8">
+      <div class="card">
         <form id="category-new" class="category-form">
           <div class="form-group">
             <label for="category-name">Category Name</label>
@@ -117,11 +117,9 @@
         </form>
       </div>
       
-      <div id="pattern-results" class="pattern-results">
-        <div class="pattern-test-intro">
-          <h3>Pattern Test Results</h3>
-          <p>Enter a pattern above to see which uncategorized transactions it would match.</p>
-        </div>
+      <div id="pattern-results" class="card">
+        <h3>Pattern Test Results</h3>
+        <p>Enter a pattern above to see which uncategorized transactions it would match.</p>
       </div>
     </div>
   </div>

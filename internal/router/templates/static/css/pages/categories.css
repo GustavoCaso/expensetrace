@@ -49,10 +49,6 @@
   opacity: 1;
 }
 
-.category-card-form.collapsed {
-  display: none;
-}
-
 /* Pattern test results */
 .pattern-test-results {
   border-radius: var(--border-radius);

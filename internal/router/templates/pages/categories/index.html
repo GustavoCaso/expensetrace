@@ -5,22 +5,22 @@
 
   <div id="category-content">
     {{ if eq .Error nil }}
-      <div class="categories-stats">
-        <div class="stats-card">
-          <h3>Total Categories</h3>
+      <div class="card-grid">
+        <div class="card ta-center">
+          <h3 class="card-title">Total Categories</h3>
           <div class="stats-number">{{len .Categories}}</div>
         </div>
-        <div class="stats-card">
-          <h3>Categorized Expenses</h3>
+        <div class="card ta-center">
+          <h3 class="card-title">Categorized Expenses</h3>
           <div class="stats-number">{{.CategorizedCount}}</div>
         </div>
-        <div class="stats-card">
-          <h3>Uncategorized Expenses</h3>
+        <div class="card ta-center">
+          <h3 class="card-title">Uncategorized Expenses</h3>
           <div class="stats-number">{{.UncategorizedCount}}</div>
         </div>
       </div>
     
-      <div class="categories-grid">
+      <div class="card-grid">
         {{range $category := .Categories}}
           {{template "categories/card" $category}}
         {{end}}
