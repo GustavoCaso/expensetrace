@@ -1,10 +1,5 @@
 /* Categories page specific styles */
 
-/* Category navigation */
-.category-nav {
-  margin-bottom: var(--spacing-6);
-}
-
 /* Pattern code display */
 .pattern-code {
   display: block;
@@ -33,13 +28,6 @@
   border-radius: var(--border-radius);
   margin-bottom: var(--spacing-6);
   animation: fadeIn var(--transition-normal) ease-out;
-}
-
-.result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-4);
 }
 
 .pattern-badge {
@@ -220,12 +208,6 @@
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
-  .result-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-3);
-  }
-
   .pattern-badge {
     max-width: 100%;
   }

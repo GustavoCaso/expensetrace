@@ -1,16 +1,14 @@
 /* Table components */
 
 /* Base table */
-.table,
-.transactions-table {
+table {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--font-size-sm);
 }
 
 /* Table header */
-.table th,
-.transactions-table th {
+table th {
   text-align: left;
   padding: var(--spacing-3);
   font-weight: var(--font-weight-medium);
@@ -20,151 +18,20 @@
 }
 
 /* Table cells */
-.table td,
-.transactions-table td {
+table td {
   padding: var(--spacing-3);
   border-bottom: 1px solid var(--color-gray-100);
   vertical-align: middle;
 }
 
 /* Table row hover */
-.table tr:hover,
-.transactions-table tr:hover {
+table tr:hover,
+tr:hover {
   background-color: var(--color-gray-50);
 }
 
 /* Last row without border */
-.table tr:last-child td,
-.transactions-table tr:last-child td {
+table tr:last-child td,
+tr:last-child td {
   border-bottom: none;
-}
-
-/* Responsive tables */
-@media (max-width: 640px) {
-  .table-responsive {
-    display: block;
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Stack tables on mobile */
-  .table-stack-mobile,
-  .table-stack-mobile thead,
-  .table-stack-mobile tbody,
-  .table-stack-mobile tr,
-  .table-stack-mobile th,
-  .table-stack-mobile td {
-    display: block;
-    width: 100%;
-  }
-
-  .table-stack-mobile thead tr {
-    position: absolute;
-    top: -9999px;
-    left: -9999px;
-  }
-
-  .table-stack-mobile tr {
-    margin-bottom: var(--spacing-4);
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--border-radius);
-    padding: var(--spacing-2);
-  }
-
-  .table-stack-mobile td {
-    border: none;
-    position: relative;
-    padding-left: 50%;
-    text-align: right;
-  }
-
-  .table-stack-mobile td:before {
-    position: absolute;
-    top: var(--spacing-3);
-    left: var(--spacing-3);
-    width: 45%;
-    white-space: nowrap;
-    font-weight: var(--font-weight-medium);
-    text-align: left;
-  }
-}
-
-/* Transaction items (alternative to table) */
-.transaction-item {
-  display: flex;
-  align-items: center;
-  padding: var(--spacing-3);
-  border-bottom: 1px solid var(--color-gray-100);
-}
-
-.transaction-item:last-child {
-  border-bottom: none;
-}
-
-.transaction-date {
-  color: var(--color-gray-500);
-  font-size: var(--font-size-sm);
-  min-width: 110px;
-}
-
-.transaction-description {
-  flex: 1;
-}
-
-.transaction-amount {
-  font-weight: var(--font-weight-semibold);
-}
-
-.transaction-amount.income {
-  color: var(--color-success);
-}
-
-.transaction-amount.expense {
-  color: var(--color-danger);
-}
-
-/* Table with expandable rows */
-.expandable-row-trigger {
-  cursor: pointer;
-}
-
-.expandable-row-content {
-  background-color: var(--color-gray-50);
-  overflow: hidden;
-  transition: max-height var(--transition-normal) ease-out;
-  max-height: 500px;
-  /* Adjust as needed */
-}
-
-/* Pattern tables (for documentation) */
-.pattern-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--font-size-sm);
-  margin-bottom: var(--spacing-4);
-}
-
-.pattern-table th {
-  text-align: left;
-  padding: var(--spacing-2);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-gray-600);
-  background-color: var(--color-gray-100);
-  border-bottom: 1px solid var(--color-gray-200);
-}
-
-.pattern-table td {
-  padding: var(--spacing-3) var(--spacing-2);
-  border-bottom: 1px solid var(--color-gray-200);
-}
-
-.pattern-table tr:last-child td {
-  border-bottom: none;
-}
-
-.pattern-table td:first-child {
-  font-family: monospace;
-  color: var(--color-primary-dark);
-  font-weight: var(--font-weight-medium);
 }

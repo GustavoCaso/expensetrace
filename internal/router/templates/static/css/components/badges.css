@@ -9,14 +9,36 @@
   letter-spacing: 0.05em;
   margin-left: var(--spacing-2);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
 }
 
-.badge.income {
+.badge.income,
+.badge.positive,
+.category-type-badge.income {
   background-color: var(--color-success-light);
   color: var(--color-success);
 }
 
-.badge.expense {
+.badge.expense,
+.badge.negative,
+.category-type-badge.expense {
   background-color: var(--color-danger-light);
   color: var(--color-danger);
+}
+
+.badge.warning {
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.pattern-code {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  background-color: var(--color-gray-100);
+  padding: var(--spacing-2);
+  border-radius: var(--border-radius);
+  color: #4338ca;
+  overflow: auto;
+  display: inline-block;
 }

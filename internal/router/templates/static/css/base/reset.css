@@ -49,23 +49,3 @@ svg {
   display: block;
   max-width: 100%;
 }
-
-/* For existing markup compatibility */
-#page {
-  width: 100%;
-}
-
-#main {
-  padding: var(--spacing-8);
-  background-color: white;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  margin: var(--spacing-4);
-}
-
-@media (max-width: 768px) {
-  #main {
-    padding: var(--spacing-4);
-    margin: var(--spacing-2);
-  }
-}

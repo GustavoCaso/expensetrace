@@ -2,7 +2,7 @@
   {{if .Error}}
     <!-- Error in regex pattern or server error -->
     <div class="card error">
-      <div class="result-header">
+      <div class="card-header">
         <h3>Error Testing Pattern</h3>
         {{if .Pattern}}
         <div class="pattern-badge error">{{.Pattern}}</div>
@@ -28,7 +28,7 @@
     {{if eq .Total 0}}
       <!-- No matches result -->
       <div class="card no-matches">
-        <div class="result-header">
+        <div class="card-header">
           <h3>No Matching Transactions</h3>
           <div class="pattern-badge">{{.Pattern}}</div>
         </div>
@@ -41,12 +41,12 @@
     {{else}}
       <!-- Success result with matched transactions -->
       <div class="card success">
-        <div class="result-header">
+        <div class="card-header">
           <h3>Pattern Matched <span class="match-count">{{.Total}}</span> Transactions</h3>
           <div class="pattern-badge">{{.Pattern}}</div>
         </div>
         <div class="matched-transactions">
-          <table class="transactions-table">
+          <table>
             <thead>
               <tr>
                 <th>Date</th>

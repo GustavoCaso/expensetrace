@@ -1,53 +1,45 @@
 /* Navigation components */
 
-/* Main navigation */
-.navigation {
-  background-color: white;
-  padding: var(--spacing-4);
-  border-bottom: 1px solid var(--color-gray-200);
+/* Month navigation */
+.month-nav {
   display: flex;
-  gap: var(--spacing-6);
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-8);
 }
 
-.navigation a {
-  color: var(--color-gray-600);
-  text-decoration: none;
-  font-weight: var(--font-weight-medium);
-  padding: var(--spacing-2) 0;
+.month-link {
   position: relative;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--border-radius);
+  background-color: var(--color-gray-100);
+  text-decoration: none;
+  color: var(--color-gray-600);
+  font-size: var(--font-size-sm);
+  transition: background-color var(--transition-fast);
 }
 
-.navigation a:hover {
-  color: var(--color-gray-800);
+.month-link:hover {
+  background-color: var(--color-gray-200);
 }
 
-.navigation a:after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background-color: var(--color-primary);
-  transition: width var(--transition-normal) ease-in-out;
+.month-name {
+  z-index: 1;
+  margin-bottom: var(--spacing-2);
+  font-weight: var(--font-weight-medium);
 }
 
-.navigation a:hover:after {
-  width: 100%;
+/* Month link states */
+.month-link.positive {
+  border-left: 3px solid var(--color-success);
 }
 
-.navigation a.active {
-  color: var(--color-primary);
-}
-
-.navigation a.active:after {
-  width: 100%;
+.month-link.negative {
+  border-left: 3px solid var(--color-danger);
 }
 
 /* Tab navigation */
-.tabs,
-.category-tabs,
-.category-nav {
+.tabs {
   display: flex;
   border-bottom: 1px solid var(--color-gray-200);
   margin-bottom: var(--spacing-8);
@@ -77,178 +69,4 @@
 .tab-btn.active {
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
-}
-
-/* Tab content */
-.tab-content {
-  display: none;
-  padding: var(--spacing-4) 0;
-}
-
-.tab-content.active {
-  display: block;
-}
-
-/* Month navigation */
-.month-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
-  margin-bottom: var(--spacing-8);
-}
-
-.month-link {
-  position: relative;
-  padding: var(--spacing-2) var(--spacing-3);
-  border-radius: var(--border-radius);
-  background-color: var(--color-gray-100);
-  text-decoration: none;
-  color: var(--color-gray-600);
-  font-size: var(--font-size-sm);
-  transition: background-color var(--transition-fast);
-}
-
-.month-link:hover {
-  background-color: var(--color-gray-200);
-}
-
-.month-name {
-  z-index: 1;
-  font-weight: var(--font-weight-medium);
-}
-
-/* Month link states */
-.month-link.positive {
-  border-left: 3px solid var(--color-success);
-}
-
-.month-link.negative {
-  border-left: 3px solid var(--color-danger);
-}
-
-.month-link.active {
-  background-color: #e0e7ff;
-  /* Light indigo color */
-  color: #4338ca;
-  /* Indigo 700 */
-  font-weight: var(--font-weight-semibold);
-}
-
-/* Collapsible section headers */
-.year-header,
-.month-header {
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-}
-
-.year-header {
-  background-color: var(--color-gray-100);
-  border-radius: var(--border-radius);
-  padding: var(--spacing-3) var(--spacing-4);
-  margin-bottom: var(--spacing-4);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.year-header:hover {
-  background-color: var(--color-gray-200);
-}
-
-.year-header h2 {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-gray-800);
-  margin: 0;
-}
-
-.month-header {
-  background-color: var(--color-gray-50);
-  border-left: 3px solid var(--color-primary);
-  padding: var(--spacing-3) var(--spacing-4);
-  margin: var(--spacing-6) 0 var(--spacing-4) 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-radius: 0 var(--border-radius) var(--border-radius) 0;
-}
-
-.month-header:hover {
-  background-color: var(--color-gray-100);
-}
-
-.month-header h3 {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-gray-600);
-  margin: 0;
-}
-
-/* Toggle icons for collapsible sections */
-.toggle-icon {
-  color: var(--color-gray-500);
-  font-size: var(--font-size-xl);
-  transition: transform var(--transition-normal);
-}
-
-.collapsed .toggle-icon {
-  transform: rotate(-90deg);
-}
-
-/* Pagination navigation */
-.pagination {
-  display: flex;
-  justify-content: center;
-  margin-top: var(--spacing-8);
-  gap: var(--spacing-1);
-}
-
-.pagination-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--border-radius);
-  font-size: var(--font-size-sm);
-  color: var(--color-gray-600);
-  transition: background-color var(--transition-fast);
-}
-
-.pagination-link:hover {
-  background-color: var(--color-gray-100);
-  color: var(--color-gray-800);
-}
-
-.pagination-link.active {
-  background-color: var(--color-primary);
-  color: white;
-}
-
-.pagination-link.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Responsive navigation */
-@media (max-width: 768px) {
-  .navigation {
-    flex-wrap: wrap;
-    gap: var(--spacing-4);
-  }
-
-  .month-link {
-    min-width: calc(50% - var(--spacing-2));
-  }
-
-  .tabs,
-  .category-tabs {
-    overflow-x: auto;
-  }
-}
-
-@media (max-width: 480px) {
-  .month-link {
-    min-width: 100%;
-  }
 }
