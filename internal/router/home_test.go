@@ -9,7 +9,6 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/db"
-	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -101,45 +100,5 @@ func TestHomeHandler(t *testing.T) {
 				t.Errorf("Expected status %v; got %v", tt.expectedStatus, resp.Status)
 			}
 		})
-	}
-}
-
-func TestGenerateLinks(t *testing.T) {
-	database := testutil.SetupTestDB(t)
-
-	// Create test categories
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
-	}
-	matcher := category.NewMatcher(categories)
-
-	// Create router
-	r := newTestRouter(database, matcher)
-
-	// Test with empty reports
-	links := r.generateLinks()
-	if len(links) != 0 {
-		t.Errorf("Expected 0 links, got %d", len(links))
-	}
-
-	// Add a test report
-	now := time.Now()
-	reportKey := now.Format("2006-1")
-	r.reports = map[string]report.Report{
-		reportKey: {
-			Income:   1000,
-			Spending: 500,
-			Savings:  500,
-		},
-	}
-	r.sortedReportKeys = []string{reportKey}
-
-	links = r.generateLinks()
-	if len(links) != 1 {
-		t.Errorf("Expected 1 link, got %d", len(links))
-	}
-
-	if links[0].Income != 1000 || links[0].Spending != 500 || links[0].Savings != 500 {
-		t.Error("Link data does not match report data")
 	}
 }

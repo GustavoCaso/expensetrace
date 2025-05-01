@@ -10,18 +10,44 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/report"
 )
 
-type link struct {
-	Name     string
-	URL      string
-	Income   int64
-	Spending int64
-	Savings  int64
+type chartDataPoint struct {
+	Month             string  `json:"Month"`
+	URL               string  `json:"URL"`
+	Income            int64   `json:"Income"`
+	Spending          int64   `json:"Spending"`
+	Savings           int64   `json:"Savings"`
+	SavingsPercentage float32 `json:"SavingsPercentage"`
 }
 
 type homeData struct {
-	Report report.Report
-	Links  []link
-	Error  error
+	Report    report.Report
+	ChartData []chartDataPoint
+	Error     error
+}
+
+func (router *router) generateChartData() []chartDataPoint {
+	chartData := make([]chartDataPoint, 0, len(router.sortedReportKeys))
+
+	for _, key := range router.sortedReportKeys {
+		parts := strings.Split(key, "-")
+
+		r := router.reports[key]
+		chartData = append(chartData, chartDataPoint{
+			Month:             r.Title,
+			Income:            r.Income,
+			URL:               fmt.Sprintf("/?month=%s&year=%s", parts[1], parts[0]),
+			Spending:          r.Spending,
+			Savings:           r.Savings,
+			SavingsPercentage: r.SavingsPercentage,
+		})
+	}
+
+	// Reverse the order to have oldest months first (better for chart visualization)
+	for i, j := 0, len(chartData)-1; i < j; i, j = i+1, j-1 {
+		chartData[i], chartData[j] = chartData[j], chartData[i]
+	}
+
+	return chartData
 }
 
 func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -52,9 +78,9 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 		year = now.Year()
 	}
 
-	var links []link
+	var chartData []chartDataPoint
 	if !useReportTemplate {
-		links = router.generateLinks()
+		chartData = router.generateChartData()
 	}
 
 	var data homeData
@@ -72,9 +98,9 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			data = homeData{
-				Report: report,
-				Links:  links,
-				Error:  nil,
+				Report:    report,
+				ChartData: chartData,
+				Error:     nil,
 			}
 		}
 	}
@@ -84,24 +110,4 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		router.templates.Render(w, "pages/reports/index.html", data)
 	}
-}
-
-func (router *router) generateLinks() []link {
-	links := make([]link, len(router.sortedReportKeys))
-
-	for i, reportKey := range router.sortedReportKeys {
-		s := strings.Split(reportKey, "-")
-		month, _ := strconv.Atoi(s[1])
-
-		r := router.reports[reportKey]
-		links[i] = link{
-			Name:     fmt.Sprintf("%s %s", time.Month(month), s[0]),
-			URL:      fmt.Sprintf("/?month=%s&year=%s", s[1], s[0]),
-			Income:   r.Income,
-			Spending: r.Spending,
-			Savings:  r.Savings,
-		}
-	}
-
-	return links
 }

@@ -4,20 +4,15 @@
 {{define "main"}}
   {{ if eq .Error nil }}
     <div id="report-content">
-      <!-- Timeline Navigation -->
-      <nav class="month-nav">
-       {{range $link := .Links}}
-        <a href="{{$link.URL}}" 
-          hx-get={{$link.URL}} 
-          hx-target="#report" 
-          hx-swap="outerHTML" 
-          class="month-link {{if gt $link.Savings 0}}positive{{else}}negative{{end}}">
-            <span class="month-name">{{$link.Name}}</span>
-        </a>
-       {{end}}  
-      </nav>
+      {{if .ChartData}}
+        <div class="mb-8">
+          {{template "reports/chart" .}}
+        </div>
+      {{end}}
       
-      {{template "reports/card" .Report}}
+      <div class="mb-8">
+        {{template "reports/card" .Report}}
+      </div>
     </div>
   {{ else }}
     {{template "error" .Error}}

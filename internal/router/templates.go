@@ -2,6 +2,7 @@ package router
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -26,6 +27,13 @@ var templateFuncs = template.FuncMap{
 	"colorOutput": util.ColorOutput,
 	"sub": func(a, b int) int {
 		return a - b
+	},
+	"json": func(v interface{}) string {
+		jsonBytes, err := json.Marshal(v)
+		if err != nil {
+			return "[]"
+		}
+		return string(jsonBytes)
 	},
 }
 

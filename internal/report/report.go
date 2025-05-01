@@ -3,6 +3,7 @@ package report
 import (
 	"fmt"
 	"maps"
+	"math"
 	"slices"
 	"sort"
 	"strconv"
@@ -51,7 +52,12 @@ func Generate(startDate, endDate time.Time, expenses []*expenseDB.Expense, repor
 	report.EndDate = endDate
 	savings := income - (spending)*-1
 	report.Savings = savings
-	report.SavingsPercentage = (float32(savings) / float32(income)) * percentageOfTotal
+	savingsPercentage := (float32(savings) / float32(income)) * percentageOfTotal
+	if math.IsNaN(float64(savingsPercentage)) || math.IsInf(float64(savingsPercentage), 0) {
+		report.SavingsPercentage = 0
+	} else {
+		report.SavingsPercentage = savingsPercentage
+	}
 	numberOfDaysPerMonth := calendarDays(startDate, endDate)
 	report.AverageSpendingPerDay = (spending) * -1 / int64(numberOfDaysPerMonth)
 	report.EarningsPerDay = income / int64(numberOfDaysPerMonth)
