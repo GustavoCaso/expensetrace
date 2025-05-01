@@ -1,0 +1,72 @@
+/* Navigation components */
+
+/* Month navigation */
+.month-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-8);
+}
+
+.month-link {
+  position: relative;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--border-radius);
+  background-color: var(--color-gray-100);
+  text-decoration: none;
+  color: var(--color-gray-600);
+  font-size: var(--font-size-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.month-link:hover {
+  background-color: var(--color-gray-200);
+}
+
+.month-name {
+  z-index: 1;
+  margin-bottom: var(--spacing-2);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Month link states */
+.month-link.positive {
+  border-left: 3px solid var(--color-success);
+}
+
+.month-link.negative {
+  border-left: 3px solid var(--color-danger);
+}
+
+/* Tab navigation */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-gray-200);
+  margin-bottom: var(--spacing-8);
+}
+
+.tab-link,
+.tab-btn {
+  padding: var(--spacing-4) var(--spacing-6);
+  text-decoration: none;
+  color: var(--color-gray-600);
+  font-weight: var(--font-weight-medium);
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  cursor: pointer;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+.tab-link:hover,
+.tab-btn:hover {
+  color: var(--color-primary);
+}
+
+.tab-link.active,
+.tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}

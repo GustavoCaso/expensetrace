@@ -1,31 +1,25 @@
 {{define "reports/card" }} 
   <div id="report">
     <h2>{{.Title}} Summary</h2>
-    <div class="report-cards">
-      <div class="summary-card income-card">
-        <h3>Income</h3>
-        <div class="card-amount">{{formatMoney .Income "." ","}}€</div>
-        <div class="card-comparison">
-          {{if gt .Income 0}}+{{else}}-{{end}}{{printf "%.1f%%" 5.2}} from last month
-        </div>
+    <div class="card-grid">
+      <div class="card ta-center">
+        <h3 class="card-title">Income</h3>
+        <div class="income">{{formatMoney .Income "." ","}}€</div>
       </div>
       
-      <div class="summary-card expense-card">
-        <h3>Spending</h3>
-        <div class="card-amount">{{formatMoney .Spending "." ","}}€</div>
-        <div class="card-comparison">
-          {{if gt .Spending 0}}+{{else}}-{{end}}{{printf "%.1f%%" 2.7}} from last month
-        </div>
+      <div class="card ta-center">
+        <h3 class="card-title">Spending</h3>
+        <div class="expense">{{formatMoney .Spending "." ","}}€</div>
       </div>
       
-      <div class="summary-card {{if gt .Savings 0}}savings-card{{else}}deficit-card{{end}}">
-        <h3>Savings</h3>
-        <div class="card-amount">{{formatMoney .Savings "." ","}}€</div>
-        <div class="card-percentage">
+      <div class="card ta-center">
+        <h3 class="card-title">Savings</h3>
+        <div class="{{if gt .Savings 0}}income{{else}}expense{{end}}">{{formatMoney .Savings "." ","}}€</div>
+        <div> 
           {{if gt .Savings 0}}
-            <span class="savings-percentage savings">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
+            <span class="income">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
           {{else}}
-            <span class="savings-percentage expenses">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
+            <span class="expense">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
           {{end}}
         </div>
       </div>
@@ -66,14 +60,14 @@
                     <span class="category-amount expense">{{formatMoney $category.Amount "." ","}}€</span>
                   </div>
                   <div class="category-bar">
-                    <div class="category-progress" style="width: {{$category.PercentageOfTotal}}%"></div>
+                    <div class="category-progress expense" style="width: {{$category.PercentageOfTotal}}%"></div>
                   </div>
                   
                   <button class="btn-small toggle-details" data-target="expense-details-{{$category.Name}}">
                     <span class="toggle-text">Show Details</span>
                   </button>
-                  <div id="expense-details-{{$category.Name}}" class="category-details toggle-content collapsed">
-                    <table class="transactions-table">
+                  <div id="expense-details-{{$category.Name}}" class="toggle-content mt-4 collapsed">
+                    <table>
                       <thead>
                         <tr>
                           <th>Date</th>
@@ -108,14 +102,14 @@
                     <span class="category-amount income">{{formatMoney $category.Amount "." ","}}€</span>
                   </div>
                   <div class="category-bar">
-                    <div class="category-progress income-bar" style="width: {{$category.PercentageOfTotal}}%"></div>
+                    <div class="category-progress income" style="width: {{$category.PercentageOfTotal}}%"></div>
                   </div>
                   <button class="btn-small toggle-details" data-target="income-details-{{$category.Name}}">
                     <span class="toggle-text">Show Details</span>
                   </button>
                   
-                  <div id="income-details-{{$category.Name}}" class="category-details toggle-content collapsed">
-                    <table class="transactions-table">
+                  <div id="income-details-{{$category.Name}}" class="toggle-content mt-4 collapsed">
+                    <table>
                       <thead>
                         <tr>
                           <th>Date</th>

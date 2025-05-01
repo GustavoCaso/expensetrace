@@ -1,36 +1,34 @@
 {{define "title"}}Categories{{end}}
+{{define "css"}}/static/css/categories.css{{end}}
 
 {{define "main"}}
   {{template "categories/nav" "index"}}
 
   <div id="category-content">
     {{ if eq .Error nil }}
-      <div class="categories-stats">
-        <div class="stats-card">
-          <h3>Total Categories</h3>
-          <div class="stats-number">{{len .Categories}}</div>
+      <div class="card-grid">
+        <div class="card ta-center">
+          <h3 class="card-title">Total Categories</h3>
+          <div class="text-lg font-bold">{{len .Categories}}</div>
         </div>
-        <div class="stats-card">
-          <h3>Categorized Expenses</h3>
-          <div class="stats-number">{{.CategorizedCount}}</div>
+        <div class="card ta-center">
+          <h3 class="card-title">Categorized Expenses</h3>
+          <div class="text-lg font-bold">{{.CategorizedCount}}</div>
         </div>
-        <div class="stats-card">
-          <h3>Uncategorized Expenses</h3>
-          <div class="stats-number">{{.UncategorizedCount}}</div>
+        <div class="card ta-center">
+          <h3 class="card-title">Uncategorized Expenses</h3>
+          <div class="text-lg font-bold">{{.UncategorizedCount}}</div>
         </div>
       </div>
     
-      <div class="categories-grid">
+      <div class="card-grid">
         {{range $category := .Categories}}
           {{template "categories/card" $category}}
         {{end}}
       </div>
     {{ else }}
-      <div class="error-message">
-        <h2>There was an error</h2>
-        <p>{{.Error}}</p>
-        <button class="btn-primary" hx-get="/categories" hx-target="#page" hx-swap="outerHTML">Retry</button>
-      </div>
+      {{template "error" .Error}}
+      <button class="btn-primary" hx-get="/categories" hx-target="#page" hx-swap="outerHTML">Retry</button>
     {{ end }}
   </div>
 {{end}}

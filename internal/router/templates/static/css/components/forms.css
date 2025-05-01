@@ -1,0 +1,154 @@
+/* Form elements */
+
+/* Form base */
+form {
+  width: 100%;
+  background-color: var(--color-gray-50);
+  padding: var(--spacing-6);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+/* Form groups/rows */
+.form-group {
+  margin-bottom: var(--spacing-4);
+}
+
+/* Labels */
+label,
+.form-group label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-700);
+  margin-bottom: var(--spacing-1);
+}
+
+/* Text inputs */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="file"],
+textarea,
+select {
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--border-radius);
+  background-color: white;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  color: var(--color-gray-800);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Radio and checkbox containers */
+.radio-group {
+  display: flex;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-1);
+}
+
+/* Radio and checkbox labels */
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.radio-label input {
+  margin: 0;
+}
+
+/* Error states */
+.error-input,
+input.error-input,
+select.error-input,
+textarea.error-input {
+  border-color: var(--color-danger);
+}
+
+.error-input:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-group-error {
+  display: block;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  margin-top: var(--spacing-1);
+  padding-left: var(--spacing-2);
+  border-left: 3px solid var(--color-danger);
+}
+
+/* Animation for form errors */
+@keyframes errorShake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+.form-error-shake {
+  animation: errorShake 0.5s ease-in-out;
+}
+
+/* Form actions (buttons container) */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-6);
+}
+
+/* Category form */
+.category-form {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  form {
+    padding: var(--spacing-4);
+  }
+
+  .radio-group {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+}
