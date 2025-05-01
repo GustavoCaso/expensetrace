@@ -59,7 +59,7 @@
   transition: transform var(--transition-normal);
 }
 
-.year-header .collapsed .toggle-icon {
+.year-header.collapsed .toggle-icon {
   transform: rotate(-90deg);
 }
 

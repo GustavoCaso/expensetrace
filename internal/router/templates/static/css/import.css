@@ -7,16 +7,10 @@
 /* Components */
 @import 'components/buttons.css';
 @import 'components/errors.css';
-@import 'components/badges.css';
-@import 'components/cards.css';
 @import 'components/forms.css';
-@import 'components/tables.css';
 @import 'components/navigation.css';
 
 /* Page specific styles */
-@import 'pages/reports.css';
-@import 'pages/categories.css';
-@import 'pages/expenses.css';
 @import 'pages/import.css';
 
 /* Utilities */

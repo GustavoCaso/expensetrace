@@ -12,14 +12,6 @@
   color: var(--color-gray-900);
 }
 
-/* Report summary cards */
-.report-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--spacing-6);
-  margin-bottom: var(--spacing-8);
-}
-
 /* Report details layout */
 .report-details {
   display: grid;
@@ -308,10 +300,6 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .report-details {
-    grid-template-columns: 1fr;
-  }
-
-  .report-cards {
     grid-template-columns: 1fr;
   }
 }
