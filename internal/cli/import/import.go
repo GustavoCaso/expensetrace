@@ -56,7 +56,6 @@ func (c importCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 		for _, expense := range info.ImportWithoutCategory {
 			fmt.Printf("  - %s: %s\n", expense.Description, util.FormatMoney(expense.Amount, ".", ","))
 		}
-
 	}
 	if info.Error != nil {
 		fmt.Printf("Errors importing file: %s\n", info.Error)
