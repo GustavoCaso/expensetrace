@@ -1,0 +1,32 @@
+/* Tab navigation */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-gray-200);
+  margin-bottom: var(--spacing-8);
+}
+
+.tab-link,
+.tab-btn {
+  padding: var(--spacing-4) var(--spacing-6);
+  text-decoration: none;
+  color: var(--color-gray-600);
+  font-weight: var(--font-weight-medium);
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  cursor: pointer;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+.tab-link:hover,
+.tab-btn:hover {
+  color: var(--color-primary);
+}
+
+.tab-link.active,
+.tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}

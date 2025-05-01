@@ -1,23 +1,22 @@
 {{define "title"}}Report{{end}}
+{{define "css"}}/static/css/reports.css{{end}}
 
 {{define "main"}}
   {{ if eq .Error nil }}
     <div id="report-content">
       {{if .ChartData}}
-        <div class="report-section">
+        <div class="mb-8">
           {{template "reports/chart" .}}
         </div>
       {{end}}
       
-      <div class="report-section">
+      <div class="mb-8">
         {{template "reports/card" .Report}}
       </div>
     </div>
   {{ else }}
-    <div class="error-message">
-      <h2>There was an error</h2>
-      <p>{{.Error}}</p>
-      <button class="btn-primary" hx-get="/" hx-swap="outerHTML">Retry</button>
-    </div>
+    {{template "error" .Error}}
+   
+    <button class="btn-primary" hx-get="/" hx-swap="outerHTML">Retry</button>
   {{ end }}
 {{end}}

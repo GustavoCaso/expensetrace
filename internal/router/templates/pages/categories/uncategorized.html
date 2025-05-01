@@ -1,4 +1,5 @@
 {{define "title"}}Uncategorized Expenses{{end}}
+{{define "css"}}/static/css/categories.css{{end}}
 
 {{define "main"}}  
   {{ if eq .Error nil }}
@@ -13,18 +14,18 @@
           <a href="/" class="btn-primary">View Reports</a>
         </div>
       {{ else }}
-        <div class="categories-stats">
-          <div class="stats-card">
-            <h3>Different Transactions</h3>
-            <div class="stats-number">{{len .Keys}}</div>
+        <div class="card-grid">
+          <div class="card ta-center">
+            <h3 class="card-title">Different Transactions</h3>
+            <div class="text-lg font-bold">{{len .Keys}}</div>
           </div>
-          <div class="stats-card">
-            <h3>Total Expenses</h3>
-            <div class="stats-number">{{.TotalExpenses}}</div>
+          <div class="card ta-center">
+            <h3 class="card-title">Total Expenses</h3>
+            <div class="text-lg font-bold">{{.TotalExpenses}}</div>
           </div>
-          <div class="stats-card">
-            <h3>Total Amount</h3>
-            <div class="stats-number">{{formatMoney .TotalAmount "." ","}}€</div>
+          <div class="card ta-center">
+            <h3 class="card-title">Total Amount</h3>
+            <div class="text-lg font-bold">{{formatMoney .TotalAmount "." ","}}€</div>
           </div>
         </div>
 
@@ -33,16 +34,16 @@
           <p>These expenses haven't been automatically categorized. Select a category to organize them.</p>
         </div>
 
-        <div class="categories-grid">
+        <div class="card-grid">
           {{range $key := .Keys}}
             {{$uncategorized := index $.UncategorizeInfo $key}}
-            <div class="category-card" id="expense-group-{{$uncategorized.Slug}}">
-              <div class="category-card-header">
-                <h3>{{$key}}</h3>
+            <div class="card" id="expense-group-{{$uncategorized.Slug}}">
+              <div class="card-header">
+                <h3 class="card-title">{{$key}}</h3>
                 {{if gt $uncategorized.Total 0}}
-                  <span class="category-type-badge income">Income</span>
+                  <span class="badge income">Income</span>
                 {{else}}
-                  <span class="category-type-badge expense">Expense</span>
+                  <span class="badge expense">Expense</span>
                 {{end}}
               </div>
               
@@ -100,16 +101,16 @@
                 {{end}}
               </div>
               
-              <div class="category-actions">
+              <div class="card-actions">
                 <form hx-post="/category/uncategorized/update" 
                       hx-target="#page" 
                       hx-swap="outerHTML show:window:top">
                   <input name="description" value="{{$key}}" type="hidden">
-                  <div class="select-with-label">
+                  <div>
                     <label for="category-select-{{$key}}">Assign category:</label>
-                    <div class="select-wrapper">
+                    <div class="grid">
                       <select id="category-select-{{$key}}"
-                              class="category-select"
+                              class="category-select mb-1"
                               name="categoryID">
                         <option value="">-- Select a category --</option>
                         <optgroup label="Expense Categories">
@@ -136,10 +137,7 @@
       {{end}}
     </div>
   {{ else }}
-    <div class="error-message">
-      <h2>There was an error</h2>
-      <p>{{.Error}}</p>
-      <button class="btn-primary" hx-get="/categories" hx-target="#page" hx-swap="outerHTML">Retry</button>
-    </div>
+    {{template "error" .Error}}
+    <button class="btn-primary" hx-get="/categories" hx-target="#page" hx-swap="outerHTML">Retry</button>
   {{ end }}
 {{end}}

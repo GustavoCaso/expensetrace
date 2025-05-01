@@ -62,38 +62,35 @@ func (e InsertError) Error() string {
 	return fmt.Sprintf("error when trying to insert record on table. err: %v", e.err)
 }
 
-func InsertExpenses(db *sql.DB, expenses []*Expense) []error {
+func InsertExpenses(db *sql.DB, expenses []*Expense) (int64, error) {
+	if len(expenses) == 0 {
+		return 0, nil
+	}
 	// Insert records
-	insertStmt, err := db.Prepare(
-		"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) values(?, ?, ?, ?, ?, ?, ?)",
-	)
+	query := "INSERT OR IGNORE INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES %s;"
+	var buffer = bytes.Buffer{}
 
-	errors := []error{}
+	err := renderTemplate(&buffer, "expenses/insert.tmpl", struct {
+		Length   int
+		Expenses []*Expense
+	}{
+		// Inside the template we itarte over expenses, the index starts at 0
+		Length:   len(expenses) - 1,
+		Expenses: expenses,
+	})
 
 	if err != nil {
-		errors = append(errors, err)
-		return errors
-	}
-	defer insertStmt.Close()
-
-	for _, expense := range expenses {
-		_, err = insertStmt.Exec(
-			expense.Source,
-			expense.Amount,
-			expense.Description,
-			expense.Type,
-			expense.Date.Unix(),
-			expense.Currency,
-			expense.CategoryID,
-		)
-		if err != nil {
-			errors = append(errors, InsertError{
-				err: err,
-			})
-		}
+		return 0, err
 	}
 
-	return errors
+	formattedQuery := fmt.Sprintf(query, buffer.String())
+
+	result, err := db.Exec(formattedQuery)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected()
 }
 
 func GetExpenses(db *sql.DB) ([]*Expense, error) {
@@ -124,11 +121,15 @@ func GetExpenses(db *sql.DB) ([]*Expense, error) {
 }
 
 func UpdateExpenses(db *sql.DB, expenses []*Expense) (int64, error) {
+	if len(expenses) == 0 {
+		return 0, nil
+	}
+
 	// Update records
 	query := "INSERT OR REPLACE INTO expenses(id, source, amount, description, expense_type, date, currency, category_id) VALUES %s;"
 	var buffer = bytes.Buffer{}
 
-	err := renderTemplate(&buffer, "values.tmpl", struct {
+	err := renderTemplate(&buffer, "expenses/updates.tmpl", struct {
 		Length   int
 		Expenses []*Expense
 	}{

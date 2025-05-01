@@ -77,9 +77,9 @@ func TestInsertExpenses(t *testing.T) {
 		},
 	}
 
-	errs := InsertExpenses(database, expenses)
-	if len(errs) > 0 {
-		t.Errorf("Failed to insert expenses: %v", errs)
+	_, err := InsertExpenses(database, expenses)
+	if err != nil {
+		t.Errorf("Failed to insert expenses: %v", err)
 	}
 
 	// Verify expenses were inserted

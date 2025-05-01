@@ -1,11 +1,12 @@
 {{define "title"}}Create New Category{{end}}
+{{define "css"}}/static/css/categories.css{{end}}
 
 {{define "main"}}
   {{template "categories/nav" "new"}}
   
   <div id="category-content">
-    <div class="create-category-container">
-      <div class="category-form-container">
+    <div class="card-grid gap-8">
+      <div class="card">
         <form id="category-new" class="category-form">
           <div class="form-group">
             <label for="category-name">Category Name</label>
@@ -42,7 +43,7 @@
           <div id="pattern-help" class="pattern-quick-reference hidden">
             <div class="reference-header">
               <h3>Pattern Quick Reference</h3>
-              <div class="tab-controls">
+              <div class="flex">
                 <button type="button" class="tab-btn active" data-tab="basics">Basics</button>
                 <button type="button" class="tab-btn" data-tab="examples">Examples</button>
               </div>
@@ -50,7 +51,7 @@
             
             <!-- Tab content for basics -->
             <div id="basics-tab" class="tab-content active">
-              <table class="pattern-table">
+              <table>
                 <tr>
                   <th>Pattern</th>
                   <th>Example</th>
@@ -117,11 +118,9 @@
         </form>
       </div>
       
-      <div id="pattern-results" class="pattern-results">
-        <div class="pattern-test-intro">
-          <h3>Pattern Test Results</h3>
-          <p>Enter a pattern above to see which uncategorized transactions it would match.</p>
-        </div>
+      <div id="pattern-results" class="card">
+        <h3>Pattern Test Results</h3>
+        <p>Enter a pattern above to see which uncategorized transactions it would match.</p>
       </div>
     </div>
   </div>

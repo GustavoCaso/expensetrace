@@ -1,0 +1,37 @@
+/* Table components */
+
+/* Base table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+/* Table header */
+table th {
+  text-align: left;
+  padding: var(--spacing-3);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-600);
+  background-color: var(--color-gray-50);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+/* Table cells */
+table td {
+  padding: var(--spacing-3);
+  border-bottom: 1px solid var(--color-gray-100);
+  vertical-align: middle;
+}
+
+/* Table row hover */
+table tr:hover,
+tr:hover {
+  background-color: var(--color-gray-50);
+}
+
+/* Last row without border */
+table tr:last-child td,
+tr:last-child td {
+  border-bottom: none;
+}
