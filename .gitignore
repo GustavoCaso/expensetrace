@@ -2,4 +2,3 @@
 expense*.yml
 reports/**/*
 docker-compose.yml
-db_backups
