@@ -62,8 +62,8 @@ func TestUncategorizedHandler(t *testing.T) {
 		},
 	}
 
-	err := db.InsertExpenses(database, expenses)
-	if len(err) > 0 {
+	_, err := db.InsertExpenses(database, expenses)
+	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
@@ -105,9 +105,9 @@ func TestCreateCategoryHandler(t *testing.T) {
 		},
 	}
 
-	expenseErrors := db.InsertExpenses(database, expenses)
-	if len(expenseErrors) > 0 {
-		t.Fatalf("Failed to insert test expenses: %v", expenseErrors)
+	_, expenseError := db.InsertExpenses(database, expenses)
+	if expenseError != nil {
+		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
 	// Create router
@@ -308,9 +308,9 @@ func TestUpdateHandler(t *testing.T) {
 				},
 			}
 
-			expenseErrors := db.InsertExpenses(database, expenses)
-			if len(expenseErrors) > 0 {
-				t.Fatalf("Failed to insert test expenses: %v", expenseErrors)
+			_, expenseError := db.InsertExpenses(database, expenses)
+			if expenseError != nil {
+				t.Fatalf("Failed to insert test expenses: %v", expenseError)
 			}
 
 			// Create new router for every request
@@ -390,9 +390,9 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 		},
 	}
 
-	expenseErrors := db.InsertExpenses(database, expenses)
-	if len(expenseErrors) > 0 {
-		t.Fatalf("Failed to insert test expenses: %v", expenseErrors)
+	_, expenseError := db.InsertExpenses(database, expenses)
+	if expenseError != nil {
+		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
 	// Create router

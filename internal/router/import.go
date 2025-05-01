@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
 
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
 )
@@ -46,15 +45,9 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len())
-	errors := importUtil.Import(header.Filename, &buf, router.db, router.matcher)
-	if len(errors) > 0 {
-		errorStrings := make([]string, len(errors))
-		for i, err := range errors {
-			errorStrings[i] = err.Error()
-		}
-		errorMessage := strings.Join(errorStrings, "\n")
-		log.Printf("Errors importing file: %s. %s", header.Filename, errorMessage)
-		fmt.Fprint(w, errorMessage)
+	info := importUtil.Import(header.Filename, &buf, router.db, router.matcher)
+	if info.Error != nil && info.TotalImports == 0 {
+		fmt.Fprint(w, "Unable to import expenses due to error: ", info.Error)
 		return
 	}
 

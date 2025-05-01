@@ -73,9 +73,9 @@ func TestInitialModel(t *testing.T) {
 		},
 	}
 
-	errs := expenseDB.InsertExpenses(db, expenses)
-	if len(errs) > 0 {
-		t.Fatalf("Failed to create expenses: %v", errs)
+	_, insertErr := expenseDB.InsertExpenses(db, expenses)
+	if insertErr != nil {
+		t.Fatalf("Failed to create expenses: %v", insertErr)
 	}
 
 	// Test initial model creation
@@ -139,9 +139,9 @@ func TestGenerateReports(t *testing.T) {
 		},
 	}
 
-	errs := expenseDB.InsertExpenses(db, expenses)
-	if len(errs) > 0 {
-		t.Fatalf("Failed to create expenses: %v", errs)
+	_, insertErr := expenseDB.InsertExpenses(db, expenses)
+	if insertErr != nil {
+		t.Fatalf("Failed to create expenses: %v", insertErr)
 	}
 
 	// Test report generation

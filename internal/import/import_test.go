@@ -35,9 +35,9 @@ Test Source,02/01/2024,Uber ride,-5000.00,USD
 Test Source,03/01/2024,Salary,500000.00,USD`
 
 	reader := strings.NewReader(csvData)
-	errs := Import("test.csv", reader, database, matcher)
-	if len(errs) > 0 {
-		t.Errorf("Import failed with errors: %v", errs)
+	info := Import("test.csv", reader, database, matcher)
+	if info.Error != nil {
+		t.Errorf("Import failed with error: %v", info.Error)
 	}
 
 	// Verify imported expenses
@@ -134,9 +134,9 @@ func TestImportJSON(t *testing.T) {
 	]`
 
 	reader := strings.NewReader(jsonData)
-	errs := Import("test.json", reader, database, matcher)
-	if len(errs) > 0 {
-		t.Errorf("Import failed with errors: %v", errs)
+	info := Import("test.json", reader, database, matcher)
+	if info.Error != nil {
+		t.Errorf("Import failed with error: %v", info.Error)
 	}
 
 	// Verify imported expenses
@@ -200,12 +200,9 @@ func TestImportInvalidFormat(t *testing.T) {
 
 	// Test with invalid file format
 	reader := strings.NewReader("test data")
-	errs := Import("test.txt", reader, database, matcher)
-	if len(errs) != 1 {
-		t.Errorf("Expected 1 error, got %d", len(errs))
-	}
-	if !strings.Contains(errs[0].Error(), "unsupported file format") {
-		t.Errorf("Expected error about unsupported format, got %v", errs[0])
+	info := Import("test.txt", reader, database, matcher)
+	if info.Error == nil || info.Error.Error() != "unsupported file format: .txt" {
+		t.Errorf("Expected error for unsupported file format")
 	}
 }
 
@@ -222,9 +219,13 @@ func TestImportInvalidCSV(t *testing.T) {
 	csvData := `Test Source,invalid-date,Restaurant bill,-1234.56,USD`
 
 	reader := strings.NewReader(csvData)
-	errs := Import("test.csv", reader, database, matcher)
-	if len(errs) != 1 {
-		t.Errorf("Expected 1 error, got %d", len(errs))
+	info := Import("test.csv", reader, database, matcher)
+	if info.Error == nil {
+		t.Errorf("Expected 1 error")
+	} else {
+		if !strings.Contains(info.Error.Error(), "parsing time") {
+			t.Errorf("Expected parsing error, got: %v", info.Error)
+		}
 	}
 }
 
@@ -249,8 +250,12 @@ func TestImportInvalidJSON(t *testing.T) {
 	]`
 
 	reader := strings.NewReader(jsonData)
-	errs := Import("test.json", reader, database, matcher)
-	if len(errs) != 1 {
-		t.Errorf("Expected 1 error, got %d", len(errs))
+	info := Import("test.json", reader, database, matcher)
+	if info.Error == nil {
+		t.Errorf("Expected 1 error")
+	} else {
+		if !strings.Contains(info.Error.Error(), "parsing time") {
+			t.Errorf("Expected parsing error, got: %v", info.Error)
+		}
 	}
 }

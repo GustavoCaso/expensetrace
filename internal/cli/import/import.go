@@ -40,16 +40,21 @@ func (c importCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	}
 	defer file.Close()
 
-	errors := importUtil.Import(importFile, file, db, matcher)
-	if len(errors) > 0 {
-		var errMsg string
-		for i, err := range errors {
-			if i > 0 {
-				errMsg += "; "
-			}
-			errMsg += err.Error()
-		}
-		return fmt.Errorf("unable to import file: %s", errMsg)
+	info := importUtil.Import(importFile, file, db, matcher)
+	if info.Error != nil && info.TotalImports == 0 {
+		return fmt.Errorf("unable to import expenses due to error: %s", info.Error)
+	}
+
+	if info.TotalImports > 0 {
+		fmt.Printf("Total expenses imported: %d\n", info.TotalImports)
+	} else {
+		fmt.Println("No expenses were imported")
+	}
+	if len(info.ImportWithoutCategory) > 0 {
+		fmt.Printf("The following expenses were imported without a category: %s\n", info.ImportWithoutCategory)
+	}
+	if info.Error != nil {
+		fmt.Printf("Errors importing file: %s\n", info.Error)
 	}
 
 	return nil

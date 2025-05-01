@@ -60,9 +60,9 @@ func TestImport(t *testing.T) {
 		},
 	}
 
-	dbErrors := db.InsertExpenses(database, expenses)
-	if len(dbErrors) > 0 {
-		t.Fatalf("Failed to insert test expenses: %v", dbErrors)
+	_, expenseError := db.InsertExpenses(database, expenses)
+	if expenseError != nil {
+		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
 	// Create router

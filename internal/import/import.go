@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"path"
 	"regexp"
 	"strconv"
@@ -31,8 +30,14 @@ type expense struct {
 	Currency    string    `json:"currency"`
 }
 
-func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *category.Matcher) []error {
-	errs := []error{}
+type ImportInfo struct {
+	TotalImports          int
+	ImportWithoutCategory []string
+	Error                 error
+}
+
+func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *category.Matcher) ImportInfo {
+	info := ImportInfo{}
 	expenses := []*expenseDB.Expense{}
 
 	fileFormat := path.Ext(filename)
@@ -53,27 +58,27 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 				break
 			}
 			if err != nil {
-				errs = append(errs, err)
-				return errs
+				info.Error = err
+				return info
 			}
 
 			t, err := time.Parse("02/01/2006", record[1])
 			if err != nil {
-				errs = append(errs, err)
-				return errs
+				info.Error = err
+				return info
 			}
 
 			description := strings.ToLower(record[2])
 			id, category := categoryMatcher.Match(description)
 
 			if category == "" {
-				log.Printf("expense without category. Description: %s\n", description)
+				info.ImportWithoutCategory = append(info.ImportWithoutCategory, description)
 			}
 
 			matches := re.FindStringSubmatch(record[3])
 			if len(matches) == 0 {
-				errs = append(errs, errors.New("amount regex did not find any matches"))
-				return errs
+				info.Error = fmt.Errorf("amount regex did not find any matches for %s", record[3])
+				return info
 			}
 
 			amount := matches[amountIndex]
@@ -88,8 +93,8 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 			}
 			parsedAmount, err := strconv.ParseInt(amountStr, 10, 64)
 			if err != nil {
-				errs = append(errs, err)
-				return errs
+				info.Error = err
+				return info
 			}
 
 			var et expenseDB.ExpenseType
@@ -116,8 +121,8 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 
 		err := json.NewDecoder(reader).Decode(&e)
 		if err != nil {
-			errs = append(errs, err)
-			return errs
+			info.Error = err
+			return info
 		}
 
 		for _, expense := range e {
@@ -125,7 +130,7 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 			id, category := categoryMatcher.Match(description)
 
 			if category == "" {
-				log.Printf("expense without category. Description: %s\n", description)
+				info.ImportWithoutCategory = append(info.ImportWithoutCategory, description)
 			}
 
 			var et expenseDB.ExpenseType
@@ -149,9 +154,16 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 		}
 
 	default:
-		errs = append(errs, fmt.Errorf("unsupported file format: %s", fileFormat))
-		return errs
+		info.Error = fmt.Errorf("unsupported file format: %s", fileFormat)
+		return info
 	}
 
-	return expenseDB.InsertExpenses(db, expenses)
+	inserted, err := expenseDB.InsertExpenses(db, expenses)
+
+	info.TotalImports = int(inserted)
+	if err != nil {
+		info.Error = fmt.Errorf("unexpected error inserting expenses: %w", err)
+	}
+
+	return info
 }
