@@ -13,14 +13,26 @@
         <h3>Import Successful</h3>
       </div>
       <div class="card-body">
-        <p><strong>{{.TotalImports}}</strong> expenses imported</p>
+        <p><span class="font-bold">{{.TotalImports}}</span> expenses imported</p>
         
         {{if .ImportWithoutCategory}}
           <div class="mt-2">
-            <p><strong>Expenses without category:</strong></p>
-            <ul class="list">
+            <p><span class="font-bold">Expenses without category:</span></p>
+            <div class="card-grid">
               {{range .ImportWithoutCategory}}
-                <li class="badge warning">{{.}}</li>
+                <div class="card">
+                  <div class="card-header">
+                    <p><span class="font-bold">Description:</span> {{.Description}}</p>
+                  </div>
+                  <div class="card-body">
+                    <p><span class="font-bold">Date:</span> {{.Date.Format "2006-01-02"}}</p>
+                    {{if gt .Amount 0}}
+                      <p class="income ta-center">{{formatMoney .Amount "." ","}}</p>
+                    {{else}}
+                      <p class="expense ta-center">{{formatMoney .Amount "." ","}}</p>
+                    {{end}}
+                  </div>
+                </div>
               {{end}}
             </ul>
           </div>

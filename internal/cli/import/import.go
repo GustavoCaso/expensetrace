@@ -10,6 +10,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
+	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
 type importCommand struct {
@@ -51,7 +52,11 @@ func (c importCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 		fmt.Println("No expenses were imported")
 	}
 	if len(info.ImportWithoutCategory) > 0 {
-		fmt.Printf("The following expenses were imported without a category: %s\n", info.ImportWithoutCategory)
+		fmt.Print("The following expenses were imported without a category: \n")
+		for _, expense := range info.ImportWithoutCategory {
+			fmt.Printf("  - %s: %s\n", expense.Description, util.FormatMoney(expense.Amount, ".", ","))
+		}
+
 	}
 	if info.Error != nil {
 		fmt.Printf("Errors importing file: %s\n", info.Error)

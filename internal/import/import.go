@@ -32,7 +32,8 @@ type expense struct {
 
 type ImportInfo struct {
 	TotalImports          int
-	ImportWithoutCategory []string
+	ImportWithoutCategory []*expenseDB.Expense
+	ImportWithCategory    []*expenseDB.Expense
 	Error                 error
 }
 
@@ -70,10 +71,6 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 
 			description := strings.ToLower(record[2])
 			id, category := categoryMatcher.Match(description)
-
-			if category == "" {
-				info.ImportWithoutCategory = append(info.ImportWithoutCategory, description)
-			}
 
 			matches := re.FindStringSubmatch(record[3])
 			if len(matches) == 0 {
@@ -114,6 +111,12 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 				CategoryID:  id,
 			}
 
+			if category == "" {
+				info.ImportWithoutCategory = append(info.ImportWithoutCategory, expense)
+			} else {
+				info.ImportWithCategory = append(info.ImportWithCategory, expense)
+			}
+
 			expenses = append(expenses, expense)
 		}
 	case ".json":
@@ -128,10 +131,6 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 		for _, expense := range e {
 			description := strings.ToLower(expense.Description)
 			id, category := categoryMatcher.Match(description)
-
-			if category == "" {
-				info.ImportWithoutCategory = append(info.ImportWithoutCategory, description)
-			}
 
 			var et expenseDB.ExpenseType
 			if expense.Amount < 0 {
@@ -148,6 +147,12 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 				Type:        et,
 				Currency:    expense.Currency,
 				CategoryID:  id,
+			}
+
+			if category == "" {
+				info.ImportWithoutCategory = append(info.ImportWithoutCategory, expense)
+			} else {
+				info.ImportWithCategory = append(info.ImportWithCategory, expense)
 			}
 
 			expenses = append(expenses, expense)
