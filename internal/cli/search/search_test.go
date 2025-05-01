@@ -233,9 +233,9 @@ func TestRun(t *testing.T) {
 		},
 	}
 
-	errs := expenseDB.InsertExpenses(db, expenses)
-	if len(errs) > 0 {
-		t.Fatalf("Failed to create expenses: %v", errs)
+	_, insertErr := expenseDB.InsertExpenses(db, expenses)
+	if insertErr != nil {
+		t.Fatalf("Failed to create expenses: %v", insertErr)
 	}
 
 	// Create category matcher
@@ -292,9 +292,9 @@ func TestExpenseCategory(t *testing.T) {
 		},
 	}
 
-	errs := expenseDB.InsertExpenses(db, expenses)
-	if len(errs) > 0 {
-		t.Fatalf("Failed to create expenses: %v", errs)
+	_, insertErr := expenseDB.InsertExpenses(db, expenses)
+	if insertErr != nil {
+		t.Fatalf("Failed to create expenses: %v", insertErr)
 	}
 
 	expenses, err = expenseDB.GetExpenses(db)

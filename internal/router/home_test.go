@@ -54,8 +54,8 @@ func TestHomeHandler(t *testing.T) {
 		},
 	}
 
-	err := db.InsertExpenses(database, expenses)
-	if len(err) > 0 {
+	_, err := db.InsertExpenses(database, expenses)
+	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
