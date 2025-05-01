@@ -3,7 +3,6 @@ package router
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -19,7 +18,13 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(maxMemory)
 
 	if err != nil {
-		fmt.Fprint(w, "error r.ParseMultipartForm() ", err.Error())
+		data := struct {
+			Error string
+		}{
+			Error: "Error parsing form: " + err.Error(),
+		}
+
+		router.templates.Render(w, "partials/import/result", data)
 		return
 	}
 
@@ -32,7 +37,13 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			errorMessage = "Error retrieving the file"
 		}
-		fmt.Fprint(w, errorMessage)
+		data := struct {
+			Error string
+		}{
+			Error: "Error parsing form: " + errorMessage,
+		}
+
+		router.templates.Render(w, "partials/import/result", data)
 		return
 	}
 	defer file.Close()
@@ -41,17 +52,31 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	_, err = io.Copy(&buf, file)
 	if err != nil {
-		fmt.Fprint(w, err)
+		data := struct {
+			Error string
+		}{
+			Error: "Error parsing form: " + err.Error(),
+		}
+
+		router.templates.Render(w, "partials/import/result", data)
 		return
 	}
 	log.Printf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len())
 	info := importUtil.Import(header.Filename, &buf, router.db, router.matcher)
+
 	if info.Error != nil && info.TotalImports == 0 {
-		fmt.Fprint(w, "Unable to import expenses due to error: ", info.Error)
+		data := struct {
+			Error string
+		}{
+			Error: "Error importing expenses: " + info.Error.Error(),
+		}
+
+		router.templates.Render(w, "partials/import/result.html", data)
 		return
 	}
 
-	router.resetCache()
+	router.templates.Render(w, "partials/import/result.html", info)
 
-	fmt.Fprint(w, "Imported")
+	// Reset cache to refresh data after import
+	router.resetCache()
 }

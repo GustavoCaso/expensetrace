@@ -42,7 +42,7 @@ func (c importCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 
 	info := importUtil.Import(importFile, file, db, matcher)
 	if info.Error != nil && info.TotalImports == 0 {
-		return fmt.Errorf("unable to import expenses due to error: %s", info.Error)
+		return fmt.Errorf("unable to import expenses due to error: %w", info.Error)
 	}
 
 	if info.TotalImports > 0 {

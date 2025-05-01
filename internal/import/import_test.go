@@ -1,3 +1,4 @@
+//nolint:cyclop // This is a test file and cyclomatic complexity is not a concern
 package importutil
 
 import (
@@ -222,10 +223,9 @@ func TestImportInvalidCSV(t *testing.T) {
 	info := Import("test.csv", reader, database, matcher)
 	if info.Error == nil {
 		t.Errorf("Expected 1 error")
-	} else {
-		if !strings.Contains(info.Error.Error(), "parsing time") {
-			t.Errorf("Expected parsing error, got: %v", info.Error)
-		}
+	}
+	if !strings.Contains(info.Error.Error(), "parsing time") {
+		t.Errorf("Expected parsing error, got: %v", info.Error)
 	}
 }
 
@@ -253,9 +253,8 @@ func TestImportInvalidJSON(t *testing.T) {
 	info := Import("test.json", reader, database, matcher)
 	if info.Error == nil {
 		t.Errorf("Expected 1 error")
-	} else {
-		if !strings.Contains(info.Error.Error(), "parsing time") {
-			t.Errorf("Expected parsing error, got: %v", info.Error)
-		}
+	}
+	if !strings.Contains(info.Error.Error(), "parsing time") {
+		t.Errorf("Expected parsing error, got: %v", info.Error)
 	}
 }

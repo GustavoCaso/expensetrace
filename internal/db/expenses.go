@@ -67,7 +67,7 @@ func InsertExpenses(db *sql.DB, expenses []*Expense) (int64, error) {
 		return 0, nil
 	}
 	// Insert records
-	query := "INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES %s;"
+	query := "INSERT OR IGNORE INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES %s;"
 	var buffer = bytes.Buffer{}
 
 	err := renderTemplate(&buffer, "expenses/insert.tmpl", struct {

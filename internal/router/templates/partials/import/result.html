@@ -1,0 +1,31 @@
+{{define "import/result"}}
+  {{if .Error}}
+    <div class="error-message">
+      <div class="error-icon">⚠️</div>
+      <div>
+        <p class="error-title">Import Failed</p>
+        <p>{{.Error}}</p>
+      </div>
+    </div>
+  {{else}}
+    <div class="card success">
+      <div class="card-header">
+        <h3>Import Successful</h3>
+      </div>
+      <div class="card-body">
+        <p><strong>{{.TotalImports}}</strong> expenses imported</p>
+        
+        {{if .ImportWithoutCategory}}
+          <div class="mt-2">
+            <p><strong>Expenses without category:</strong></p>
+            <ul class="list">
+              {{range .ImportWithoutCategory}}
+                <li class="badge warning">{{.}}</li>
+              {{end}}
+            </ul>
+          </div>
+        {{end}}
+      </div>
+    </div>
+  {{end}}
+{{end}}
