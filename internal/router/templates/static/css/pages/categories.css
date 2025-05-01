@@ -1,20 +1,5 @@
 /* Categories page specific styles */
 
-/* Pattern code display */
-.pattern-code {
-  display: block;
-  background-color: var(--color-gray-100);
-  padding: var(--spacing-2);
-  border-radius: var(--border-radius);
-  font-family: monospace;
-  font-size: var(--font-size-sm);
-  color: var(--color-primary-dark);
-  margin-bottom: var(--spacing-3);
-  border-left: 3px solid var(--color-primary);
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
 /* Category form */
 .category-card-form {
   overflow: hidden;

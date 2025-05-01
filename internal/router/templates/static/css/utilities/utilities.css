@@ -16,6 +16,11 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.warning {
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
 .text-primary {
   color: var(--color-primary);
 }
@@ -635,9 +640,6 @@
   animation: errorShake var(--transition-fast) ease-in-out;
 }
 
-.form-error-shake {
-  animation: errorShake 0.5s ease-in-out;
-}
 
 /* Responsive utilities */
 @media (max-width: 768px) {

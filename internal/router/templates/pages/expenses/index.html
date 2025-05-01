@@ -1,7 +1,7 @@
 {{define "title"}}Expeses{{end}}
 
 {{define "main"}}
-  <form id='expenses-search-form'>
+  <form class='expenses-search-form'>
     <div class="form-group">
       <input type='search' name='q' required>
     </div>
@@ -17,7 +17,7 @@
 
   {{ if eq .Error nil }}
     <!-- List of Expenses -->
-    <div id="expenses">
+    <div class="expenses-container">
         {{range $year := .Years}}
           {{$currentYear := (eq $year $.CurrentYear)}}
         

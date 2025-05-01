@@ -60,7 +60,7 @@
                     <span class="category-amount expense">{{formatMoney $category.Amount "." ","}}€</span>
                   </div>
                   <div class="category-bar">
-                    <div class="category-progress" style="width: {{$category.PercentageOfTotal}}%"></div>
+                    <div class="category-progress expense" style="width: {{$category.PercentageOfTotal}}%"></div>
                   </div>
                   
                   <button class="btn-small toggle-details" data-target="expense-details-{{$category.Name}}">
@@ -102,7 +102,7 @@
                     <span class="category-amount income">{{formatMoney $category.Amount "." ","}}€</span>
                   </div>
                   <div class="category-bar">
-                    <div class="category-progress income-bar" style="width: {{$category.PercentageOfTotal}}%"></div>
+                    <div class="category-progress income" style="width: {{$category.PercentageOfTotal}}%"></div>
                   </div>
                   <button class="btn-small toggle-details" data-target="income-details-{{$category.Name}}">
                     <span class="toggle-text">Show Details</span>

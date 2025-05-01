@@ -1,6 +1,6 @@
 {{define "categories/card"}}
   <div class="card" id="category-{{.ID}}">
-    <div class="card-header">
+    <div class="card-header flex">
       <h3 class="card-title">{{.Name}}</h3>
       {{if eq .Type 1}}
         <span class="badge income">Income</span>
@@ -97,7 +97,7 @@
         {{end}}
         <div class="stat-item">
           <span class="stat-label">Last Transaction:</span>
-          <span class="stat-value">{{.LastTransaction}}</span>
+          <span class="stat-value font-bold">{{.LastTransaction}}</span>
         </div>
       </div>
     </div>

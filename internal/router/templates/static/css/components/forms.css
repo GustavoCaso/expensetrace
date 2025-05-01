@@ -100,9 +100,19 @@ textarea.error-input {
 
 /* Animation for form errors */
 @keyframes errorShake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
 }
 
 .form-error-shake {
@@ -115,33 +125,6 @@ textarea.error-input {
   justify-content: flex-end;
   gap: var(--spacing-3);
   margin-top: var(--spacing-6);
-}
-
-/* Success and error messages */
-.import-success {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
-  padding: var(--spacing-4);
-  border-radius: var(--border-radius);
-  font-weight: var(--font-weight-medium);
-  margin-bottom: var(--spacing-4);
-}
-
-.import-error {
-  background-color: var(--color-danger-light);
-  color: var(--color-danger);
-  padding: var(--spacing-4);
-  border-radius: var(--border-radius);
-  font-weight: var(--font-weight-medium);
-  margin-bottom: var(--spacing-4);
-}
-
-/* Search form specific */
-#expenses-search-form,
-#search-form {
-  display: flex;
-  gap: var(--spacing-2);
-  margin-bottom: var(--spacing-4);
 }
 
 /* Category form */
@@ -167,10 +150,5 @@ textarea.error-input {
 
   .form-actions button {
     width: 100%;
-  }
-  
-  #expenses-search-form,
-  #search-form {
-    flex-direction: column;
   }
 }

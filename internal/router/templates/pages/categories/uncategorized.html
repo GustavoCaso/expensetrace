@@ -16,15 +16,15 @@
         <div class="card-grid">
           <div class="card ta-center">
             <h3 class="card-title">Different Transactions</h3>
-            <div class="stats-number">{{len .Keys}}</div>
+            <div class="text-lg font-bold">{{len .Keys}}</div>
           </div>
           <div class="card ta-center">
             <h3 class="card-title">Total Expenses</h3>
-            <div class="stats-number">{{.TotalExpenses}}</div>
+            <div class="text-lg font-bold">{{.TotalExpenses}}</div>
           </div>
           <div class="card ta-center">
             <h3 class="card-title">Total Amount</h3>
-            <div class="stats-number">{{formatMoney .TotalAmount "." ","}}€</div>
+            <div class="text-lg font-bold">{{formatMoney .TotalAmount "." ","}}€</div>
           </div>
         </div>
 
@@ -105,11 +105,11 @@
                       hx-target="#page" 
                       hx-swap="outerHTML show:window:top">
                   <input name="description" value="{{$key}}" type="hidden">
-                  <div class="select-with-label">
+                  <div>
                     <label for="category-select-{{$key}}">Assign category:</label>
-                    <div class="select-wrapper">
+                    <div class="grid">
                       <select id="category-select-{{$key}}"
-                              class="category-select"
+                              class="category-select mb-1"
                               name="categoryID">
                         <option value="">-- Select a category --</option>
                         <optgroup label="Expense Categories">
