@@ -208,6 +208,14 @@ func (router *router) updateCategoryHandler(
 	enhancedCat.Category.Pattern = pattern
 	enhancedCat.Category.Type = categoryType
 
+	if patternChanged {
+		updateCategoryMatcherErr := router.updateCategoryMatcher()
+		if updateCategoryMatcherErr != nil {
+			categoryIndexError(router, w, updateCategoryMatcherErr)
+			return
+		}
+	}
+
 	if updated {
 		router.resetCache()
 	}
@@ -351,11 +359,36 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 		router.templates.Render(w, "pages/categories/uncategorized.html", data)
 	}
 
-	_, err = expenseDB.GetCategory(router.db, int64(categoryID))
+	cat, err := expenseDB.GetCategory(router.db, int64(categoryID))
 
 	if err != nil {
 		log.Println("error GetCategory ", err.Error())
 
+		data := struct {
+			Error error
+		}{
+			Error: err,
+		}
+		router.templates.Render(w, "pages/categories/uncategorized.html", data)
+		return
+	}
+
+	extendedRegex, err := extendRegex(cat.Pattern, expenseDescription)
+
+	if err != nil {
+		log.Println("error extendRegex ", err.Error())
+		data := struct {
+			Error error
+		}{
+			Error: err,
+		}
+		router.templates.Render(w, "pages/categories/uncategorized.html", data)
+		return
+	}
+
+	err = expenseDB.UpdateCategory(router.db, cat.ID, cat.Name, extendedRegex, cat.Type)
+	if err != nil {
+		log.Println("error UpdateCategory ", err.Error())
 		data := struct {
 			Error error
 		}{
@@ -399,10 +432,30 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 			log.Print("not all expenses updated succesfully")
 		}
 
+		updateCategoryMatcherErr := router.updateCategoryMatcher()
+		if updateCategoryMatcherErr != nil {
+			data := struct {
+				Error error
+			}{
+				Error: updateCategoryMatcherErr,
+			}
+			router.templates.Render(w, "pages/categories/uncategorized.html", data)
+			return
+		}
+
 		router.resetCache()
 	}
 
 	router.uncategorizedHandler(w)
+}
+
+func extendRegex(pattern, description string) (string, error) {
+	extendedPattern := fmt.Sprintf("%s|%s", pattern, regexp.QuoteMeta(description))
+	re, err := regexp.Compile(extendedPattern)
+	if err != nil {
+		return "", err
+	}
+	return re.String(), nil
 }
 
 func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, r *http.Request) {
@@ -506,16 +559,13 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			total = int(updated)
 		}
 
-		categories, categoryErr := expenseDB.GetCategories(router.db)
-		if categoryErr != nil {
-			data.Error = categoryErr
-
+		updateCategoryMatcherErr := router.updateCategoryMatcher()
+		if updateCategoryMatcherErr != nil {
+			data.Error = updateCategoryMatcherErr
 			router.templates.Render(w, "partials/categories/new_result.html", data)
 			return
 		}
 
-		matcher := category.NewMatcher(categories)
-		router.matcher = matcher
 		router.resetCache()
 	}
 
@@ -575,4 +625,15 @@ func categoryIndexError(router *router, w io.Writer, err error) {
 		Error: err,
 	}
 	router.templates.Render(w, "pages/categories/index.html", data)
+}
+
+func (router *router) updateCategoryMatcher() error {
+	categories, categoryErr := expenseDB.GetCategories(router.db)
+	if categoryErr != nil {
+		return categoryErr
+	}
+
+	matcher := category.NewMatcher(categories)
+	router.matcher = matcher
+	return nil
 }

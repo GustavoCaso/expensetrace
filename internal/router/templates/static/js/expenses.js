@@ -161,6 +161,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const ctx = canvas.getContext('2d');
   const tooltip = document.getElementById('chart-tooltip');
 
+  // Get device pixel ratio for high-resolution rendering
+  const dpr = window.devicePixelRatio || 1;
+
   // Get chart data from the server
   let chartData = canvas.getAttribute('data-finance')
   if (!chartData || chartData.length === 0) return;
@@ -188,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
       tooltip: 'rgba(31, 41, 55, 0.9)'
     },
     animationDuration: 500,
-    visibleMonths: 8 // Number of months visible at once
+    visibleMonths: 8 // Number of months visible by default
   };
 
   // Derived values
@@ -234,8 +237,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const chartWidth = canvas.width - config.padding.left - config.padding.right;
-    const chartHeight = canvas.height - config.padding.top - config.padding.bottom;
+    const chartWidth = canvas.width / dpr - config.padding.left - config.padding.right;
+    const chartHeight = canvas.height / dpr - config.padding.top - config.padding.bottom;
 
     // Determine visible data
     const visibleData = chartData.slice(
@@ -562,9 +565,24 @@ document.addEventListener('DOMContentLoaded', function () {
       currentOffset = chartData.length - config.visibleMonths;
     }
 
-    // Set canvas dimensions based on container
+    // Set canvas dimensions based on container with high-DPI support
     const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
+    const displayWidth = container.clientWidth;
+    const displayHeight = canvas.height;
+
+    // Set the canvas size in CSS pixels
+    canvas.style.width = displayWidth + 'px';
+    canvas.style.height = displayHeight + 'px';
+
+    // Set actual size in memory (scaled for DPI)
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+
+    // Set the most appropiate number of visible months
+    config.visibleMonths = Math.floor((canvas.width / dpr - config.padding.left - config.padding.right) / monthWidth);
+
+    // Scale the context to ensure correct drawing operations
+    ctx.scale(dpr, dpr);
 
     // Initial draw
     drawChart();
@@ -579,7 +597,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Handle window resize
     window.addEventListener('resize', () => {
-      canvas.width = container.clientWidth;
+      // Update canvas dimensions with high-DPI support on resize
+      const displayWidth = container.clientWidth;
+
+      canvas.style.width = displayWidth + 'px';
+      canvas.width = displayWidth * dpr;
+
+      config.visibleMonths = Math.floor((canvas.width / dpr - config.padding.left - config.padding.right) / monthWidth);
+
+      // Reset the scale
+      ctx.scale(dpr, dpr);
+
       drawChart();
     });
   }
