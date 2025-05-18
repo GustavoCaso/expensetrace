@@ -27,3 +27,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ vars.DOCKERHUB_USERNAME }}/expensetrace:latest,${{ vars.DOCKERHUB_USERNAME }}/expensetrace:${{ github.ref_name }}
+      
+      - name: Update docker hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ vars.DOCKERHUB_USERNAME }}/expensetrace
