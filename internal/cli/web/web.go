@@ -50,7 +50,9 @@ func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	handler, _ := router.New(db, matcher)
 	log.Printf("Open report on http://localhost:%s\n", port)
 
-	handler = xFrameMiddleware(handler, allowEmbedding)
+	if !allowEmbedding {
+		handler = xFrameDenyHeaderMiddleware(handler)
+	}
 
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%s", port),
@@ -60,14 +62,9 @@ func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 	return server.ListenAndServe()
 }
 
-func xFrameMiddleware(next http.Handler, allowEmbedding bool) http.Handler {
-	option := "DENY"
-	if allowEmbedding {
-		option = "SAMEORIGIN"
-	}
-
+func xFrameDenyHeaderMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Frame-Options", option)
+		w.Header().Set("X-Frame-Options", "DENY")
 		next.ServeHTTP(w, r)
 	})
 }
