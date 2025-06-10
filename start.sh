@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Start the application based on SUBCOMMAND
-case "$SUBCOMMAND" in
+# Start the application based on EXPENSETRACE_SUBCOMMAND
+case "$EXPENSETRACE_SUBCOMMAND" in
     "web")
         echo "Starting web server..."
         ./expensetrace web
@@ -11,7 +11,7 @@ case "$SUBCOMMAND" in
         ./expensetrace tui
         ;;
     *)
-        echo "Unknown mode: $SUBCOMMAND"
+        echo "Unknown mode: $EXPENSETRACE_SUBCOMMAND"
         echo "Available modes: web, tui"
         exit 1
         ;;
