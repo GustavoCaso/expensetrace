@@ -160,9 +160,9 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	// wrap entire mux with live reload middleware
-	wrappedMux := newLiveReloadMiddleware(router, mux)
+	liveReloadMux := newLiveReloadMiddleware(router, mux)
 
-	return wrappedMux, router
+	return liveReloadMux, router
 }
 
 func (router *router) generateReports() error {
