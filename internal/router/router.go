@@ -162,17 +162,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	// wrap entire mux with live reload middleware
 	liveReloadMux := newLiveReloadMiddleware(router, mux)
 
-	// X-Frame-Options middleware
-	xFrameMux := xFrameMiddleware(liveReloadMux)
-
-	return xFrameMux, router
-}
-
-func xFrameMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
-		next.ServeHTTP(w, r)
-	})
+	return liveReloadMux, router
 }
 
 func (router *router) generateReports() error {
