@@ -1,7 +1,7 @@
 # ExpenseTrace
 
 <div align="center">
-  <img src="https://github.com/GustavoCaso/expensetrace/blob/main/images/logo.png" alt="ExpenseTrace Logo" width="400">
+  <img src="https://raw.githubusercontent.com/GustavoCaso/expensetrace/refs/heads/main/images/logo.png" alt="ExpenseTrace Logo" width="400">
 </div>
 
 ExpenseTrace is a privacy-focused expense tracking tool that helps you manage your finances without sharing your banking details with third-party services. Built in Go, it provides a simple yet powerful way to track your expenses, categorize them, and generate insightful reports.
