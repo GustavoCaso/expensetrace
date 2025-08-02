@@ -90,6 +90,7 @@ type reportExpense struct {
 	count   int
 	dates   []time.Time
 	amounts []int64
+	sources []string
 }
 
 func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
@@ -105,6 +106,7 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
 			r.count++
 			r.dates = append(r.dates, ex.Date)
 			r.amounts = append(r.amounts, ex.Amount)
+			r.sources = append(r.sources, ex.Source)
 			groupedExpenses[ex.Description] = r
 		} else {
 			groupedExpenses[ex.Description] = reportExpense{
@@ -114,6 +116,9 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
 				},
 				amounts: []int64{
 					ex.Amount,
+				},
+				sources: []string{
+					ex.Source,
 				},
 			}
 		}
@@ -136,8 +141,10 @@ func inspect(writer io.Writer, expenses []*expenseDB.Expense) {
 		for i, date := range groupedExpenses[k].dates {
 			fmt.Fprintf(
 				writer,
-				"	[%s] %s€\n",
+				"	[%s] %s (%s) %s€\n",
 				date.Format("2006-01-02"),
+				k,
+				expense.sources[i],
 				util.FormatMoney(expense.amounts[i], ".", ","),
 			)
 		}

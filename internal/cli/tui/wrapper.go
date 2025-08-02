@@ -77,6 +77,7 @@ func (w wrapper) ExpensesToRow(expenses []*db.Expense, expending bool) []table.R
 
 		rows[i] = table.Row{
 			expense.Description,
+			expense.Source,
 			expenseAmount,
 		}
 	}

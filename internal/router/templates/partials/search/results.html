@@ -10,7 +10,7 @@
       {{end}}
       <ul>
         {{range $expense := $category.Expenses -}}
-          <li>{{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} {{formatMoney $expense.Amount "." "," }}€</li>
+          <li>{{$expense.Date.Format "2006-01-02"}} {{$expense.Description}} ({{$expense.Source}}) {{formatMoney $expense.Amount "." "," }}€</li>
         {{ end }}
       </ul>
     {{end}}

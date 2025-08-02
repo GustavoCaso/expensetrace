@@ -71,6 +71,7 @@
                   {{if lt $index $maxShow}}
                     <div class="transaction-item">
                       <span class="transaction-date">{{$expense.Date.Format "2006-01-02"}}</span>
+                      <span class="transaction-source">{{$expense.Source}}</span>
                       <span class="transaction-amount {{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
                         {{formatMoney $expense.Amount "." ","}}€
                       </span>
@@ -93,6 +94,7 @@
                   {{if ge $index $maxShow}}
                     <div class="transaction-item">
                       <span class="transaction-date">{{$expense.Date.Format "2006-01-02"}}</span>
+                      <span class="transaction-source">{{$expense.Source}}</span>
                       <span class="transaction-amount {{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
                         {{formatMoney $expense.Amount "." ","}}€
                       </span>

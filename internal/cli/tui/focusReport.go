@@ -14,7 +14,8 @@ const (
 )
 
 const (
-	focusColumns = 2
+	categoryColumns = 2
+	expenseColumns  = 3
 )
 
 type focusReport struct {
@@ -120,7 +121,7 @@ func (d focusReport) View() string {
 }
 
 func createCategoryColumns(width int) []table.Column {
-	w := width / focusColumns
+	w := width / categoryColumns
 
 	return []table.Column{
 		{Title: "Category", Width: w},
@@ -129,10 +130,11 @@ func createCategoryColumns(width int) []table.Column {
 }
 
 func createExpenseColumns(width int) []table.Column {
-	w := width / focusColumns
+	w := width / expenseColumns
 
 	return []table.Column{
 		{Title: "Description", Width: w},
+		{Title: "Source", Width: w},
 		{Title: "Amount", Width: w},
 	}
 }
