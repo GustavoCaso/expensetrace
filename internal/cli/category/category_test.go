@@ -58,30 +58,33 @@ func TestInspect(t *testing.T) {
 			expenses: []*expenseDB.Expense{
 				{
 					Description: "Restaurant",
+					Source:      "Bank",
 					Date:        time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 					Amount:      -1000,
 					Type:        expenseDB.ChargeType,
 				},
 			},
-			want: "Restaurant -> 1\n\t[2024-01-01] -10,00€\n\nThere are a total of 1 uncategorized expenses",
+			want: "Restaurant -> 1\n\t[2024-01-01] Restaurant (Bank) -10,00€\n\nThere are a total of 1 uncategorized expenses",
 		},
 		{
 			name: "Multiple expenses with same description",
 			expenses: []*expenseDB.Expense{
 				{
 					Description: "Restaurant",
+					Source:      "Bank",
 					Date:        time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 					Amount:      -1000,
 					Type:        expenseDB.ChargeType,
 				},
 				{
 					Description: "Restaurant",
+					Source:      "CreditCard",
 					Date:        time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 					Amount:      -2000,
 					Type:        expenseDB.ChargeType,
 				},
 			},
-			want: "Restaurant -> 2\n\t[2024-01-01] -10,00€\n\t[2024-01-02] -20,00€\n\nThere are a total of 2 uncategorized expenses",
+			want: "Restaurant -> 2\n\t[2024-01-01] Restaurant (Bank) -10,00€\n\t[2024-01-02] Restaurant (CreditCard) -20,00€\n\nThere are a total of 2 uncategorized expenses",
 		},
 	}
 

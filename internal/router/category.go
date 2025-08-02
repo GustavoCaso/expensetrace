@@ -228,6 +228,7 @@ type uncategorizedInfo struct {
 	Expenses []struct {
 		Date   time.Time
 		Amount int64
+		Source string
 	}
 	Total int64
 	Slug  string
@@ -255,9 +256,11 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 			r.Expenses = append(r.Expenses, struct {
 				Date   time.Time
 				Amount int64
+				Source string
 			}{
 				Date:   ex.Date,
 				Amount: ex.Amount,
+				Source: ex.Source,
 			})
 			r.Total += ex.Amount
 			uncategorizeInfo[ex.Description] = r
@@ -268,10 +271,12 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 				Expenses: []struct {
 					Date   time.Time
 					Amount int64
+					Source string
 				}{
 					{
 						Date:   ex.Date,
 						Amount: ex.Amount,
+						Source: ex.Source,
 					},
 				},
 				Slug: slugify(ex.Description),

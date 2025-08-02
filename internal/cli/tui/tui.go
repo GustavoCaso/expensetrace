@@ -20,6 +20,10 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
+const (
+	layoutSplitRatio = 2
+)
+
 var modelStyle = lipgloss.NewStyle().
 	Align(lipgloss.Center, lipgloss.Center).
 	BorderStyle(lipgloss.HiddenBorder()).
@@ -171,7 +175,7 @@ func initialModel(db *sql.DB, width int, height int) (model, error) {
 		focusKeymap:   focusKeyMap(),
 
 		reportsTable: newReports(reports, width),
-		focusReport:  newfocusReport(width/focusColumns, height/focusColumns),
+		focusReport:  newfocusReport(width/layoutSplitRatio, height/layoutSplitRatio),
 		help:         help.New(),
 
 		width:  width,

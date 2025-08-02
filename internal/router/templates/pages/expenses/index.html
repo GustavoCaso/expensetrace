@@ -42,8 +42,11 @@
                       <li class="expense-item">
                         <span class="text-gray-500 text-sm">{{$expense.Date.Format "2006-01-02"}}</span>
                         <div class="mx-4">
-                          {{$expense.Description}}
-                          <span class="badge">{{$expense.Category}}</span>
+                          <div>{{$expense.Description}}</div>
+                          <div class="expense-meta">
+                            <span class="badge">{{$expense.Category}}</span>
+                            <span class="source-info">via {{$expense.Source}}</span>
+                          </div>
                         </div>
                         {{if gt $expense.Type 0}}
                           <span class="income"><b>{{formatMoney $expense.Amount "." ","}}€</b></span>

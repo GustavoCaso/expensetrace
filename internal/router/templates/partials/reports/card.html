@@ -72,6 +72,7 @@
                         <tr>
                           <th>Date</th>
                           <th>Description</th>
+                          <th>Source</th>
                           <th>Amount</th>
                         </tr>
                       </thead>
@@ -80,6 +81,7 @@
                           <tr>
                             <td>{{$expense.Date.Format "2006-01-02"}}</td>
                             <td>{{$expense.Description}}</td>
+                            <td class="source-column">{{$expense.Source}}</td>
                             <td class="expense">{{formatMoney $expense.Amount "." ","}}€</td>
                           </tr>
                         {{end}}
@@ -114,6 +116,7 @@
                         <tr>
                           <th>Date</th>
                           <th>Description</th>
+                          <th>Source</th>
                           <th>Amount</th>
                         </tr>
                       </thead>
@@ -122,6 +125,7 @@
                           <tr>
                             <td>{{$expense.Date.Format "2006-01-02"}}</td>
                             <td>{{$expense.Description}}</td>
+                            <td class="source-column">{{$expense.Source}}</td>
                             <td class="income">{{formatMoney $expense.Amount "." ","}}€</td>
                           </tr>
                         {{end}}
