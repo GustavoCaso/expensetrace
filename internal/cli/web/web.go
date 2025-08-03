@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -38,7 +37,8 @@ const (
 	defaultTimeout = 5 * time.Second
 )
 
-func (c webCommand) SetFlags(fs *flag.FlagSet) {
+func (c webCommand) Run(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) error {
+	// Initialize configuration from environment variables
 	port = os.Getenv("EXPENSETRACE_PORT")
 	if port == "" {
 		port = defaultPort
@@ -48,19 +48,16 @@ func (c webCommand) SetFlags(fs *flag.FlagSet) {
 		duration, err := time.ParseDuration(customTimeout)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to parse custom timeout, using default timeout of 5s")
+			timeout = defaultTimeout
+		} else {
+			timeout = duration
 		}
-		timeout = duration
 	} else {
 		timeout = defaultTimeout
 	}
 
 	allowEmbedding = os.Getenv("EXPENSETRACE_ALLOW_EMBEDDING") == "true"
 
-	fs.StringVar(&port, "p", port, "port")
-	fs.DurationVar(&timeout, "t", timeout, "timeout")
-}
-
-func (c webCommand) Run(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) error {
 	handler, _ := router.New(db, matcher, logger)
 	logger.Info("Starting web server", "url", fmt.Sprintf("http://localhost:%s", port))
 
