@@ -36,7 +36,8 @@ func TestSetFlags(t *testing.T) {
 }
 
 func TestInitialModel(t *testing.T) {
-	db := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+	db := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []expenseDB.Category{
@@ -102,7 +103,8 @@ func TestInitialModel(t *testing.T) {
 }
 
 func TestGenerateReports(t *testing.T) {
-	db := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+	db := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []expenseDB.Category{

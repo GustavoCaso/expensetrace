@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/cli/web"
 	"github.com/GustavoCaso/expensetrace/internal/config"
 	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/logger"
 )
 
 var configPath string
@@ -49,51 +49,53 @@ func main() {
 	if ok {
 		err := command.flagSet.Parse(os.Args[2:])
 		if err != nil {
-			log.Fatalf("Unable to parse flag arguments: %s", err.Error())
+			fmt.Fprintf(os.Stderr, "Unable to parse flag arguments. %s", err.Error())
 		}
 
 		conf, err := config.Parse(configPath)
 
 		if err != nil {
-			log.Fatalf("Unable to parse the configuration: %s", err.Error())
+			fmt.Fprintf(os.Stderr, "Unable to parse the configuration. %s", err.Error())
 		}
 
-		log.Printf("Using db located at %s\n", conf.DB)
+		appLogger := logger.New(conf.Logger)
+
+		appLogger.Info("Using database", "path", conf.DB)
 
 		dbInstance, err := db.GetDB(conf.DB)
 		if err != nil {
-			log.Fatalf("Unable to get DB: %s", err.Error())
+			appLogger.Fatal("Unable to get DB", "error", err.Error())
 		}
 
-		err = db.ApplyMigrations(dbInstance)
+		err = db.ApplyMigrations(dbInstance, appLogger)
 		if err != nil {
-			log.Fatalf("Unable to get create schema: %s", err.Error())
+			appLogger.Fatal("Unable to create schema", "error", err.Error())
 		}
 
 		err = db.PopulateCategoriesFromConfig(dbInstance, conf)
 
 		if err != nil {
-			log.Printf("error inserting category. err: %v\n", err.Error())
+			appLogger.Error("Error inserting category", "error", err.Error())
 		}
 
 		categories, err := db.GetCategories(dbInstance)
 		if err != nil {
-			log.Fatalf("Unable to get categories: %s", err.Error())
+			appLogger.Fatal("Unable to get categories", "error", err.Error())
 		}
 
 		matcher := categoryPkg.NewMatcher(categories)
 
-		err = command.c.Run(dbInstance, matcher)
+		err = command.c.Run(dbInstance, matcher, appLogger)
 
 		if err != nil {
-			log.Printf("Error: %v", err)
+			appLogger.Error("Command execution failed", "error", err)
 			os.Exit(1)
 		}
 
 		err = dbInstance.Close()
 
 		if err != nil {
-			log.Printf("Error closing DB: %v", err)
+			appLogger.Error("Error closing DB", "error", err)
 			os.Exit(1)
 		}
 
@@ -104,10 +106,13 @@ func main() {
 
 		os.Exit(0)
 	}
-	log.Fatalf(
-		"unsupported comand %s. \nUse 'help' command to print information about supported commands\n",
+
+	fmt.Fprintf(
+		os.Stderr,
+		"Unsupported command `%s`. Use 'help' command to print information about supported commands",
 		commandName,
 	)
+	os.Exit(1)
 }
 
 func printHelp() {

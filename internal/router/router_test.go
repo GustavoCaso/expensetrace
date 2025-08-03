@@ -9,7 +9,8 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+	database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{
@@ -19,7 +20,7 @@ func TestNew(t *testing.T) {
 	matcher := category.NewMatcher(categories)
 
 	// Create router
-	handler, _ := New(database, matcher)
+	handler, _ := New(database, matcher, logger)
 	if handler == nil {
 		t.Fatal("Expected non-nil handler")
 	}

@@ -5,7 +5,6 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"log"
 	"maps"
 	"net/http"
 	"os"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
@@ -34,15 +34,17 @@ type router struct {
 	reports          map[string]report.Report
 	sortedReportKeys []string
 	reportsOnce      *sync.Once
+	logger           *logger.Logger
 }
 
 //nolint:revive // We return the private router struct to allow testing some internal functions
-func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
+func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Handler, *router) {
 	router := &router{
 		reload:      os.Getenv("LIVERELOAD") == "true",
 		matcher:     matcher,
 		db:          db,
 		reportsOnce: &sync.Once{},
+		logger:      logger,
 	}
 
 	mux := &http.ServeMux{}
@@ -50,7 +52,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	parseError := router.parseTemplates()
 
 	if parseError != nil {
-		panic(parseError)
+		logger.Fatal("error parsing templates", "error", parseError.Error())
 	}
 
 	// Routes
@@ -61,7 +63,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 			if err != nil {
 				// If we fail to generate reports servers do not start
 				// TODO: fix
-				log.Fatalf("generateReports fail %v", err)
+				logger.Fatal("Failed to generate reports", "error", err)
 			}
 
 			reportKeys := slices.Collect(maps.Keys(router.reports))
@@ -118,7 +120,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
-			log.Println("error r.ParseForm() ", err.Error())
+			logger.Error("Failed to parse form", "error", err)
 
 			data := struct {
 				Error error
@@ -159,8 +161,9 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	// wrap entire mux with live reload middleware
-	liveReloadMux := newLiveReloadMiddleware(router, mux)
+	// wrap entire mux with middlewares
+	handler := loggingMiddleware(logger, mux)
+	liveReloadMux := newLiveReloadMiddleware(router, handler)
 
 	return liveReloadMux, router
 }

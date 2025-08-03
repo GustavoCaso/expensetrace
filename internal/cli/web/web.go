@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
+	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/router"
 )
 
@@ -47,7 +47,7 @@ func (c webCommand) SetFlags(fs *flag.FlagSet) {
 	if customTimeout != "" {
 		duration, err := time.ParseDuration(customTimeout)
 		if err != nil {
-			log.Println("[WARN] failed to parse custom timeout using default timout 5s")
+			fmt.Fprintf(os.Stderr, "Failed to parse custom timeout, using default timeout of 5s")
 		}
 		timeout = duration
 	} else {
@@ -60,9 +60,9 @@ func (c webCommand) SetFlags(fs *flag.FlagSet) {
 	fs.DurationVar(&timeout, "t", timeout, "timeout")
 }
 
-func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
-	handler, _ := router.New(db, matcher)
-	log.Printf("Open report on http://localhost:%s\n", port)
+func (c webCommand) Run(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) error {
+	handler, _ := router.New(db, matcher, logger)
+	logger.Info("Starting web server", "url", fmt.Sprintf("http://localhost:%s", port))
 
 	if !allowEmbedding {
 		handler = xFrameDenyHeaderMiddleware(handler)
@@ -76,7 +76,7 @@ func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("[ERROR] unexpected error %s", err.Error())
+			logger.Fatal("Unexpected server error", "error", err)
 		}
 	}()
 
@@ -85,12 +85,12 @@ func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 
 	<-signalChan
 
-	log.Println("Received signal, shutting down...")
+	logger.Info("Received shutdown signal, shutting down server...")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	err := server.Shutdown(ctx)
 	if err != nil {
-		log.Printf("[ERROR] issue shuting down server: %s\n", err.Error())
+		logger.Error("Issue shutting down server", "error", err)
 	}
 	return nil
 }

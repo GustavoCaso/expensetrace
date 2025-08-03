@@ -15,7 +15,8 @@ import (
 )
 
 func TestCategoriesHandler(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+	database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{
@@ -25,7 +26,7 @@ func TestCategoriesHandler(t *testing.T) {
 	matcher := category.NewMatcher(categories)
 
 	// Create router
-	handler, _ := New(database, matcher)
+	handler, _ := New(database, matcher, logger)
 
 	// Create test request
 	req := httptest.NewRequest(http.MethodGet, "/categories", nil)
@@ -42,7 +43,8 @@ func TestCategoriesHandler(t *testing.T) {
 }
 
 func TestUncategorizedHandler(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+	database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{
@@ -68,7 +70,7 @@ func TestUncategorizedHandler(t *testing.T) {
 	}
 
 	// Create router
-	handler, _ := New(database, matcher)
+	handler, _ := New(database, matcher, logger)
 
 	// Create test request
 	req := httptest.NewRequest(http.MethodGet, "/uncategorized", nil)
@@ -85,7 +87,8 @@ func TestUncategorizedHandler(t *testing.T) {
 }
 
 func TestCreateCategoryHandler(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+	database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{
@@ -111,7 +114,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 	}
 
 	// Create router
-	handler, router := New(database, matcher)
+	handler, router := New(database, matcher, logger)
 
 	oldMatcher := router.matcher
 	oldSyncOnce := router.reportsOnce
@@ -268,7 +271,8 @@ func TestUpdateHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			database := testutil.SetupTestDB(t)
+			logger := testutil.TestLogger(t)
+			database := testutil.SetupTestDB(t, logger)
 			// Create test categories
 			categoryID, err := db.CreateCategory(
 				database,
@@ -318,7 +322,7 @@ func TestUpdateHandler(t *testing.T) {
 
 			// Create new router for every request
 			// that way we do not share state between tests
-			handler, router := New(database, matcher)
+			handler, router := New(database, matcher, logger)
 
 			oldSyncOnce := router.reportsOnce
 			oldMatcher := router.matcher
@@ -366,7 +370,8 @@ func TestUpdateHandler(t *testing.T) {
 }
 
 func TestUpdateUncategorizedHandler(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+	database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categoryID, err := db.CreateCategory(database, "Entertainment", "restaurant|bars", db.ExpenseCategoryType)
@@ -399,7 +404,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 	}
 
 	// Create router
-	handler, router := New(database, matcher)
+	handler, router := New(database, matcher, logger)
 
 	oldSyncOnce := router.reportsOnce
 

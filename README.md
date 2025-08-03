@@ -65,6 +65,10 @@ CGO_ENABLED=1 go build
 
 ```yaml
 db: expenses.db
+logger:
+  level: info
+  format: text
+  output: stdout
 categories:
   - name: "Groceries"
     pattern: "supermarket"
@@ -86,6 +90,9 @@ services:
       EXPENSETRACE_CONFIG: /app/data/expensetrace.yml  # Path to the configuration file inside the container
       EXPENSETRACE_DB: /app/data/expenses.db            # Path to the SQLite database file inside the container
       EXPENSETRACE_PORT: 8081                          # Port the application will listen on inside the container
+      EXPENSETRACE_LOG_LEVEL: info                     # Log level: debug, info, warn, error
+      EXPENSETRACE_LOG_FORMAT: text                    # Log format: text or json
+      EXPENSETRACE_LOG_OUTPUT: stdout                  # Log output: stdout, stderr, or file path
       SUBCOMMAND: web
     ports:
       - "8082:8081"                                    # Maps container port 8081 to host port 8082
@@ -97,8 +104,11 @@ The environment variables control the following aspects of the application:
 
 - `EXPENSETRACE_CONFIG`: Specifies the location of the configuration file inside the container. This file should contain your expense categories and other settings.
 - `EXPENSETRACE_DB`: Defines where the SQLite database file will be stored inside the container. This file will persist your expense data.
-- `EXPENSETRACE_PORT`: Sets the port number that the application will use to serve the web iterface. Default value `8080`
-- `SUBCOMMAND`: Specifies the subcommand that would be use in the container (tui or web). Default value `web`
+- `EXPENSETRACE_PORT`: Sets the port number that the application will use to serve the web interface. Default value `8080`
+- `EXPENSETRACE_LOG_LEVEL`: Controls logging verbosity (debug, info, warn, error). Default value `info`
+- `EXPENSETRACE_LOG_FORMAT`: Sets log format (text, json). Default value `text`
+- `EXPENSETRACE_LOG_OUTPUT`: Specifies log output destination (stdout, stderr, or file path). Default value `stdout`
+- `SUBCOMMAND`: Specifies the subcommand that would be use in the container. Default value `web`
 
 2. Start the service:
 
@@ -114,6 +124,7 @@ The `expense.yaml` file allows you to:
 
 - Set the database location
 - Define expense categories and their matching patterns
+- Configure logging settings
 
 #### Category Pattern Matching
 
@@ -153,6 +164,47 @@ categories:
     pattern: ".*subscription$|.*membership$"  # Matches if these terms appear at the end
   - name: "Healthcare"
     pattern: "pharmacy|doctor|hospital|medical"  # Matches healthcare-related expenses
+```
+
+#### Logging Configuration
+
+ExpenseTrace includes comprehensive logging capabilities to help with debugging and monitoring. You can configure logging in your `expense.yaml` file:
+
+```yaml
+db: expenses.db
+logger:
+  level: info      # Log level: debug, info, warn, error
+  format: text     # Log format: text or json
+  output: stdout   # Output: stdout, stderr, or file path
+categories:
+  # ... your categories
+```
+
+**Logging Options:**
+
+- **Level**: Controls which log messages are shown
+  - `debug`: All messages (most verbose)
+  - `info`: Informational messages and above (default)
+  - `warn`: Warnings and errors only
+  - `error`: Error messages only
+
+- **Format**: Controls log message formatting
+  - `text`: Human-readable format (default)
+  - `json`: Structured JSON format for log aggregation
+
+- **Output**: Where log messages are sent
+  - `stdout`: Standard output (default)
+  - `stderr`: Standard error
+  - File path: e.g., `/var/log/expensetrace.log` for file logging
+
+**Environment Variables:**
+
+You can also configure logging using environment variables (which override the config file):
+
+```bash
+export EXPENSETRACE_LOG_LEVEL=debug
+export EXPENSETRACE_LOG_FORMAT=json
+export EXPENSETRACE_LOG_OUTPUT=/tmp/expensetrace.log
 ```
 
 ## Usage

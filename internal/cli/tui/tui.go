@@ -16,6 +16,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
@@ -304,7 +305,7 @@ func (m *model) SetWidth(width int) {
 	m.width = width
 }
 
-func (c tuiCommand) Run(db *sql.DB, _ *category.Matcher) error {
+func (c tuiCommand) Run(db *sql.DB, _ *category.Matcher, _ *logger.Logger) error {
 	w, h, err := term.GetSize(os.Stdout.Fd())
 	if err != nil {
 		return fmt.Errorf("failed to get terminal size: %w", err)

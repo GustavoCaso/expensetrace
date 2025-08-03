@@ -17,7 +17,8 @@ import (
 )
 
 func TestImport(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+	database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	_, err := db.CreateCategory(database, "Food", "restaurant|food|grocery", db.ExpenseCategoryType)
@@ -66,7 +67,7 @@ func TestImport(t *testing.T) {
 	}
 
 	// Create router
-	handler, router := New(database, matcher)
+	handler, router := New(database, matcher, logger)
 
 	// Hit home to populate cache
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
