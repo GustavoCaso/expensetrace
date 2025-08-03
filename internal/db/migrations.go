@@ -3,8 +3,9 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
+
+	"github.com/GustavoCaso/expensetrace/internal/logger"
 )
 
 func createMigrationsTable(db *sql.DB) error {
@@ -224,7 +225,9 @@ func ApplyMigrations(db *sql.DB) error {
 		migrationVersion := i + 1
 		//nolint:nestif // No need to extract this code to a function as is clear
 		if migrationVersion > currentVersion {
-			log.Printf("Applying migration (%d) '%s'", migrationVersion, migration.name)
+			logger.Info("Applying migration", 
+				"version", migrationVersion, 
+				"name", migration.name)
 
 			// Begin transaction for this migration
 			tx, err := db.Begin()
@@ -262,7 +265,7 @@ func ApplyMigrations(db *sql.DB) error {
 					migrationVersion, err)
 			}
 
-			log.Printf("Migration %d applied successfully", migrationVersion)
+			logger.Info("Migration applied successfully", "version", migrationVersion)
 		}
 	}
 

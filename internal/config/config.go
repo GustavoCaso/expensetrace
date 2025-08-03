@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 
+	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -17,13 +18,38 @@ type Categories struct {
 }
 
 type Config struct {
-	DB         string     `yaml:"db"`
-	Categories Categories `yaml:"categories"`
+	DB         string        `yaml:"db"`
+	Categories Categories    `yaml:"categories"`
+	Logger     logger.Config `yaml:"logger"`
 }
 
 func (c *Config) parseEnv() {
 	if c.DB == "" {
 		c.DB = os.Getenv("EXPENSETRACE_DB")
+	}
+	
+	if c.Logger.Level == "" {
+		if level := os.Getenv("EXPENSETRACE_LOG_LEVEL"); level != "" {
+			c.Logger.Level = logger.Level(level)
+		} else {
+			c.Logger.Level = logger.LevelInfo
+		}
+	}
+	
+	if c.Logger.Format == "" {
+		if format := os.Getenv("EXPENSETRACE_LOG_FORMAT"); format != "" {
+			c.Logger.Format = logger.Format(format)
+		} else {
+			c.Logger.Format = logger.FormatText
+		}
+	}
+	
+	if c.Logger.Output == "" {
+		if output := os.Getenv("EXPENSETRACE_LOG_OUTPUT"); output != "" {
+			c.Logger.Output = output
+		} else {
+			c.Logger.Output = "stdout"
+		}
 	}
 }
 
