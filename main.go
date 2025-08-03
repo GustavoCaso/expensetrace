@@ -8,11 +8,6 @@ import (
 
 	categoryPkg "github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
-	"github.com/GustavoCaso/expensetrace/internal/cli/category"
-	deleteCmd "github.com/GustavoCaso/expensetrace/internal/cli/delete"
-	importCmd "github.com/GustavoCaso/expensetrace/internal/cli/import"
-	"github.com/GustavoCaso/expensetrace/internal/cli/report"
-	"github.com/GustavoCaso/expensetrace/internal/cli/search"
 	"github.com/GustavoCaso/expensetrace/internal/cli/tui"
 	"github.com/GustavoCaso/expensetrace/internal/cli/web"
 	"github.com/GustavoCaso/expensetrace/internal/config"
@@ -28,21 +23,6 @@ type command struct {
 }
 
 var subcommands = map[string]*command{
-	"delete": {
-		c: deleteCmd.NewCommand(),
-	},
-	"category": {
-		c: category.NewCommand(),
-	},
-	"import": {
-		c: importCmd.NewCommand(),
-	},
-	"report": {
-		c: report.NewCommand(),
-	},
-	"search": {
-		c: search.NewCommand(),
-	},
 	"tui": {
 		c: tui.NewCommand(),
 	},
