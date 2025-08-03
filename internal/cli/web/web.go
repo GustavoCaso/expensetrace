@@ -1,12 +1,16 @@
 package web
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
@@ -26,12 +30,12 @@ func (c webCommand) Description() string {
 }
 
 var port string
-var timeout int
+var timeout time.Duration
 var allowEmbedding = false
 
 const (
 	defaultPort    = "8080"
-	defaultTimeout = 3
+	defaultTimeout = 5 * time.Second
 )
 
 func (c webCommand) SetFlags(fs *flag.FlagSet) {
@@ -39,11 +43,21 @@ func (c webCommand) SetFlags(fs *flag.FlagSet) {
 	if port == "" {
 		port = defaultPort
 	}
+	customTimeout := os.Getenv("EXPENSETRACE_TIMEOUT")
+	if customTimeout != "" {
+		duration, err := time.ParseDuration(customTimeout)
+		if err != nil {
+			log.Println("[WARN] failed to parse custom timeout using default timout 5s")
+		}
+		timeout = duration
+	} else {
+		timeout = defaultTimeout
+	}
 
 	allowEmbedding = os.Getenv("EXPENSETRACE_ALLOW_EMBEDDING") == "true"
 
 	fs.StringVar(&port, "p", port, "port")
-	fs.IntVar(&timeout, "t", defaultTimeout, "timeout")
+	fs.DurationVar(&timeout, "t", timeout, "timeout")
 }
 
 func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
@@ -56,10 +70,29 @@ func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%s", port),
-		ReadHeaderTimeout: time.Duration(timeout) * time.Second,
+		ReadHeaderTimeout: timeout,
 		Handler:           handler,
 	}
-	return server.ListenAndServe()
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("[ERROR] unexpected error %s", err.Error())
+		}
+	}()
+
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	<-signalChan
+
+	log.Println("Received signal, shutting down...")
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	err := server.Shutdown(ctx)
+	if err != nil {
+		log.Printf("[ERROR] issue shuting down server: %s\n", err.Error())
+	}
+	return nil
 }
 
 func xFrameDenyHeaderMiddleware(next http.Handler) http.Handler {
