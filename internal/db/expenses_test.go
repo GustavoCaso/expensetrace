@@ -6,6 +6,8 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/GustavoCaso/expensetrace/internal/logger"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
@@ -14,8 +16,12 @@ func setupTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
 	}
-
-	err = ApplyMigrations(database)
+	testLogger := logger.New(logger.Config{
+		Level:  logger.LevelInfo,
+		Format: logger.FormatText,
+		Output: "discard",
+	})
+	err = ApplyMigrations(database, testLogger)
 	if err != nil {
 		t.Fatalf("Failed to create schema: %v", err)
 	}

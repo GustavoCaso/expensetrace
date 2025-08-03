@@ -33,17 +33,6 @@ type Logger struct {
 	*slog.Logger
 }
 
-var defaultLogger *Logger
-
-//nolint:gochecknoinits // Global logger initialization is necessary
-func init() {
-	defaultLogger = New(Config{
-		Level:  LevelInfo,
-		Format: FormatText,
-		Output: "stdout",
-	})
-}
-
 func New(config Config) *Logger {
 	var writer io.Writer
 	switch config.Output {
@@ -51,6 +40,8 @@ func New(config Config) *Logger {
 		writer = os.Stderr
 	case "stdout":
 		writer = os.Stdout
+	case "discard":
+		writer = io.Discard
 	default:
 		if config.Output != "" {
 			file, err := os.OpenFile(config.Output, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
@@ -98,36 +89,23 @@ func New(config Config) *Logger {
 	}
 }
 
-func Default() *Logger {
-	return defaultLogger
+func (l *Logger) Debug(msg string, args ...interface{}) {
+	l.Logger.Debug(msg, args...)
 }
 
-func SetDefault(logger *Logger) {
-	defaultLogger = logger
+func (l *Logger) Info(msg string, args ...interface{}) {
+	l.Logger.Info(msg, args...)
 }
 
-//nolint:sloglint // Global convenience functions are intentional
-func Debug(msg string, args ...interface{}) {
-	defaultLogger.Debug(msg, args...)
+func (l *Logger) Warn(msg string, args ...interface{}) {
+	l.Logger.Warn(msg, args...)
 }
 
-//nolint:sloglint // Global convenience functions are intentional
-func Info(msg string, args ...interface{}) {
-	defaultLogger.Info(msg, args...)
+func (l *Logger) Error(msg string, args ...interface{}) {
+	l.Logger.Error(msg, args...)
 }
 
-//nolint:sloglint // Global convenience functions are intentional
-func Warn(msg string, args ...interface{}) {
-	defaultLogger.Warn(msg, args...)
-}
-
-//nolint:sloglint // Global convenience functions are intentional
-func Error(msg string, args ...interface{}) {
-	defaultLogger.Error(msg, args...)
-}
-
-//nolint:sloglint // Global convenience functions are intentional
-func Fatal(msg string, args ...interface{}) {
-	defaultLogger.Error(msg, args...)
+func (l *Logger) Fatal(msg string, args ...interface{}) {
+	l.Logger.Error(msg, args...)
 	os.Exit(1)
 }

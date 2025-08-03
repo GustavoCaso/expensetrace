@@ -60,8 +60,8 @@ func (c webCommand) SetFlags(fs *flag.FlagSet) {
 	fs.DurationVar(&timeout, "t", timeout, "timeout")
 }
 
-func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
-	handler, _ := router.New(db, matcher)
+func (c webCommand) Run(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) error {
+	handler, _ := router.New(db, matcher, logger)
 	logger.Info("Starting web server", "url", fmt.Sprintf("http://localhost:%s", port))
 
 	if !allowEmbedding {

@@ -13,7 +13,8 @@ import (
 )
 
 func TestExpensesHandler(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+	database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{
@@ -59,7 +60,7 @@ func TestExpensesHandler(t *testing.T) {
 	}
 
 	// Create router
-	handler, _ := New(database, matcher)
+	handler, _ := New(database, matcher, logger)
 
 	// Create test request
 	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)

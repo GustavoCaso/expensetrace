@@ -34,15 +34,17 @@ type router struct {
 	reports          map[string]report.Report
 	sortedReportKeys []string
 	reportsOnce      *sync.Once
+	logger           *logger.Logger
 }
 
 //nolint:revive // We return the private router struct to allow testing some internal functions
-func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
+func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Handler, *router) {
 	router := &router{
 		reload:      os.Getenv("LIVERELOAD") == "true",
 		matcher:     matcher,
 		db:          db,
 		reportsOnce: &sync.Once{},
+		logger:      logger,
 	}
 
 	mux := &http.ServeMux{}
@@ -50,7 +52,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	parseError := router.parseTemplates()
 
 	if parseError != nil {
-		panic(parseError)
+		logger.Fatal("error parsing templates", "error", parseError.Error())
 	}
 
 	// Routes
@@ -160,7 +162,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	// wrap entire mux with middlewares
-	handler := loggingMiddleware(mux)
+	handler := loggingMiddleware(logger, mux)
 	liveReloadMux := newLiveReloadMiddleware(router, handler)
 
 	return liveReloadMux, router

@@ -64,7 +64,7 @@ func DropTables(db *sql.DB) error {
 	return nil
 }
 
-func ApplyMigrations(db *sql.DB) error {
+func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 	// Create migrations table if it doesn't exist
 	if err := createMigrationsTable(db); err != nil {
 		return fmt.Errorf("failed to create migrations table: %w", err)

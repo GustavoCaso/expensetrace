@@ -43,7 +43,8 @@ func TestSetFlags(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{

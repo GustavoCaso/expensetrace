@@ -13,7 +13,8 @@ import (
 )
 
 func TestImportCSV(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{
@@ -92,7 +93,8 @@ Test Source,03/01/2024,Salary,500000.00,USD`
 }
 
 func TestImportJSON(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{
@@ -191,7 +193,8 @@ func TestImportJSON(t *testing.T) {
 }
 
 func TestImportInvalidFormat(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{
@@ -208,7 +211,8 @@ func TestImportInvalidFormat(t *testing.T) {
 }
 
 func TestImportInvalidCSV(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{
@@ -230,7 +234,8 @@ func TestImportInvalidCSV(t *testing.T) {
 }
 
 func TestImportInvalidJSON(t *testing.T) {
-	database := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{

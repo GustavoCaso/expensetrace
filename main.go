@@ -69,39 +69,38 @@ func main() {
 	if ok {
 		err := command.flagSet.Parse(os.Args[2:])
 		if err != nil {
-			logger.Fatal("Unable to parse flag arguments", "error", err.Error())
+			fmt.Fprintf(os.Stderr, "Unable to parse flag arguments. %s", err.Error())
 		}
 
 		conf, err := config.Parse(configPath)
 
 		if err != nil {
-			logger.Fatal("Unable to parse the configuration", "error", err.Error())
+			fmt.Fprintf(os.Stderr, "Unable to parse the configuration. %s", err.Error())
 		}
 
 		appLogger := logger.New(conf.Logger)
-		logger.SetDefault(appLogger)
 
-		logger.Info("Using database", "path", conf.DB)
+		appLogger.Info("Using database", "path", conf.DB)
 
 		dbInstance, err := db.GetDB(conf.DB)
 		if err != nil {
-			logger.Fatal("Unable to get DB", "error", err.Error())
+			appLogger.Fatal("Unable to get DB", "error", err.Error())
 		}
 
-		err = db.ApplyMigrations(dbInstance)
+		err = db.ApplyMigrations(dbInstance, appLogger)
 		if err != nil {
-			logger.Fatal("Unable to create schema", "error", err.Error())
+			appLogger.Fatal("Unable to create schema", "error", err.Error())
 		}
 
 		err = db.PopulateCategoriesFromConfig(dbInstance, conf)
 
 		if err != nil {
-			logger.Error("Error inserting category", "error", err.Error())
+			appLogger.Error("Error inserting category", "error", err.Error())
 		}
 
 		categories, err := db.GetCategories(dbInstance)
 		if err != nil {
-			logger.Fatal("Unable to get categories", "error", err.Error())
+			appLogger.Fatal("Unable to get categories", "error", err.Error())
 		}
 
 		matcher := categoryPkg.NewMatcher(categories)
@@ -109,14 +108,14 @@ func main() {
 		err = command.c.Run(dbInstance, matcher)
 
 		if err != nil {
-			logger.Error("Command execution failed", "error", err)
+			appLogger.Error("Command execution failed", "error", err)
 			os.Exit(1)
 		}
 
 		err = dbInstance.Close()
 
 		if err != nil {
-			logger.Error("Error closing DB", "error", err)
+			appLogger.Error("Error closing DB", "error", err)
 			os.Exit(1)
 		}
 
@@ -127,10 +126,13 @@ func main() {
 
 		os.Exit(0)
 	}
-	logger.Fatal(
-		"Unsupported command. Use 'help' command to print information about supported commands",
-		"command", commandName,
+
+	fmt.Fprintf(
+		os.Stderr,
+		"Unsupported command `%s`. Use 'help' command to print information about supported commands",
+		commandName,
 	)
+	os.Exit(1)
 }
 
 func printHelp() {

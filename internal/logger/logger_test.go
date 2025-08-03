@@ -132,16 +132,3 @@ func TestTextFormat(t *testing.T) {
 		t.Errorf("Expected output to contain 'key=value', got %s", outputStr)
 	}
 }
-
-func TestDefaultLogger(t *testing.T) {
-	defLogger := Default()
-	if defLogger == nil {
-		t.Error("Expected default logger to exist")
-	}
-
-	// Test that default functions work
-	Info("test info message")
-	Debug("test debug message")
-	Warn("test warn message")
-	Error("test error message")
-}

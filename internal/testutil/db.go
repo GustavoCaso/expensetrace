@@ -11,9 +11,10 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/logger"
 )
 
-func SetupTestDB(t *testing.T) *sql.DB {
+func SetupTestDB(t *testing.T, logger *logger.Logger) *sql.DB {
 	t.Helper()
 	// We use a tempDir + the unique test name (t.Name) that way we can warranty that any test has its own DB
 	// Using a tempDir ensure it gets clean after each test
@@ -23,7 +24,7 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to open test database: %v", err)
 	}
 
-	err = db.ApplyMigrations(database)
+	err = db.ApplyMigrations(database, logger)
 	if err != nil {
 		t.Fatalf("Failed to create schema: %v", err)
 	}
