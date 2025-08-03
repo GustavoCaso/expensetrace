@@ -76,7 +76,7 @@ func (c webCommand) Run(db *sql.DB, matcher *category.Matcher) error {
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("[ERROR] unexpected error %s", err.Error())
+			log.Fatalf("[ERROR] unexpected error %s", err.Error())
 		}
 	}()
 
