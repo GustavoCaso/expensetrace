@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -15,95 +14,30 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 )
 
-var configPath string
-
-type command struct {
-	c       cli.Command
-	flagSet *flag.FlagSet
+var subcommands = map[string]cli.Command{
+	"tui": tui.NewCommand(),
+	"web": web.NewCommand(),
 }
 
-var subcommands = map[string]*command{
-	"tui": {
-		c: tui.NewCommand(),
-	},
-	"web": {
-		c: web.NewCommand(),
-	},
-}
+const minArgsRequired = 2
 
 func main() {
-	initFlagSets()
-
-	minFlagsNum := 2
-
-	if len(os.Args) < minFlagsNum {
+	if len(os.Args) < minArgsRequired {
 		fmt.Printf("subcommand is required\n")
 		printHelp()
-
 		os.Exit(1)
 	}
 
 	commandName := os.Args[1]
 	command, ok := subcommands[commandName]
-	//nolint:nestif // No need to extract this code to a function as is clear
+
 	if ok {
-		err := command.flagSet.Parse(os.Args[2:])
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to parse flag arguments. %s", err.Error())
-		}
-
-		conf, err := config.Parse(configPath)
-
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to parse the configuration. %s", err.Error())
-		}
-
-		appLogger := logger.New(conf.Logger)
-
-		appLogger.Info("Using database", "path", conf.DB)
-
-		dbInstance, err := db.GetDB(conf.DB)
-		if err != nil {
-			appLogger.Fatal("Unable to get DB", "error", err.Error())
-		}
-
-		err = db.ApplyMigrations(dbInstance, appLogger)
-		if err != nil {
-			appLogger.Fatal("Unable to create schema", "error", err.Error())
-		}
-
-		err = db.PopulateCategoriesFromConfig(dbInstance, conf)
-
-		if err != nil {
-			appLogger.Error("Error inserting category", "error", err.Error())
-		}
-
-		categories, err := db.GetCategories(dbInstance)
-		if err != nil {
-			appLogger.Fatal("Unable to get categories", "error", err.Error())
-		}
-
-		matcher := categoryPkg.NewMatcher(categories)
-
-		err = command.c.Run(dbInstance, matcher, appLogger)
-
-		if err != nil {
-			appLogger.Error("Command execution failed", "error", err)
-			os.Exit(1)
-		}
-
-		err = dbInstance.Close()
-
-		if err != nil {
-			appLogger.Error("Error closing DB", "error", err)
-			os.Exit(1)
-		}
-
-		os.Exit(0)
+		executeCommand(command)
+		return
 	}
+
 	if strings.Contains(commandName, "help") {
 		printHelp()
-
 		os.Exit(0)
 	}
 
@@ -115,27 +49,66 @@ func main() {
 	os.Exit(1)
 }
 
-func printHelp() {
-	fmt.Printf("usage: expensetrace <subcommand> [flags]\n\n")
-
-	for commandName, cliCommand := range subcommands {
-		fmt.Printf("subcommmand <%s>: %s\n", commandName, cliCommand.c.Description())
-		cliCommand.flagSet.PrintDefaults()
-		fmt.Println()
-		fmt.Println()
+func executeCommand(command cli.Command) {
+	configPath := os.Getenv("EXPENSETRACE_CONFIG")
+	if configPath == "" {
+		configPath = "expense.yml"
 	}
+
+	conf, err := config.Parse(configPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to parse the configuration. %s", err.Error())
+		os.Exit(1)
+	}
+
+	appLogger := logger.New(conf.Logger)
+
+	appLogger.Info("Using database", "path", conf.DB)
+
+	dbInstance, err := db.GetDB(conf.DB)
+	if err != nil {
+		appLogger.Fatal("Unable to get DB", "error", err.Error())
+	}
+
+	err = db.ApplyMigrations(dbInstance, appLogger)
+	if err != nil {
+		appLogger.Fatal("Unable to create schema", "error", err.Error())
+	}
+
+	err = db.PopulateCategoriesFromConfig(dbInstance, conf)
+	if err != nil {
+		appLogger.Error("Error inserting category", "error", err.Error())
+	}
+
+	categories, err := db.GetCategories(dbInstance)
+	if err != nil {
+		appLogger.Fatal("Unable to get categories", "error", err.Error())
+	}
+
+	matcher := categoryPkg.NewMatcher(categories)
+
+	err = command.Run(dbInstance, matcher, appLogger)
+	if err != nil {
+		appLogger.Error("Command execution failed", "error", err)
+		os.Exit(1)
+	}
+
+	err = dbInstance.Close()
+	if err != nil {
+		appLogger.Error("Error closing DB", "error", err)
+		os.Exit(1)
+	}
+
+	os.Exit(0)
 }
 
-func initFlagSets() {
-	for commandName, cliCommand := range subcommands {
-		fset := flag.NewFlagSet(commandName, flag.ExitOnError)
-		configPath = os.Getenv("EXPENSETRACE_CONFIG")
-		if configPath == "" {
-			configPath = "expense.yml"
-		}
-		fset.StringVar(&configPath, "c", configPath, "Configuration file")
+func printHelp() {
+	fmt.Printf("usage: expensetrace <subcommand>\n\n")
+	fmt.Printf("Configuration is managed through environment variables and config file.\n")
+	fmt.Printf("Use EXPENSETRACE_CONFIG to specify config file path (default: expense.yml)\n\n")
 
-		cliCommand.c.SetFlags(fset)
-		cliCommand.flagSet = fset
+	for commandName, cliCommand := range subcommands {
+		fmt.Printf("subcommmand <%s>: %s\n", commandName, cliCommand.Description())
 	}
+	fmt.Println()
 }

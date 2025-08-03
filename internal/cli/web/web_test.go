@@ -1,7 +1,6 @@
 package web
 
 import (
-	"flag"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,40 +12,6 @@ import (
 	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
-
-func TestSetFlags(t *testing.T) {
-	cmd := NewCommand()
-	fs := flag.NewFlagSet("test", flag.ContinueOnError)
-	cmd.SetFlags(fs)
-
-	// Check if port flag is registered
-	portFlag := fs.Lookup("p")
-	if portFlag == nil {
-		t.Fatal("Expected port flag to be registered")
-	}
-
-	if portFlag.DefValue != "8080" {
-		t.Errorf("Port default value = %q, want 8080", portFlag.DefValue)
-	}
-}
-
-func TestSetFlagsENV(t *testing.T) {
-	t.Setenv("EXPENSETRACE_PORT", "8081")
-
-	cmd := NewCommand()
-	fs := flag.NewFlagSet("test", flag.ContinueOnError)
-	cmd.SetFlags(fs)
-
-	// Check if port flag is registered
-	portFlag := fs.Lookup("p")
-	if portFlag == nil {
-		t.Fatal("Expected port flag to be registered")
-	}
-
-	if portFlag.DefValue != "8081" {
-		t.Errorf("Port default value = %q, want 8081", portFlag.DefValue)
-	}
-}
 
 func TestRun(t *testing.T) {
 	logger := testutil.TestLogger(t)

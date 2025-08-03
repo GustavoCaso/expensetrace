@@ -76,6 +76,70 @@ categories:
     pattern: "uber|taxi|metro"
 ```
 
+## Environment Variables
+
+ExpenseTrace can be configured entirely through environment variables, which override values from the configuration file. This makes it ideal for containerized deployments.
+
+### Core Configuration
+
+- `EXPENSETRACE_CONFIG`: Path to configuration file (default: `expense.yml`)
+- `EXPENSETRACE_DB`: Path to SQLite database file (default: from config file)
+
+### Web Server Configuration
+
+- `EXPENSETRACE_PORT`: Web server port (default: `8080`)
+- `EXPENSETRACE_TIMEOUT`: Server timeout duration (default: `5s`)
+- `EXPENSETRACE_ALLOW_EMBEDDING`: Allow iframe embedding - set to `true` to enable (default: `false`)
+
+### Logging Configuration
+
+- `EXPENSETRACE_LOG_LEVEL`: Log level - `debug`, `info`, `warn`, `error` (default: `info`)
+- `EXPENSETRACE_LOG_FORMAT`: Log format - `text` or `json` (default: `text`)
+- `EXPENSETRACE_LOG_OUTPUT`: Log output - `stdout`, `stderr`, or file path (default: `stdout`)
+
+## Usage
+
+ExpenseTrace provides two main interfaces to help you manage your expenses:
+
+### Subcommands
+
+#### `tui`
+
+Launches the interactive terminal user interface:
+
+```bash
+expensetrace tui
+```
+
+The TUI provides a comprehensive interface for:
+- Browsing expense reports by month and year
+- Viewing detailed expense breakdowns
+- Split view showing reports and detailed expense information
+- Navigate using Tab to switch between views and arrow keys to navigate
+
+#### `web`
+
+Launch the web interface:
+
+```bash
+expensetrace web
+```
+
+### Getting Started
+
+1. **Start with the web interface** for easy setup and data import:
+   ```bash
+   expensetrace web
+   ```
+   Then visit `http://localhost:8080` to import your data and configure categories.
+
+2. **Use the TUI** for quick access and terminal-based workflows:
+   ```bash
+   expensetrace tui
+   ```
+
+Both interfaces work with the same underlying data, so you can switch between them as needed.
+
 ### Using Docker Compose
 
 ExpenseTrace can be run using Docker Compose for a containerized environment:
@@ -99,16 +163,6 @@ services:
     volumes:
       - ./:/app/data                                    # Mounts the current directory to /app/data in the container.
 ```
-
-The environment variables control the following aspects of the application:
-
-- `EXPENSETRACE_CONFIG`: Specifies the location of the configuration file inside the container. This file should contain your expense categories and other settings.
-- `EXPENSETRACE_DB`: Defines where the SQLite database file will be stored inside the container. This file will persist your expense data.
-- `EXPENSETRACE_PORT`: Sets the port number that the application will use to serve the web interface. Default value `8080`
-- `EXPENSETRACE_LOG_LEVEL`: Controls logging verbosity (debug, info, warn, error). Default value `info`
-- `EXPENSETRACE_LOG_FORMAT`: Sets log format (text, json). Default value `text`
-- `EXPENSETRACE_LOG_OUTPUT`: Specifies log output destination (stdout, stderr, or file path). Default value `stdout`
-- `SUBCOMMAND`: Specifies the subcommand that would be use in the container. Default value `web`
 
 2. Start the service:
 
@@ -196,73 +250,6 @@ categories:
   - `stdout`: Standard output (default)
   - `stderr`: Standard error
   - File path: e.g., `/var/log/expensetrace.log` for file logging
-
-**Environment Variables:**
-
-You can also configure logging using environment variables (which override the config file):
-
-```bash
-export EXPENSETRACE_LOG_LEVEL=debug
-export EXPENSETRACE_LOG_FORMAT=json
-export EXPENSETRACE_LOG_OUTPUT=/tmp/expensetrace.log
-```
-
-## Usage
-
-ExpenseTrace provides two main interfaces to help you manage your expenses:
-
-### Subcommands
-
-#### `tui`
-
-Launches the interactive terminal user interface:
-
-```bash
-expensetrace tui
-```
-
-The TUI provides a comprehensive interface for:
-- Browsing expense reports by month and year
-- Viewing detailed expense breakdowns
-- Split view showing reports and detailed expense information
-- Navigate using Tab to switch between views and arrow keys to navigate
-
-#### `web`
-
-Launch the web interface:
-
-```bash
-expensetrace web [-p PORT] [-t TIMEOUT]
-```
-
-Options:
-- `-p`: Port number (default: 8080)
-- `-t`: Server timeout (default: 5s)
-
-The web interface provides:
-- **Visual expense reports** with interactive charts and tables
-- **Import functionality** for CSV and JSON files
-- **Category management** - create, edit, and manage expense categories
-- **Search functionality** - find specific expenses by keyword
-- **Expense management** - view, edit, and categorize transactions
-- **Uncategorized expenses** - review and categorize unmatched transactions
-
-All expense management, importing, searching, and reporting can be done through either interface, making the application simple and focused.
-
-### Getting Started
-
-1. **Start with the web interface** for easy setup and data import:
-   ```bash
-   expensetrace web
-   ```
-   Then visit `http://localhost:8080` to import your data and configure categories.
-
-2. **Use the TUI** for quick access and terminal-based workflows:
-   ```bash
-   expensetrace tui
-   ```
-
-Both interfaces work with the same underlying data, so you can switch between them as needed.
 
 ## Contributing
 

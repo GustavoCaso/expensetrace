@@ -2,7 +2,6 @@ package tui
 
 import (
 	"database/sql"
-	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -45,8 +44,6 @@ func NewCommand() cli.Command {
 func (c tuiCommand) Description() string {
 	return "Interactive terminal user interface"
 }
-
-func (c tuiCommand) SetFlags(*flag.FlagSet) {}
 
 type focusState int
 

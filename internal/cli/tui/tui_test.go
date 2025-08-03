@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"flag"
 	"testing"
 	"time"
 
@@ -21,17 +20,6 @@ func TestDescription(t *testing.T) {
 	desc := cmd.Description()
 	if desc != "Interactive terminal user interface" {
 		t.Errorf("Description() = %v, want %v", desc, "Interactive terminal user interface")
-	}
-}
-
-func TestSetFlags(t *testing.T) {
-	cmd := NewCommand()
-	fs := flag.NewFlagSet("test", flag.ContinueOnError)
-	cmd.SetFlags(fs)
-
-	// Verify that no flags are registered
-	if fs.NFlag() != 0 {
-		t.Error("SetFlags() registered flags when it shouldn't")
 	}
 }
 
