@@ -187,7 +187,7 @@ func (t *templates) parseTemplates(fsDir fs.FS) error {
 func (router *router) parseTemplates() error {
 	var fs fs.FS
 
-	templates := templates{
+	t := templates{
 		t:      map[string]*template.Template{},
 		logger: router.logger,
 	}
@@ -198,13 +198,13 @@ func (router *router) parseTemplates() error {
 		fs = embeddedFS(router.logger)
 	}
 
-	err := templates.parseTemplates(fs)
+	err := t.parseTemplates(fs)
 
 	if err != nil {
 		return err
 	}
 
-	router.templates = templates
+	router.templates = t
 	return nil
 }
 

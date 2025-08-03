@@ -14,7 +14,7 @@ import (
 
 func TestHomeHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-database := testutil.SetupTestDB(t, logger)
+	database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []db.Category{
