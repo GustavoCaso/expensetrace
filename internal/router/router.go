@@ -61,7 +61,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 			if err != nil {
 				// If we fail to generate reports servers do not start
 				// TODO: fix
-				log.Fatalf("generateReports fail %v", err)
+				logger.Fatal("Failed to generate reports", "error", err)
 			}
 
 			reportKeys := slices.Collect(maps.Keys(router.reports))
@@ -118,7 +118,7 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
-			log.Println("error r.ParseForm() ", err.Error())
+			logger.Error("Failed to parse form", "error", err)
 
 			data := struct {
 				Error error
@@ -159,8 +159,9 @@ func New(db *sql.DB, matcher *category.Matcher) (http.Handler, *router) {
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	// wrap entire mux with live reload middleware
-	liveReloadMux := newLiveReloadMiddleware(router, mux)
+	// wrap entire mux with middlewares
+	handler := loggingMiddleware(mux)
+	liveReloadMux := newLiveReloadMiddleware(router, handler)
 
 	return liveReloadMux, router
 }

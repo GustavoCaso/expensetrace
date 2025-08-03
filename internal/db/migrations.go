@@ -225,8 +225,8 @@ func ApplyMigrations(db *sql.DB) error {
 		migrationVersion := i + 1
 		//nolint:nestif // No need to extract this code to a function as is clear
 		if migrationVersion > currentVersion {
-			logger.Info("Applying migration", 
-				"version", migrationVersion, 
+			logger.Info("Applying migration",
+				"version", migrationVersion,
 				"name", migration.name)
 
 			// Begin transaction for this migration

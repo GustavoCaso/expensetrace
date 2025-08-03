@@ -7,13 +7,13 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
@@ -46,7 +46,7 @@ func (t templates) Render(w io.Writer, templateName string, data interface{}) {
 		_, _ = fmt.Fprintf(w, "template '%s' is not available", templateName)
 		return
 	}
-	log.Printf("rendering template `%s`\n", templateName)
+	logger.Debug("Rendering template", "name", templateName)
 	var err error
 	if strings.Contains(templateName, "partials") {
 		tName := strings.TrimSuffix(temp.Name(), ".html")
@@ -55,7 +55,7 @@ func (t templates) Render(w io.Writer, templateName string, data interface{}) {
 		err = temp.Execute(w, data)
 	}
 	if err != nil {
-		log.Print(err.Error())
+		logger.Error("Template execution failed", "error", err)
 		errorMessage := fmt.Sprintf("Error rendering template '%s': %v", templateName, err.Error())
 		_, _ = fmt.Fprint(w, errorMessage)
 	}
@@ -64,7 +64,7 @@ func (t templates) Render(w io.Writer, templateName string, data interface{}) {
 func localFSDirectory() fs.FS {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		log.Printf("enable to get current directory %s. defaulting to embedded templates\n", filename)
+		logger.Warn("Unable to get current directory, defaulting to embedded templates", "filename", filename)
 		return embeddedFS()
 	}
 

@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -35,6 +35,7 @@ type Logger struct {
 
 var defaultLogger *Logger
 
+//nolint:gochecknoinits // Global logger initialization is necessary
 func init() {
 	defaultLogger = New(Config{
 		Level:  LevelInfo,
@@ -52,8 +53,9 @@ func New(config Config) *Logger {
 		writer = os.Stdout
 	default:
 		if config.Output != "" {
-			file, err := os.OpenFile(config.Output, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+			file, err := os.OpenFile(config.Output, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 			if err != nil {
+				fmt.Fprintf(os.Stderr, "fail to open custom logger file. Using 'stdout' error: %s", err.Error())
 				writer = os.Stdout
 			} else {
 				writer = file
@@ -85,6 +87,8 @@ func New(config Config) *Logger {
 	switch config.Format {
 	case FormatJSON:
 		handler = slog.NewJSONHandler(writer, opts)
+	case FormatText:
+		fallthrough
 	default:
 		handler = slog.NewTextHandler(writer, opts)
 	}
@@ -102,55 +106,28 @@ func SetDefault(logger *Logger) {
 	defaultLogger = logger
 }
 
-func (l *Logger) WithContext(ctx context.Context) *Logger {
-	return &Logger{Logger: l.Logger.With()}
-}
-
-func (l *Logger) WithComponent(component string) *Logger {
-	return &Logger{Logger: l.Logger.With("component", component)}
-}
-
-func (l *Logger) WithFields(fields map[string]interface{}) *Logger {
-	args := make([]interface{}, 0, len(fields)*2)
-	for k, v := range fields {
-		args = append(args, k, v)
-	}
-	return &Logger{Logger: l.Logger.With(args...)}
-}
-
+//nolint:sloglint // Global convenience functions are intentional
 func Debug(msg string, args ...interface{}) {
 	defaultLogger.Debug(msg, args...)
 }
 
+//nolint:sloglint // Global convenience functions are intentional
 func Info(msg string, args ...interface{}) {
 	defaultLogger.Info(msg, args...)
 }
 
+//nolint:sloglint // Global convenience functions are intentional
 func Warn(msg string, args ...interface{}) {
 	defaultLogger.Warn(msg, args...)
 }
 
+//nolint:sloglint // Global convenience functions are intentional
 func Error(msg string, args ...interface{}) {
 	defaultLogger.Error(msg, args...)
 }
 
+//nolint:sloglint // Global convenience functions are intentional
 func Fatal(msg string, args ...interface{}) {
 	defaultLogger.Error(msg, args...)
 	os.Exit(1)
-}
-
-func DebugCtx(ctx context.Context, msg string, args ...interface{}) {
-	defaultLogger.DebugContext(ctx, msg, args...)
-}
-
-func InfoCtx(ctx context.Context, msg string, args ...interface{}) {
-	defaultLogger.InfoContext(ctx, msg, args...)
-}
-
-func WarnCtx(ctx context.Context, msg string, args ...interface{}) {
-	defaultLogger.WarnContext(ctx, msg, args...)
-}
-
-func ErrorCtx(ctx context.Context, msg string, args ...interface{}) {
-	defaultLogger.ErrorContext(ctx, msg, args...)
 }

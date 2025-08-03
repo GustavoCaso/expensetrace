@@ -20,16 +20,16 @@ func (rw *responseWriter) WriteHeader(code int) {
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		// Wrap the response writer to capture status code
 		wrapped := &responseWriter{
 			ResponseWriter: w,
 			statusCode:     http.StatusOK,
 		}
-		
+
 		// Call the next handler
 		next.ServeHTTP(wrapped, r)
-		
+
 		// Log the request
 		duration := time.Since(start)
 		logger.Info("HTTP request",

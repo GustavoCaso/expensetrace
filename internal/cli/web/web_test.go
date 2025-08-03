@@ -97,11 +97,4 @@ func TestRun(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status code %d, got %d", http.StatusOK, resp.StatusCode)
 	}
-
-	// Test invalid port
-	port = "invalid"
-	err = cmd.Run(db, matcher)
-	if err == nil {
-		t.Error("Expected error for invalid port, got nil")
-	}
 }

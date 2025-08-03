@@ -4,8 +4,9 @@ import (
 	"errors"
 	"os"
 
-	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"gopkg.in/yaml.v3"
+
+	"github.com/GustavoCaso/expensetrace/internal/logger"
 )
 
 type Category struct {
@@ -27,7 +28,7 @@ func (c *Config) parseEnv() {
 	if c.DB == "" {
 		c.DB = os.Getenv("EXPENSETRACE_DB")
 	}
-	
+
 	if c.Logger.Level == "" {
 		if level := os.Getenv("EXPENSETRACE_LOG_LEVEL"); level != "" {
 			c.Logger.Level = logger.Level(level)
@@ -35,7 +36,7 @@ func (c *Config) parseEnv() {
 			c.Logger.Level = logger.LevelInfo
 		}
 	}
-	
+
 	if c.Logger.Format == "" {
 		if format := os.Getenv("EXPENSETRACE_LOG_FORMAT"); format != "" {
 			c.Logger.Format = logger.Format(format)
@@ -43,7 +44,7 @@ func (c *Config) parseEnv() {
 			c.Logger.Format = logger.FormatText
 		}
 	}
-	
+
 	if c.Logger.Output == "" {
 		if output := os.Getenv("EXPENSETRACE_LOG_OUTPUT"); output != "" {
 			c.Logger.Output = output
