@@ -47,7 +47,7 @@ func (c webCommand) SetFlags(fs *flag.FlagSet) {
 	if customTimeout != "" {
 		duration, err := time.ParseDuration(customTimeout)
 		if err != nil {
-			logger.Warn("Failed to parse custom timeout, using default", "timeout", "5s")
+			fmt.Fprintf(os.Stderr, "Failed to parse custom timeout, using default timeout of 5s")
 		}
 		timeout = duration
 	} else {

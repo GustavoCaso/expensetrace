@@ -49,7 +49,8 @@ func TestSetFlagsENV(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	db := testutil.SetupTestDB(t)
+	logger := testutil.TestLogger(t)
+	db := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
 	categories := []expenseDB.Category{
@@ -76,7 +77,7 @@ func TestRun(t *testing.T) {
 	// Start the server in a goroutine
 	errChan := make(chan error, 1)
 	go func() {
-		errChan <- cmd.Run(db, matcher)
+		errChan <- cmd.Run(db, matcher, logger)
 	}()
 
 	// Give the server a moment to start

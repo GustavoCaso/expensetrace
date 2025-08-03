@@ -85,7 +85,7 @@ func main() {
 
 		matcher := categoryPkg.NewMatcher(categories)
 
-		err = command.c.Run(dbInstance, matcher)
+		err = command.c.Run(dbInstance, matcher, appLogger)
 
 		if err != nil {
 			appLogger.Error("Command execution failed", "error", err)
