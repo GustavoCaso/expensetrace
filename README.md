@@ -15,20 +15,20 @@ ExpenseTrace is a privacy-focused expense tracking tool that helps you manage yo
 
 In an era where financial data privacy is increasingly important, ExpenseTrace offers a secure alternative to traditional expense tracking apps. Instead of connecting to your bank accounts or sharing sensitive financial information, ExpenseTrace allows you to:
 
-- Manually import your expenses from CSV or JSON files
-- Categorize transactions based on your own rules
+- Import your expenses from CSV or JSON files through the web interface
+- Automatically categorize transactions based on customizable regex patterns
 - Generate detailed reports and insights
-- Access your data through a CLI or web interface
+- Access your data through either a terminal interface (TUI) or web interface
 - Keep all your financial data local and private
 
 ## Features
 
 - 📊 Interactive TUI (Terminal User Interface) for easy navigation
-- 🌐 Web interface for visual data exploration
-- 📝 CSV, JSON import functionality
-- 📈 Detailed financial reports
+- 🌐 Web interface for visual data exploration with import functionality
+- 📈 Detailed financial reports and insights
 - 🔒 Local data storage with SQLite
 - 🎨 Beautiful terminal output with color coding
+- 📝 Import expenses via web interface (CSV, JSON)
 
 ## Data Privacy
 
@@ -98,7 +98,7 @@ The environment variables control the following aspects of the application:
 - `EXPENSETRACE_CONFIG`: Specifies the location of the configuration file inside the container. This file should contain your expense categories and other settings.
 - `EXPENSETRACE_DB`: Defines where the SQLite database file will be stored inside the container. This file will persist your expense data.
 - `EXPENSETRACE_PORT`: Sets the port number that the application will use to serve the web iterface. Default value `8080`
-- `SUBCOMMAND`: Specifies the subcommand that would be use in the container. Default value `web`
+- `SUBCOMMAND`: Specifies the subcommand that would be use in the container (tui or web). Default value `web`
 
 2. Start the service:
 
@@ -157,7 +157,7 @@ categories:
 
 ## Usage
 
-ExpenseTrace provides several commands to help you manage your expenses:
+ExpenseTrace provides two main interfaces to help you manage your expenses:
 
 ### Subcommands
 
@@ -169,77 +169,48 @@ Launches the interactive terminal user interface:
 expensetrace tui
 ```
 
-The TUI provides a split view showing categories on the left and expenses on the right. Use Tab to switch between views and arrow keys to navigate.
-
-#### `import`
-
-Import expenses from a file:
-
-```bash
-expensetrace import -f expenses.csv
-```
-
-#### `report`
-
-Generate expense reports:
-
-```bash
-expensetrace report [-month MONTH] [-year YEAR] [-v]
-```
-
-Options:
-
-- `-month`: Specify month (1-12)
-- `-year`: Specify year
-- `-v`: Verbose output with detailed expense breakdown
-
-#### `search`
-
-Search for specific expenses:
-
-```bash
-expensetrace search -k "keyword" [-v]
-```
-
-Options:
-
-- `-k`: Search keyword
-- `-v`: Verbose output
-
-#### `category`
-
-Manage expense categories:
-
-```bash
-expensetrace category -a inspect|recategorize|migrate [-o output.txt]
-```
-
-Options:
-
-- `-a`: Action to perform (inspect, recategorize, or migrate)
-- `-o`: Output file for inspection results
+The TUI provides a comprehensive interface for:
+- Browsing expense reports by month and year
+- Viewing detailed expense breakdowns
+- Split view showing reports and detailed expense information
+- Navigate using Tab to switch between views and arrow keys to navigate
 
 #### `web`
 
 Launch the web interface:
 
 ```bash
-expensetrace web [-p PORT]
+expensetrace web [-p PORT] [-t TIMEOUT]
 ```
 
 Options:
-
 - `-p`: Port number (default: 8080)
+- `-t`: Server timeout (default: 5s)
 
-#### `delete`
+The web interface provides:
+- **Visual expense reports** with interactive charts and tables
+- **Import functionality** for CSV and JSON files
+- **Category management** - create, edit, and manage expense categories
+- **Search functionality** - find specific expenses by keyword
+- **Expense management** - view, edit, and categorize transactions
+- **Uncategorized expenses** - review and categorize unmatched transactions
 
-Reset the database:
+All expense management, importing, searching, and reporting can be done through either interface, making the application simple and focused.
 
-```bash
-expensetrace delete
-```
+### Getting Started
 
-⚠️ Warning: This will delete all your expense data!
+1. **Start with the web interface** for easy setup and data import:
+   ```bash
+   expensetrace web
+   ```
+   Then visit `http://localhost:8080` to import your data and configure categories.
+
+2. **Use the TUI** for quick access and terminal-based workflows:
+   ```bash
+   expensetrace tui
+   ```
+
+Both interfaces work with the same underlying data, so you can switch between them as needed.
 
 ## Contributing
 
