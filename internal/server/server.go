@@ -1,4 +1,4 @@
-package router
+package server
 
 import (
 	"database/sql"
@@ -26,7 +26,7 @@ import (
 var static embed.FS
 var staticFS, _ = fs.Sub(static, "templates/static")
 
-type router struct {
+type server struct {
 	reload           bool
 	matcher          *category.Matcher
 	db               *sql.DB
@@ -38,8 +38,8 @@ type router struct {
 }
 
 //nolint:revive // We return the private router struct to allow testing some internal functions
-func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Handler, *router) {
-	router := &router{
+func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Handler, *server) {
+	server := &server{
 		reload:      os.Getenv("LIVERELOAD") == "true",
 		matcher:     matcher,
 		db:          db,
@@ -49,7 +49,7 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 
 	mux := &http.ServeMux{}
 
-	parseError := router.parseTemplates()
+	parseError := server.parseTemplates()
 
 	if parseError != nil {
 		logger.Fatal("error parsing templates", "error", parseError.Error())
@@ -57,8 +57,8 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 
 	// Routes
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		router.reportsOnce.Do(func() {
-			err := router.generateReports()
+		server.reportsOnce.Do(func() {
+			err := server.generateReports()
 
 			if err != nil {
 				// If we fail to generate reports servers do not start
@@ -66,7 +66,7 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 				logger.Fatal("Failed to generate reports", "error", err)
 			}
 
-			reportKeys := slices.Collect(maps.Keys(router.reports))
+			reportKeys := slices.Collect(maps.Keys(server.reports))
 
 			sort.SliceStable(reportKeys, func(i, j int) bool {
 				s1 := strings.Split(reportKeys[i], "-")
@@ -84,9 +84,9 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 				return year1 > year2
 			})
 
-			router.sortedReportKeys = reportKeys
+			server.sortedReportKeys = reportKeys
 		})
-		router.homeHandler(w, r)
+		server.homeHandler(w, r)
 	})
 
 	mux.HandleFunc("DELETE /expense/{id}", func(_ http.ResponseWriter, _ *http.Request) {
@@ -94,27 +94,27 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 	})
 
 	mux.HandleFunc("GET /expenses", func(w http.ResponseWriter, _ *http.Request) {
-		router.expensesHandler(w)
+		server.expensesHandler(w)
 	})
 
 	mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
-		router.templates.Render(w, "pages/import/index.html", nil)
+		server.templates.Render(w, "pages/import/index.html", nil)
 	})
 
 	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
-		router.importHandler(w, r)
+		server.importHandler(w, r)
 	})
 
 	mux.HandleFunc("GET /categories", func(w http.ResponseWriter, _ *http.Request) {
-		router.categoriesHandler(w)
+		server.categoriesHandler(w)
 	})
 
 	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
-		router.templates.Render(w, "pages/categories/new.html", nil)
+		server.templates.Render(w, "pages/categories/new.html", nil)
 	})
 
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, _ *http.Request) {
-		router.uncategorizedHandler(w)
+		server.uncategorizedHandler(w)
 	})
 
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -127,7 +127,7 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 			}{
 				Error: err,
 			}
-			router.templates.Render(w, "partials/categories/card.html", data)
+			server.templates.Render(w, "partials/categories/card.html", data)
 			return
 		}
 
@@ -140,40 +140,40 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 			categoryType = expenseDB.IncomeCategoryType
 		}
 
-		router.updateCategoryHandler(categoryID, name, pattern, categoryType, w)
+		server.updateCategoryHandler(categoryID, name, pattern, categoryType, w)
 	})
 
 	mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {
-		router.createCategoryHandler(false, w, r)
+		server.createCategoryHandler(false, w, r)
 	})
 
 	mux.HandleFunc("POST /category", func(w http.ResponseWriter, r *http.Request) {
-		router.createCategoryHandler(true, w, r)
+		server.createCategoryHandler(true, w, r)
 	})
 
 	mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {
-		router.updateUncategorizedHandler(w, r)
+		server.updateUncategorizedHandler(w, r)
 	})
 
 	mux.HandleFunc("POST /search", func(w http.ResponseWriter, r *http.Request) {
-		router.searchHandler(w, r)
+		server.searchHandler(w, r)
 	})
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	// wrap entire mux with middlewares
 	handler := loggingMiddleware(logger, mux)
-	liveReloadMux := newLiveReloadMiddleware(router, handler)
+	liveReloadMux := newLiveReloadMiddleware(server, handler)
 
-	return liveReloadMux, router
+	return liveReloadMux, server
 }
 
-func (router *router) generateReports() error {
+func (s *server) generateReports() error {
 	now := time.Now()
 	month := now.Month()
 	year := now.Year()
 	skipYear := false
-	ex, err := expenseDB.GetFirstExpense(router.db)
+	ex, err := expenseDB.GetFirstExpense(s.db)
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (router *router) generateReports() error {
 
 		firstDay, lastDay := util.GetMonthDates(int(month), year)
 
-		expenses, expenseErr := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
+		expenses, expenseErr := expenseDB.GetExpensesFromDateRange(s.db, firstDay, lastDay)
 
 		if expenseErr != nil {
 			return expenseErr
@@ -214,11 +214,11 @@ func (router *router) generateReports() error {
 		month--
 	}
 
-	router.reports = reports
+	s.reports = reports
 
 	return nil
 }
 
-func (router *router) resetCache() {
-	router.reportsOnce = &sync.Once{}
+func (s *server) resetCache() {
+	s.reportsOnce = &sync.Once{}
 }

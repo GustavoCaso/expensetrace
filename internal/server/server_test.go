@@ -1,4 +1,4 @@
-package router
+package server
 
 import (
 	"testing"
@@ -19,7 +19,7 @@ func TestNew(t *testing.T) {
 	}
 	matcher := category.NewMatcher(categories)
 
-	// Create router
+	// Create server
 	handler, _ := New(database, matcher, logger)
 	if handler == nil {
 		t.Fatal("Expected non-nil handler")

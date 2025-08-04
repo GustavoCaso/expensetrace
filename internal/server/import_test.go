@@ -1,4 +1,4 @@
-package router
+package server
 
 import (
 	"bytes"
@@ -66,8 +66,8 @@ func TestImport(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
-	// Create router
-	handler, router := New(database, matcher, logger)
+	// Create server
+	handler, s := New(database, matcher, logger)
 
 	// Hit home to populate cache
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -81,7 +81,7 @@ func TestImport(t *testing.T) {
 	}
 
 	// Check reports are populated
-	initialReportsKeys := router.sortedReportKeys
+	initialReportsKeys := s.sortedReportKeys
 
 	// Import new expenses
 	body := new(bytes.Buffer)
@@ -132,7 +132,7 @@ func TestImport(t *testing.T) {
 	}
 
 	// Check reports are populated
-	if len(router.sortedReportKeys) <= len(initialReportsKeys) {
+	if len(s.sortedReportKeys) <= len(initialReportsKeys) {
 		t.Errorf("reports have not being repopulated after succesfull import")
 	}
 }

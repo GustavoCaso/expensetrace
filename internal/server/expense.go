@@ -1,4 +1,4 @@
-package router
+package server
 
 import (
 	"net/http"
@@ -25,15 +25,15 @@ var months = []string{
 	time.January.String(),
 }
 
-func (router *router) expensesHandler(w http.ResponseWriter) {
-	expenses, err := expenseDB.GetExpenses(router.db)
+func (s *server) expensesHandler(w http.ResponseWriter) {
+	expenses, err := expenseDB.GetExpenses(s.db)
 	if err != nil {
 		data := struct {
 			Error error
 		}{
 			Error: err,
 		}
-		router.templates.Render(w, "pages/expenses/index.html", data)
+		s.templates.Render(w, "pages/expenses/index.html", data)
 	}
 
 	groupedExpenses, years := expensesGroupByYearAndMonth(expenses)
@@ -54,7 +54,7 @@ func (router *router) expensesHandler(w http.ResponseWriter) {
 		CurrentMonth: today.Month().String(),
 	}
 
-	router.templates.Render(w, "pages/expenses/index.html", data)
+	s.templates.Render(w, "pages/expenses/index.html", data)
 }
 
 func expensesGroupByYearAndMonth(expenses []*expenseDB.Expense) (expensesByYear, []int) {

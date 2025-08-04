@@ -1,4 +1,4 @@
-package router
+package server
 
 import (
 	"database/sql"
@@ -59,7 +59,7 @@ func TestExpensesHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	// Create router
+	// Create server
 	handler, _ := New(database, matcher, logger)
 
 	// Create test request

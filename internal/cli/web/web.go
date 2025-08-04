@@ -14,7 +14,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
-	"github.com/GustavoCaso/expensetrace/internal/router"
+	"github.com/GustavoCaso/expensetrace/internal/server"
 )
 
 type webCommand struct {
@@ -58,7 +58,7 @@ func (c webCommand) Run(db *sql.DB, matcher *category.Matcher, logger *logger.Lo
 
 	allowEmbedding = os.Getenv("EXPENSETRACE_ALLOW_EMBEDDING") == "true"
 
-	handler, _ := router.New(db, matcher, logger)
+	handler, _ := server.New(db, matcher, logger)
 	logger.Info("Starting web server", "url", fmt.Sprintf("http://localhost:%s", port))
 
 	if !allowEmbedding {

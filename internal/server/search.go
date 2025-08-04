@@ -1,4 +1,4 @@
-package router
+package server
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/report"
 )
 
-func (router *router) searchHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 
 	if err != nil {
@@ -24,7 +24,7 @@ func (router *router) searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expenses, err := expenseDB.SearchExpenses(router.db, query)
+	expenses, err := expenseDB.SearchExpenses(s.db, query)
 	if err != nil {
 		panic(err)
 	}
@@ -43,5 +43,5 @@ func (router *router) searchHandler(w http.ResponseWriter, r *http.Request) {
 		Query:      query,
 	}
 
-	router.templates.Render(w, "partials/search/results.html", data)
+	s.templates.Render(w, "partials/search/results.html", data)
 }
