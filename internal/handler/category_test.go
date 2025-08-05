@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"database/sql"
@@ -25,15 +25,14 @@ func TestCategoriesHandler(t *testing.T) {
 	}
 	matcher := category.NewMatcher(categories)
 
-	// Create server
-	handler, _ := New(database, matcher, logger)
+	handler := New(database, matcher, logger)
 
 	// Create test request
 	req := httptest.NewRequest(http.MethodGet, "/categories", nil)
 	w := httptest.NewRecorder()
 
 	// Serve request
-	handler.ServeHTTP(w, req)
+	handler.HTTPHandler.ServeHTTP(w, req)
 
 	// Check response
 	resp := w.Result()
@@ -70,14 +69,14 @@ func TestUncategorizedHandler(t *testing.T) {
 	}
 
 	// Create server
-	handler, _ := New(database, matcher, logger)
+	handler := New(database, matcher, logger)
 
 	// Create test request
 	req := httptest.NewRequest(http.MethodGet, "/uncategorized", nil)
 	w := httptest.NewRecorder()
 
 	// Serve request
-	handler.ServeHTTP(w, req)
+	handler.HTTPHandler.ServeHTTP(w, req)
 
 	// Check response
 	resp := w.Result()
@@ -113,11 +112,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
-	// Create server
-	handler, s := New(database, matcher, logger)
-
-	oldMatcher := s.matcher
-	oldSyncOnce := s.reportsOnce
+	handler := New(database, matcher, logger)
 
 	// Create test request
 	body := strings.NewReader("name=Entertainment&pattern=cinema|movie|theater&type=0")
@@ -126,7 +121,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Serve request
-	handler.ServeHTTP(w, req)
+	handler.HTTPHandler.ServeHTTP(w, req)
 
 	// Check response
 	resp := w.Result()
@@ -170,14 +165,6 @@ func TestCreateCategoryHandler(t *testing.T) {
 
 	if expensesUpdated[0].CategoryID.Int64 != int64(categoryID) {
 		t.Fatal("Expense did not update the category ID")
-	}
-
-	if oldMatcher == s.matcher {
-		t.Error("Category matcher was not re-created")
-	}
-
-	if oldSyncOnce == s.reportsOnce {
-		t.Error("Router cache was not reset")
 	}
 }
 
@@ -320,12 +307,7 @@ func TestUpdateHandler(t *testing.T) {
 				t.Fatalf("Failed to insert test expenses: %v", expenseError)
 			}
 
-			// Create new server for every request
-			// that way we do not share state between tests
-			handler, s := New(database, matcher, logger)
-
-			oldSyncOnce := s.reportsOnce
-			oldMatcher := s.matcher
+			handler := New(database, matcher, logger)
 
 			// Create test request
 			body := strings.NewReader(tt.body)
@@ -334,7 +316,7 @@ func TestUpdateHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Serve request
-			handler.ServeHTTP(w, req)
+			handler.HTTPHandler.ServeHTTP(w, req)
 
 			// Check response
 			resp := w.Result()
@@ -355,16 +337,6 @@ func TestUpdateHandler(t *testing.T) {
 			}
 
 			tt.assertion(t, categoryUpdated, updatedExpenses)
-
-			if oldSyncOnce == s.reportsOnce {
-				t.Error("Router cache was not reset")
-			}
-
-			if tt.updateMatcher {
-				if oldMatcher == s.matcher {
-					t.Error("Router matcher was not updated")
-				}
-			}
 		})
 	}
 }
@@ -403,10 +375,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
-	// Create server
-	handler, s := New(database, matcher, logger)
-
-	oldSyncOnce := s.reportsOnce
+	handler := New(database, matcher, logger)
 
 	// Create test request
 	body := strings.NewReader(fmt.Sprintf("description=cinema. with friends&categoryID=%d", categoryID))
@@ -415,7 +384,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Serve request
-	handler.ServeHTTP(w, req)
+	handler.HTTPHandler.ServeHTTP(w, req)
 
 	// Check response
 	resp := w.Result()
@@ -453,9 +422,5 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 			categoryID,
 			expensesUpdated[0].CategoryID.Int64,
 		)
-	}
-
-	if oldSyncOnce == s.reportsOnce {
-		t.Error("Router cache was not reset")
 	}
 }

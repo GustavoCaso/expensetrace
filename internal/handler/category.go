@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"database/sql"
@@ -32,18 +32,18 @@ type enhancedCategory struct {
 	ErrorStrings    map[string]string
 }
 
-func (s *server) categoriesHandler(w http.ResponseWriter) {
-	categories, err := expenseDB.GetCategories(s.db)
+func (h *Handler) categoriesHandler(w http.ResponseWriter) {
+	categories, err := expenseDB.GetCategories(h.db)
 
 	if err != nil {
-		categoryIndexError(s, w, fmt.Errorf("error fetch categories: %v", err.Error()))
+		categoryIndexError(h, w, fmt.Errorf("error fetch categories: %v", err.Error()))
 		return
 	}
 
 	// Get counts for uncategorized expenses
-	uncategorizedInfos, err := expenseDB.GetExpensesWithoutCategory(s.db)
+	uncategorizedInfos, err := expenseDB.GetExpensesWithoutCategory(h.db)
 	if err != nil {
-		categoryIndexError(s, w, err)
+		categoryIndexError(h, w, err)
 		return
 	}
 	uncategorizedCount := len(uncategorizedInfos)
@@ -56,10 +56,10 @@ func (s *server) categoriesHandler(w http.ResponseWriter) {
 
 	for i, cat := range categories {
 		// Get expenses for this category
-		expenses, expensesErr := expenseDB.GetExpensesByCategory(s.db, cat.ID)
+		expenses, expensesErr := expenseDB.GetExpensesByCategory(h.db, cat.ID)
 
 		if expensesErr != nil {
-			categoryIndexError(s, w, expensesErr)
+			categoryIndexError(h, w, expensesErr)
 			return
 		}
 
@@ -80,10 +80,10 @@ func (s *server) categoriesHandler(w http.ResponseWriter) {
 		Error:              nil,
 	}
 
-	s.templates.Render(w, "pages/categories/index.html", data)
+	h.templates.Render(w, "pages/categories/index.html", data)
 }
 
-func (s *server) updateCategoryHandler(
+func (h *Handler) updateCategoryHandler(
 	id, name, pattern string,
 	categoryType expenseDB.CategoryType,
 	w http.ResponseWriter,
@@ -91,22 +91,22 @@ func (s *server) updateCategoryHandler(
 	categoryID, err := strconv.Atoi(id)
 
 	if err != nil {
-		categoryIndexError(s, w, err)
+		categoryIndexError(h, w, err)
 		return
 	}
 
-	categoryEntry, err := expenseDB.GetCategory(s.db, int64(categoryID))
+	categoryEntry, err := expenseDB.GetCategory(h.db, int64(categoryID))
 
 	if err != nil {
-		categoryIndexError(s, w, err)
+		categoryIndexError(h, w, err)
 		return
 	}
 
 	// Get expenses for this category
-	expenses, err := expenseDB.GetExpensesByCategory(s.db, categoryEntry.ID)
+	expenses, err := expenseDB.GetExpensesByCategory(h.db, categoryEntry.ID)
 
 	if err != nil {
-		categoryIndexError(s, w, err)
+		categoryIndexError(h, w, err)
 		return
 	}
 
@@ -125,13 +125,13 @@ func (s *server) updateCategoryHandler(
 					"pattern": fmt.Sprintf("invalid pattern %v", err),
 				}
 
-				s.templates.Render(w, "partials/categories/card.html", enhancedCat)
+				h.templates.Render(w, "partials/categories/card.html", enhancedCat)
 				return
 			}
 			patternChanged = true
 		}
 
-		err = expenseDB.UpdateCategory(s.db, categoryID, name, pattern, categoryType)
+		err = expenseDB.UpdateCategory(h.db, categoryID, name, pattern, categoryType)
 
 		if err != nil {
 			enhancedCat.Errors = true
@@ -139,7 +139,7 @@ func (s *server) updateCategoryHandler(
 				"name": fmt.Sprintf("failed to updated category %v", err),
 			}
 
-			s.templates.Render(w, "partials/categories/card.html", enhancedCat)
+			h.templates.Render(w, "partials/categories/card.html", enhancedCat)
 			return
 		}
 
@@ -148,20 +148,20 @@ func (s *server) updateCategoryHandler(
 
 	//nolint:nestif // No need to extract this code to a function for now as is clear
 	if updated {
-		categories, categoryErr := expenseDB.GetCategories(s.db)
+		categories, categoryErr := expenseDB.GetCategories(h.db)
 		if err != nil {
-			categoryIndexError(s, w, categoryErr)
+			categoryIndexError(h, w, categoryErr)
 			return
 		}
 
 		matcher := category.NewMatcher(categories)
-		s.matcher = matcher
+		h.matcher = matcher
 
 		if patternChanged {
-			allExpenses, expensesErr := expenseDB.GetExpenses(s.db)
+			allExpenses, expensesErr := expenseDB.GetExpenses(h.db)
 
 			if expensesErr != nil {
-				categoryIndexError(s, w, expensesErr)
+				categoryIndexError(h, w, expensesErr)
 				return
 			}
 
@@ -191,9 +191,9 @@ func (s *server) updateCategoryHandler(
 			}
 
 			if len(toUpdated) > 0 {
-				updated, updateErr := expenseDB.UpdateExpenses(s.db, toUpdated)
+				updated, updateErr := expenseDB.UpdateExpenses(h.db, toUpdated)
 				if updateErr != nil {
-					categoryIndexError(s, w, updateErr)
+					categoryIndexError(h, w, updateErr)
 					return
 				}
 
@@ -209,18 +209,18 @@ func (s *server) updateCategoryHandler(
 	enhancedCat.Category.Type = categoryType
 
 	if patternChanged {
-		updateCategoryMatcherErr := s.updateCategoryMatcher()
+		updateCategoryMatcherErr := h.updateCategoryMatcher()
 		if updateCategoryMatcherErr != nil {
-			categoryIndexError(s, w, updateCategoryMatcherErr)
+			categoryIndexError(h, w, updateCategoryMatcherErr)
 			return
 		}
 	}
 
 	if updated {
-		s.resetCache()
+		h.resetCache()
 	}
 
-	s.templates.Render(w, "partials/categories/card.html", enhancedCat)
+	h.templates.Render(w, "partials/categories/card.html", enhancedCat)
 }
 
 type uncategorizedInfo struct {
@@ -234,15 +234,15 @@ type uncategorizedInfo struct {
 	Slug  string
 }
 
-func (s *server) uncategorizedHandler(w http.ResponseWriter) {
-	expenses, err := expenseDB.GetExpensesWithoutCategory(s.db)
+func (h *Handler) uncategorizedHandler(w http.ResponseWriter) {
+	expenses, err := expenseDB.GetExpensesWithoutCategory(h.db)
 	if err != nil {
 		data := struct {
 			Error error
 		}{
 			Error: err,
 		}
-		s.templates.Render(w, "pages/categories/uncategorized.html", data)
+		h.templates.Render(w, "pages/categories/uncategorized.html", data)
 		return
 	}
 
@@ -310,13 +310,13 @@ func (s *server) uncategorizedHandler(w http.ResponseWriter) {
 	}{
 		Keys:              keys,
 		UncategorizeInfo:  uncategorizeInfo,
-		ExpenseCategories: s.matcher.ExpenseCategories(),
-		IncomeCategories:  s.matcher.IncomeCategories(),
+		ExpenseCategories: h.matcher.ExpenseCategories(),
+		IncomeCategories:  h.matcher.IncomeCategories(),
 		TotalExpenses:     totalExpenses,
 		TotalAmount:       totalAmount,
 		Error:             nil,
 	}
-	s.templates.Render(w, "pages/categories/uncategorized.html", data)
+	h.templates.Render(w, "pages/categories/uncategorized.html", data)
 }
 
 var specialCharactersRegex = regexp.MustCompile(`[^a-z0-9\-]`)
@@ -336,7 +336,7 @@ func slugify(s string) string {
 	return s
 }
 
-func (s *server) updateUncategorizedHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) updateUncategorizedHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		log.Println("error r.ParseForm() ", err.Error())
@@ -346,7 +346,7 @@ func (s *server) updateUncategorizedHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		s.templates.Render(w, "pages/categories/uncategorized.html", data)
+		h.templates.Render(w, "pages/categories/uncategorized.html", data)
 		return
 	}
 
@@ -361,10 +361,10 @@ func (s *server) updateUncategorizedHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		s.templates.Render(w, "pages/categories/uncategorized.html", data)
+		h.templates.Render(w, "pages/categories/uncategorized.html", data)
 	}
 
-	cat, err := expenseDB.GetCategory(s.db, int64(categoryID))
+	cat, err := expenseDB.GetCategory(h.db, int64(categoryID))
 
 	if err != nil {
 		log.Println("error GetCategory ", err.Error())
@@ -374,7 +374,7 @@ func (s *server) updateUncategorizedHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		s.templates.Render(w, "pages/categories/uncategorized.html", data)
+		h.templates.Render(w, "pages/categories/uncategorized.html", data)
 		return
 	}
 
@@ -387,11 +387,11 @@ func (s *server) updateUncategorizedHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		s.templates.Render(w, "pages/categories/uncategorized.html", data)
+		h.templates.Render(w, "pages/categories/uncategorized.html", data)
 		return
 	}
 
-	err = expenseDB.UpdateCategory(s.db, cat.ID, cat.Name, extendedRegex, cat.Type)
+	err = expenseDB.UpdateCategory(h.db, cat.ID, cat.Name, extendedRegex, cat.Type)
 	if err != nil {
 		log.Println("error UpdateCategory ", err.Error())
 		data := struct {
@@ -399,11 +399,11 @@ func (s *server) updateUncategorizedHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		s.templates.Render(w, "pages/categories/uncategorized.html", data)
+		h.templates.Render(w, "pages/categories/uncategorized.html", data)
 		return
 	}
 
-	expenses, err := expenseDB.SearchExpensesByDescription(s.db, expenseDescription)
+	expenses, err := expenseDB.SearchExpensesByDescription(h.db, expenseDescription)
 
 	if err != nil {
 		log.Println("error SearchExpensesByDescription ", err.Error())
@@ -413,7 +413,7 @@ func (s *server) updateUncategorizedHandler(w http.ResponseWriter, r *http.Reque
 		}{
 			Error: err,
 		}
-		s.templates.Render(w, "pages/categories/uncategorized.html", data)
+		h.templates.Render(w, "pages/categories/uncategorized.html", data)
 		return
 	}
 
@@ -422,14 +422,14 @@ func (s *server) updateUncategorizedHandler(w http.ResponseWriter, r *http.Reque
 			ex.CategoryID = sql.NullInt64{Int64: int64(categoryID), Valid: true}
 		}
 
-		updated, updateErr := expenseDB.UpdateExpenses(s.db, expenses)
+		updated, updateErr := expenseDB.UpdateExpenses(h.db, expenses)
 		if updateErr != nil {
 			data := struct {
 				Error error
 			}{
 				Error: updateErr,
 			}
-			s.templates.Render(w, "pages/categories/uncategorized.html", data)
+			h.templates.Render(w, "pages/categories/uncategorized.html", data)
 			return
 		}
 
@@ -437,21 +437,21 @@ func (s *server) updateUncategorizedHandler(w http.ResponseWriter, r *http.Reque
 			log.Print("not all expenses updated succesfully")
 		}
 
-		updateCategoryMatcherErr := s.updateCategoryMatcher()
+		updateCategoryMatcherErr := h.updateCategoryMatcher()
 		if updateCategoryMatcherErr != nil {
 			data := struct {
 				Error error
 			}{
 				Error: updateCategoryMatcherErr,
 			}
-			s.templates.Render(w, "pages/categories/uncategorized.html", data)
+			h.templates.Render(w, "pages/categories/uncategorized.html", data)
 			return
 		}
 
-		s.resetCache()
+		h.resetCache()
 	}
 
-	s.uncategorizedHandler(w)
+	h.uncategorizedHandler(w)
 }
 
 func extendRegex(pattern, description string) (string, error) {
@@ -463,7 +463,7 @@ func extendRegex(pattern, description string) (string, error) {
 	return re.String(), nil
 }
 
-func (s *server) createCategoryHandler(create bool, w http.ResponseWriter, r *http.Request) {
+func (h *Handler) createCategoryHandler(create bool, w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		log.Println("error r.ParseForm() ", err.Error())
@@ -473,7 +473,7 @@ func (s *server) createCategoryHandler(create bool, w http.ResponseWriter, r *ht
 		}{
 			Error: err,
 		}
-		s.templates.Render(w, "partials/categories/new_result.html", data)
+		h.templates.Render(w, "partials/categories/new_result.html", data)
 		return
 	}
 
@@ -502,7 +502,7 @@ func (s *server) createCategoryHandler(create bool, w http.ResponseWriter, r *ht
 			"category must include name and a valid regex pattern. Ensure that you populate the name and pattern input",
 		)
 
-		s.templates.Render(w, "partials/categories/new_result.html", data)
+		h.templates.Render(w, "partials/categories/new_result.html", data)
 		return
 	}
 
@@ -511,16 +511,16 @@ func (s *server) createCategoryHandler(create bool, w http.ResponseWriter, r *ht
 	if err != nil {
 		data.Error = err
 
-		s.templates.Render(w, "partials/categories/new_result.html", data)
+		h.templates.Render(w, "partials/categories/new_result.html", data)
 		return
 	}
 
-	expenses, err := expenseDB.GetExpensesWithoutCategory(s.db)
+	expenses, err := expenseDB.GetExpensesWithoutCategory(h.db)
 
 	if err != nil {
 		data.Error = err
 
-		s.templates.Render(w, "partials/categories/new_result.html", data)
+		h.templates.Render(w, "partials/categories/new_result.html", data)
 		return
 	}
 
@@ -535,12 +535,12 @@ func (s *server) createCategoryHandler(create bool, w http.ResponseWriter, r *ht
 	total := len(toUpdated)
 
 	if create && total > 0 {
-		categoryID, createErr := expenseDB.CreateCategory(s.db, name, pattern, categoryType)
+		categoryID, createErr := expenseDB.CreateCategory(h.db, name, pattern, categoryType)
 
 		if createErr != nil {
 			data.Error = createErr
 
-			s.templates.Render(w, "partials/categories/new_result.html", data)
+			h.templates.Render(w, "partials/categories/new_result.html", data)
 			return
 		}
 
@@ -550,11 +550,11 @@ func (s *server) createCategoryHandler(create bool, w http.ResponseWriter, r *ht
 			ex.CategoryID = sqlCategoryID
 		}
 
-		updated, updateErr := expenseDB.UpdateExpenses(s.db, toUpdated)
+		updated, updateErr := expenseDB.UpdateExpenses(h.db, toUpdated)
 		if updateErr != nil {
 			data.Error = updateErr
 
-			s.templates.Render(w, "partials/categories/new_result.html", data)
+			h.templates.Render(w, "partials/categories/new_result.html", data)
 			return
 		}
 
@@ -564,21 +564,21 @@ func (s *server) createCategoryHandler(create bool, w http.ResponseWriter, r *ht
 			total = int(updated)
 		}
 
-		updateCategoryMatcherErr := s.updateCategoryMatcher()
+		updateCategoryMatcherErr := h.updateCategoryMatcher()
 		if updateCategoryMatcherErr != nil {
 			data.Error = updateCategoryMatcherErr
-			s.templates.Render(w, "partials/categories/new_result.html", data)
+			h.templates.Render(w, "partials/categories/new_result.html", data)
 			return
 		}
 
-		s.resetCache()
+		h.resetCache()
 	}
 
 	data.Total = total
 	data.Results = toUpdated
 	data.Create = create
 
-	s.templates.Render(w, "partials/categories/new_result.html", data)
+	h.templates.Render(w, "partials/categories/new_result.html", data)
 }
 
 func createEnhancedCategory(category expenseDB.Category, expenses []*expenseDB.Expense) enhancedCategory {
@@ -623,22 +623,22 @@ func createEnhancedCategory(category expenseDB.Category, expenses []*expenseDB.E
 	}
 }
 
-func categoryIndexError(server *server, w io.Writer, err error) {
+func categoryIndexError(handler *Handler, w io.Writer, err error) {
 	data := struct {
 		Error error
 	}{
 		Error: err,
 	}
-	server.templates.Render(w, "pages/categories/index.html", data)
+	handler.templates.Render(w, "pages/categories/index.html", data)
 }
 
-func (s *server) updateCategoryMatcher() error {
-	categories, categoryErr := expenseDB.GetCategories(s.db)
+func (h *Handler) updateCategoryMatcher() error {
+	categories, categoryErr := expenseDB.GetCategories(h.db)
 	if categoryErr != nil {
 		return categoryErr
 	}
 
 	matcher := category.NewMatcher(categories)
-	s.matcher = matcher
+	h.matcher = matcher
 	return nil
 }

@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"testing"
@@ -20,7 +20,7 @@ func TestNew(t *testing.T) {
 	matcher := category.NewMatcher(categories)
 
 	// Create server
-	handler, _ := New(database, matcher, logger)
+	handler := New(database, matcher, logger)
 	if handler == nil {
 		t.Fatal("Expected non-nil handler")
 	}

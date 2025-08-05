@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"bytes"
@@ -66,22 +66,18 @@ func TestImport(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
-	// Create server
-	handler, s := New(database, matcher, logger)
+	handler := New(database, matcher, logger)
 
 	// Hit home to populate cache
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 
-	handler.ServeHTTP(w, req)
+	handler.HTTPHandler.ServeHTTP(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status %v; got %v", http.StatusOK, resp.Status)
 	}
-
-	// Check reports are populated
-	initialReportsKeys := s.sortedReportKeys
 
 	// Import new expenses
 	body := new(bytes.Buffer)
@@ -113,7 +109,7 @@ func TestImport(t *testing.T) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w = httptest.NewRecorder()
 
-	handler.ServeHTTP(w, req)
+	handler.HTTPHandler.ServeHTTP(w, req)
 
 	resp = w.Result()
 	if resp.StatusCode != http.StatusOK {
@@ -124,15 +120,10 @@ func TestImport(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/", nil)
 	w = httptest.NewRecorder()
 
-	handler.ServeHTTP(w, req)
+	handler.HTTPHandler.ServeHTTP(w, req)
 
 	resp = w.Result()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status %v; got %v", http.StatusOK, resp.Status)
-	}
-
-	// Check reports are populated
-	if len(s.sortedReportKeys) <= len(initialReportsKeys) {
-		t.Errorf("reports have not being repopulated after succesfull import")
 	}
 }

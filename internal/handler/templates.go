@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"embed"
@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -184,18 +183,18 @@ func (t *templates) parseTemplates(fsDir fs.FS) error {
 	return nil
 }
 
-func (s *server) parseTemplates() error {
+func (h *Handler) parseTemplates() error {
 	var fs fs.FS
 
 	t := templates{
 		t:      map[string]*template.Template{},
-		logger: s.logger,
+		logger: h.logger,
 	}
 
-	if s.reload {
-		fs = localFSDirectory(s.logger)
+	if h.reload {
+		fs = localFSDirectory(h.logger)
 	} else {
-		fs = embeddedFS(s.logger)
+		fs = embeddedFS(h.logger)
 	}
 
 	err := t.parseTemplates(fs)
@@ -204,25 +203,6 @@ func (s *server) parseTemplates() error {
 		return err
 	}
 
-	s.templates = t
+	h.templates = t
 	return nil
-}
-
-type liveReloadTemplatesMiddleware struct {
-	handler http.Handler
-	server  *server
-}
-
-func (l *liveReloadTemplatesMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if l.server.reload {
-		_ = l.server.parseTemplates()
-	}
-	l.handler.ServeHTTP(w, r)
-}
-
-func newLiveReloadMiddleware(server *server, handlder http.Handler) *liveReloadTemplatesMiddleware {
-	return &liveReloadTemplatesMiddleware{
-		server:  server,
-		handler: handlder,
-	}
 }

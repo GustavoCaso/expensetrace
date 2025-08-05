@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ const (
 	maxMemory = 32 << 20 // 32MB
 )
 
-func (s *server) importHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) importHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(maxMemory)
 
 	if err != nil {
@@ -24,7 +24,7 @@ func (s *server) importHandler(w http.ResponseWriter, r *http.Request) {
 			Error: "Error parsing form: " + err.Error(),
 		}
 
-		s.templates.Render(w, "partials/import/result", data)
+		h.templates.Render(w, "partials/import/result", data)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (s *server) importHandler(w http.ResponseWriter, r *http.Request) {
 			Error: "Error parsing form: " + errorMessage,
 		}
 
-		s.templates.Render(w, "partials/import/result", data)
+		h.templates.Render(w, "partials/import/result", data)
 		return
 	}
 	defer file.Close()
@@ -58,11 +58,11 @@ func (s *server) importHandler(w http.ResponseWriter, r *http.Request) {
 			Error: "Error parsing form: " + err.Error(),
 		}
 
-		s.templates.Render(w, "partials/import/result", data)
+		h.templates.Render(w, "partials/import/result", data)
 		return
 	}
 	log.Printf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len())
-	info := importUtil.Import(header.Filename, &buf, s.db, s.matcher)
+	info := importUtil.Import(header.Filename, &buf, h.db, h.matcher)
 
 	if info.Error != nil && info.TotalImports == 0 {
 		data := struct {
@@ -71,12 +71,12 @@ func (s *server) importHandler(w http.ResponseWriter, r *http.Request) {
 			Error: "Error importing expenses: " + info.Error.Error(),
 		}
 
-		s.templates.Render(w, "partials/import/result.html", data)
+		h.templates.Render(w, "partials/import/result.html", data)
 		return
 	}
 
-	s.templates.Render(w, "partials/import/result.html", info)
+	h.templates.Render(w, "partials/import/result.html", info)
 
 	// Reset cache to refresh data after import
-	s.resetCache()
+	h.resetCache()
 }

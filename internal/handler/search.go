@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/report"
 )
 
-func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) searchHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 
 	if err != nil {
@@ -24,7 +24,7 @@ func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expenses, err := expenseDB.SearchExpenses(s.db, query)
+	expenses, err := expenseDB.SearchExpenses(h.db, query)
 	if err != nil {
 		panic(err)
 	}
@@ -43,5 +43,5 @@ func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		Query:      query,
 	}
 
-	s.templates.Render(w, "partials/search/results.html", data)
+	h.templates.Render(w, "partials/search/results.html", data)
 }

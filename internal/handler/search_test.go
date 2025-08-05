@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"database/sql"
@@ -50,7 +50,7 @@ func TestSearchHandler(t *testing.T) {
 	}
 
 	// Create server
-	handler, _ := New(database, matcher, logger)
+	handler := New(database, matcher, logger)
 
 	// Create test request
 	body := strings.NewReader("keyword=restaurant")
@@ -59,7 +59,7 @@ func TestSearchHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Serve request
-	handler.ServeHTTP(w, req)
+	handler.HTTPHandler.ServeHTTP(w, req)
 
 	// Check response
 	resp := w.Result()

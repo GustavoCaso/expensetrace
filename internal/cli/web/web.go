@@ -13,8 +13,8 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
+	"github.com/GustavoCaso/expensetrace/internal/handler"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
-	"github.com/GustavoCaso/expensetrace/internal/server"
 )
 
 type webCommand struct {
@@ -28,10 +28,6 @@ func (c webCommand) Description() string {
 	return "Web interface"
 }
 
-var port string
-var timeout time.Duration
-var allowEmbedding = false
-
 const (
 	defaultPort    = "8080"
 	defaultTimeout = 5 * time.Second
@@ -39,10 +35,11 @@ const (
 
 func (c webCommand) Run(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) error {
 	// Initialize configuration from environment variables
-	port = os.Getenv("EXPENSETRACE_PORT")
+	port := os.Getenv("EXPENSETRACE_PORT")
 	if port == "" {
 		port = defaultPort
 	}
+	var timeout time.Duration
 	customTimeout := os.Getenv("EXPENSETRACE_TIMEOUT")
 	if customTimeout != "" {
 		duration, err := time.ParseDuration(customTimeout)
@@ -56,19 +53,13 @@ func (c webCommand) Run(db *sql.DB, matcher *category.Matcher, logger *logger.Lo
 		timeout = defaultTimeout
 	}
 
-	allowEmbedding = os.Getenv("EXPENSETRACE_ALLOW_EMBEDDING") == "true"
-
-	handler, _ := server.New(db, matcher, logger)
+	handler := handler.New(db, matcher, logger)
 	logger.Info("Starting web server", "url", fmt.Sprintf("http://localhost:%s", port))
-
-	if !allowEmbedding {
-		handler = xFrameDenyHeaderMiddleware(handler)
-	}
 
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%s", port),
 		ReadHeaderTimeout: timeout,
-		Handler:           handler,
+		Handler:           handler.HTTPHandler,
 	}
 
 	go func() {
@@ -90,11 +81,4 @@ func (c webCommand) Run(db *sql.DB, matcher *category.Matcher, logger *logger.Lo
 		logger.Error("Issue shutting down server", "error", err)
 	}
 	return nil
-}
-
-func xFrameDenyHeaderMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Frame-Options", "DENY")
-		next.ServeHTTP(w, r)
-	})
 }

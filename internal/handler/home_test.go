@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"database/sql"
@@ -60,7 +60,7 @@ func TestHomeHandler(t *testing.T) {
 	}
 
 	// Create server
-	handler, _ := New(database, matcher, logger)
+	handler := New(database, matcher, logger)
 
 	tests := []struct {
 		name           string
@@ -94,7 +94,7 @@ func TestHomeHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
 			w := httptest.NewRecorder()
 
-			handler.ServeHTTP(w, req)
+			handler.HTTPHandler.ServeHTTP(w, req)
 
 			resp := w.Result()
 			if resp.StatusCode != tt.expectedStatus {

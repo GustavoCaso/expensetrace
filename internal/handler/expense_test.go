@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"database/sql"
@@ -60,14 +60,14 @@ func TestExpensesHandler(t *testing.T) {
 	}
 
 	// Create server
-	handler, _ := New(database, matcher, logger)
+	handler := New(database, matcher, logger)
 
 	// Create test request
 	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
 	w := httptest.NewRecorder()
 
 	// Serve request
-	handler.ServeHTTP(w, req)
+	handler.HTTPHandler.ServeHTTP(w, req)
 
 	// Check response
 	resp := w.Result()

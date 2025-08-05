@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"fmt"
@@ -25,13 +25,13 @@ type homeData struct {
 	Error     error
 }
 
-func (s *server) generateChartData() []chartDataPoint {
-	chartData := make([]chartDataPoint, 0, len(s.sortedReportKeys))
+func (h *Handler) generateChartData() []chartDataPoint {
+	chartData := make([]chartDataPoint, 0, len(h.sortedReportKeys))
 
-	for _, key := range s.sortedReportKeys {
+	for _, key := range h.sortedReportKeys {
 		parts := strings.Split(key, "-")
 
-		r := s.reports[key]
+		r := h.reports[key]
 		chartData = append(chartData, chartDataPoint{
 			Month:             r.Title,
 			Income:            r.Income,
@@ -50,7 +50,7 @@ func (s *server) generateChartData() []chartDataPoint {
 	return chartData
 }
 
-func (s *server) homeHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) homeHandler(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	var month int
 	var year int
@@ -80,7 +80,7 @@ func (s *server) homeHandler(w http.ResponseWriter, r *http.Request) {
 
 	var chartData []chartDataPoint
 	if !useReportTemplate {
-		chartData = s.generateChartData()
+		chartData = h.generateChartData()
 	}
 
 	var data homeData
@@ -90,7 +90,7 @@ func (s *server) homeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		reportKey := fmt.Sprintf("%d-%d", year, month)
-		report, ok := s.reports[reportKey]
+		report, ok := h.reports[reportKey]
 
 		if !ok {
 			data = homeData{
@@ -106,8 +106,8 @@ func (s *server) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if useReportTemplate {
-		s.templates.Render(w, "partials/reports/card.html", data.Report)
+		h.templates.Render(w, "partials/reports/card.html", data.Report)
 	} else {
-		s.templates.Render(w, "pages/reports/index.html", data)
+		h.templates.Render(w, "pages/reports/index.html", data)
 	}
 }
