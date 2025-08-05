@@ -53,11 +53,9 @@ func xFrameDenyHeaderMiddleware(next http.Handler) http.Handler {
 
 func liveReloadMiddleware(router *router, handlder http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if router.reload {
-			err := router.parseTemplates()
-			if err != nil {
-				router.logger.Warn("Error parsing templates during live reload", "error", err.Error())
-			}
+		err := router.parseTemplates()
+		if err != nil {
+			router.logger.Warn("Error parsing templates during live reload", "error", err.Error())
 		}
 
 		handlder.ServeHTTP(w, r)

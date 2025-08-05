@@ -166,7 +166,10 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 
 	// wrap entire mux with middlewares
 	wrappedMux := loggingMiddleware(logger, mux)
-	wrappedMux = liveReloadMiddleware(router, wrappedMux)
+
+	if router.reload {
+		wrappedMux = liveReloadMiddleware(router, wrappedMux)
+	}
 
 	if !allowEmbedding {
 		wrappedMux = xFrameDenyHeaderMiddleware(wrappedMux)
