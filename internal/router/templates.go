@@ -63,23 +63,23 @@ func (t *templates) Render(w io.Writer, templateName string, data interface{}) {
 	}
 }
 
-func localFSDirectory(logger *logger.Logger) fs.FS {
+func localFSDirectory(logger *logger.Logger) (fs.FS, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		logger.Warn("Unable to get current directory, defaulting to embedded templates", "filename", filename)
-		return embeddedFS(logger)
+		return embeddedFS()
 	}
 
-	return os.DirFS(filepath.Join(filename, "../templates"))
+	return os.DirFS(filepath.Join(filename, "../templates")), nil
 }
 
-func embeddedFS(logger *logger.Logger) fs.FS {
+func embeddedFS() (fs.FS, error) {
 	subTemplateFS, err := fs.Sub(templatesFS, "templates")
 	if err != nil {
-		logger.Fatal("error reading embedded templates", "error", err.Error())
+		return nil, err
 	}
 
-	return subTemplateFS
+	return subTemplateFS, nil
 }
 
 func (t *templates) parseTemplates(fsDir fs.FS) error {
@@ -180,29 +180,5 @@ func (t *templates) parseTemplates(fsDir fs.FS) error {
 		return nil
 	})
 
-	return nil
-}
-
-func (router *router) parseTemplates() error {
-	var fs fs.FS
-
-	t := templates{
-		t:      map[string]*template.Template{},
-		logger: router.logger,
-	}
-
-	if router.reload {
-		fs = localFSDirectory(router.logger)
-	} else {
-		fs = embeddedFS(router.logger)
-	}
-
-	err := t.parseTemplates(fs)
-
-	if err != nil {
-		return err
-	}
-
-	router.templates = t
 	return nil
 }

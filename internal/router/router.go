@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"html/template"
 	"io/fs"
 	"maps"
 	"net/http"
@@ -30,7 +31,7 @@ type router struct {
 	reload           bool
 	matcher          *category.Matcher
 	db               *sql.DB
-	templates        templates
+	templates        *templates
 	reports          map[string]report.Report
 	sortedReportKeys []string
 	reportsOnce      *sync.Once
@@ -227,4 +228,32 @@ func (router *router) generateReports() error {
 
 func (router *router) resetCache() {
 	router.reportsOnce = &sync.Once{}
+}
+
+func (router *router) parseTemplates() error {
+	t := &templates{
+		t:      map[string]*template.Template{},
+		logger: router.logger,
+	}
+
+	var fs fs.FS
+	var err error
+	if router.reload {
+		fs, err = localFSDirectory(router.logger)
+	} else {
+		fs, err = embeddedFS()
+	}
+
+	if err != nil {
+		return err
+	}
+
+	err = t.parseTemplates(fs)
+
+	if err != nil {
+		return err
+	}
+
+	router.templates = t
+	return nil
 }

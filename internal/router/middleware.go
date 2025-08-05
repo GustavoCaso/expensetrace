@@ -12,6 +12,7 @@ type responseWriter struct {
 	statusCode int
 }
 
+// WriteHeader wraps the regular ResponseWriter so we can store the status code to later log it.
 func (rw *responseWriter) WriteHeader(code int) {
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
@@ -32,7 +33,7 @@ func loggingMiddleware(logger *logger.Logger, next http.Handler) http.Handler {
 
 		// Log the request
 		duration := time.Since(start)
-		logger.Info("HTTP request",
+		logger.Debug("HTTP request",
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", wrapped.statusCode,
@@ -53,8 +54,12 @@ func xFrameDenyHeaderMiddleware(next http.Handler) http.Handler {
 func liveReloadMiddleware(router *router, handlder http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if router.reload {
-			_ = router.parseTemplates()
+			err := router.parseTemplates()
+			if err != nil {
+				router.logger.Warn("Error parsing templates during live reload", "error", err.Error())
+			}
 		}
+
 		handlder.ServeHTTP(w, r)
 	})
 }
