@@ -38,7 +38,6 @@ type Handler struct {
 	logger           *logger.Logger
 }
 
-//nolint:revive // We return the private router struct to allow testing some internal functions
 func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) *Handler {
 	allowEmbedding := os.Getenv("EXPENSETRACE_ALLOW_EMBEDDING") == "true"
 
