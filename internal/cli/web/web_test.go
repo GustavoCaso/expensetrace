@@ -37,7 +37,7 @@ func TestRun(t *testing.T) {
 	cmd := NewCommand()
 
 	// Set a random port for testing
-	port = "0" // This will let the OS assign a random available port
+	t.Setenv("EXPENSETRACE_PORT", "0") // This will let the OS assign a random available port
 
 	// Start the server in a goroutine
 	errChan := make(chan error, 1)

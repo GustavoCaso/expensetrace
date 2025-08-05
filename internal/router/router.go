@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"html/template"
 	"io/fs"
 	"maps"
 	"net/http"
@@ -30,7 +31,7 @@ type router struct {
 	reload           bool
 	matcher          *category.Matcher
 	db               *sql.DB
-	templates        templates
+	templates        *templates
 	reports          map[string]report.Report
 	sortedReportKeys []string
 	reportsOnce      *sync.Once
@@ -161,11 +162,20 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	// wrap entire mux with middlewares
-	handler := loggingMiddleware(logger, mux)
-	liveReloadMux := newLiveReloadMiddleware(router, handler)
+	allowEmbedding := os.Getenv("EXPENSETRACE_ALLOW_EMBEDDING") == "true"
 
-	return liveReloadMux, router
+	// wrap entire mux with middlewares
+	wrappedMux := loggingMiddleware(logger, mux)
+
+	if router.reload {
+		wrappedMux = liveReloadMiddleware(router, wrappedMux)
+	}
+
+	if !allowEmbedding {
+		wrappedMux = xFrameDenyHeaderMiddleware(wrappedMux)
+	}
+
+	return wrappedMux, router
 }
 
 func (router *router) generateReports() error {
@@ -221,4 +231,32 @@ func (router *router) generateReports() error {
 
 func (router *router) resetCache() {
 	router.reportsOnce = &sync.Once{}
+}
+
+func (router *router) parseTemplates() error {
+	t := &templates{
+		t:      map[string]*template.Template{},
+		logger: router.logger,
+	}
+
+	var fs fs.FS
+	var err error
+	if router.reload {
+		fs, err = localFSDirectory(router.logger)
+	} else {
+		fs, err = embeddedFS()
+	}
+
+	if err != nil {
+		return err
+	}
+
+	err = t.parseTemplates(fs)
+
+	if err != nil {
+		return err
+	}
+
+	router.templates = t
+	return nil
 }
