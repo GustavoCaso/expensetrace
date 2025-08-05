@@ -161,11 +161,17 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	// wrap entire mux with middlewares
-	handler := loggingMiddleware(logger, mux)
-	liveReloadMux := newLiveReloadMiddleware(router, handler)
+	allowEmbedding := os.Getenv("EXPENSETRACE_ALLOW_EMBEDDING") == "true"
 
-	return liveReloadMux, router
+	// wrap entire mux with middlewares
+	wrappedMux := loggingMiddleware(logger, mux)
+	wrappedMux = liveReloadMiddleware(router, wrappedMux)
+
+	if !allowEmbedding {
+		wrappedMux = xFrameDenyHeaderMiddleware(wrappedMux)
+	}
+
+	return wrappedMux, router
 }
 
 func (router *router) generateReports() error {

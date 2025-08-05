@@ -42,3 +42,19 @@ func loggingMiddleware(logger *logger.Logger, next http.Handler) http.Handler {
 		)
 	})
 }
+
+func xFrameDenyHeaderMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Frame-Options", "DENY")
+		next.ServeHTTP(w, r)
+	})
+}
+
+func liveReloadMiddleware(router *router, handlder http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if router.reload {
+			_ = router.parseTemplates()
+		}
+		handlder.ServeHTTP(w, r)
+	})
+}

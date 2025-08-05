@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -206,23 +205,4 @@ func (router *router) parseTemplates() error {
 
 	router.templates = t
 	return nil
-}
-
-type liveReloadTemplatesMiddleware struct {
-	handler http.Handler
-	router  *router
-}
-
-func (l *liveReloadTemplatesMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if l.router.reload {
-		_ = l.router.parseTemplates()
-	}
-	l.handler.ServeHTTP(w, r)
-}
-
-func newLiveReloadMiddleware(router *router, handlder http.Handler) *liveReloadTemplatesMiddleware {
-	return &liveReloadTemplatesMiddleware{
-		router:  router,
-		handler: handlder,
-	}
 }
