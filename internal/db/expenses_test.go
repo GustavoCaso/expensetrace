@@ -26,7 +26,6 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create schema: %v", err)
 	}
 
-	// Enable foreign key constraints
 	_, err = database.Exec("PRAGMA foreign_keys = ON")
 	if err != nil {
 		t.Fatalf("Failed to enable PRAGMA: %v", err)
@@ -44,7 +43,6 @@ func setupTestDB(t *testing.T) *sql.DB {
 func TestCreateExpenseTable(t *testing.T) {
 	database := setupTestDB(t)
 
-	// Verify table exists by trying to insert a record
 	_, err := database.Exec(
 		"INSERT INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
 		"test",
@@ -88,7 +86,6 @@ func TestInsertExpenses(t *testing.T) {
 		t.Errorf("Failed to insert expenses: %v", err)
 	}
 
-	// Verify expenses were inserted
 	got, err := GetExpenses(database)
 	if err != nil {
 		t.Errorf("Failed to get expenses: %v", err)
@@ -137,7 +134,6 @@ func TestGetExpenses(t *testing.T) {
 		{"test3", 3000, "Test expense 3", ChargeType, "EUR", sql.NullInt64{Int64: 1, Valid: true}},
 	}
 
-	// Create Category 1
 	_, err := CreateCategory(database, "Test", "*")
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
@@ -184,9 +180,7 @@ func TestGetExpenses(t *testing.T) {
 		if exp.Currency != testExpenses[i].currency {
 			t.Errorf("Expense[%d].Currency = %v, want %v", i, exp.Currency, testExpenses[i].currency)
 		}
-		// if exp.CategoryID == nil {
-		// 	continue
-		// }
+
 		if exp.CategoryID.Int64 != testExpenses[i].categoryID.Int64 {
 			t.Errorf("Expense[%d].CategoryID = %v, want %v", i, exp.CategoryID.Int64, testExpenses[i].categoryID.Int64)
 		}
@@ -200,7 +194,6 @@ func TestGetExpensesFromDateRange(t *testing.T) {
 	yesterday := now.AddDate(0, 0, -1)
 	tomorrow := now.AddDate(0, 0, 1)
 
-	// Insert test expenses with different dates
 	testExpenses := []struct {
 		source      string
 		amount      int64
@@ -215,7 +208,6 @@ func TestGetExpensesFromDateRange(t *testing.T) {
 		{"test3", 3000, "Test expense 3", ChargeType, tomorrow, "EUR", sql.NullInt64{Int64: 1, Valid: true}},
 	}
 
-	// Create Category 1
 	_, err := CreateCategory(database, "Test", "*")
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
@@ -237,7 +229,6 @@ func TestGetExpensesFromDateRange(t *testing.T) {
 		}
 	}
 
-	// Test getting expenses within date range
 	expenses, err := GetExpensesFromDateRange(database, yesterday, tomorrow)
 	if err != nil {
 		t.Errorf("Failed to get expenses from date range: %v", err)
@@ -265,7 +256,6 @@ func TestGetExpensesWithoutCategory(t *testing.T) {
 		{"test3", 3000, "Test expense 3", ChargeType, "EUR", sql.NullInt64{Int64: 0, Valid: false}},
 	}
 
-	// Create Category 1
 	_, err := CreateCategory(database, "Test", "*")
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
@@ -320,7 +310,6 @@ func TestSearchExpenses(t *testing.T) {
 		{"test3", 3000, "Test expense 3", ChargeType, "EUR", sql.NullInt64{Int64: 0, Valid: false}},
 	}
 
-	// Create Category 1
 	_, err := CreateCategory(database, "Test", "*")
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
@@ -356,5 +345,284 @@ func TestSearchExpenses(t *testing.T) {
 			exp.Description != "Test expense 3" {
 			t.Errorf("Unexpected expense description: %s", exp.Description)
 		}
+	}
+}
+
+func TestGetExpense(t *testing.T) {
+	database := setupTestDB(t)
+
+	now := time.Now()
+	expenses := []*Expense{
+		{
+			Source:      "test_source",
+			Amount:      1500,
+			Description: "Test expense for retrieval",
+			Type:        ChargeType,
+			Date:        now,
+			Currency:    "USD",
+		},
+	}
+
+	insertedIDs, err := InsertExpenses(database, expenses)
+	if err != nil {
+		t.Fatalf("Failed to insert test expense: %v", err)
+	}
+
+	if insertedIDs == 0 {
+		t.Fatal("No expenses were inserted")
+	}
+
+	expense, err := GetExpense(database, 1)
+	if err != nil {
+		t.Errorf("Failed to get expense: %v", err)
+	}
+
+	if expense.Source != "test_source" {
+		t.Errorf("Expected source 'test_source', got '%s'", expense.Source)
+	}
+	if expense.Amount != 1500 {
+		t.Errorf("Expected amount 1500, got %d", expense.Amount)
+	}
+	if expense.Description != "Test expense for retrieval" {
+		t.Errorf("Expected description 'Test expense for retrieval', got '%s'", expense.Description)
+	}
+	if expense.Type != ChargeType {
+		t.Errorf("Expected type ChargeType, got %v", expense.Type)
+	}
+	if expense.Currency != "USD" {
+		t.Errorf("Expected currency 'USD', got '%s'", expense.Currency)
+	}
+}
+
+func TestGetExpenseNotFound(t *testing.T) {
+	database := setupTestDB(t)
+
+	_, err := GetExpense(database, 999)
+	if err == nil {
+		t.Error("Expected error when getting non-existent expense, but got none")
+	}
+}
+
+func TestUpdateExpense(t *testing.T) {
+	database := setupTestDB(t)
+
+	categoryID, err := CreateCategory(database, "Test Category", "test")
+	if err != nil {
+		t.Fatalf("Failed to create test category: %v", err)
+	}
+
+	now := time.Now()
+	originalExpense := []*Expense{
+		{
+			Source:      "original_source",
+			Amount:      1000,
+			Description: "Original description",
+			Type:        ChargeType,
+			Date:        now,
+			Currency:    "EUR",
+		},
+	}
+
+	_, err = InsertExpenses(database, originalExpense)
+	if err != nil {
+		t.Fatalf("Failed to insert original expense: %v", err)
+	}
+
+	updatedDate := now.AddDate(0, 0, 1)
+	updatedExpense := &Expense{
+		ID:          1,
+		Source:      "updated_source",
+		Amount:      2000,
+		Description: "Updated description",
+		Type:        IncomeType,
+		Date:        updatedDate,
+		Currency:    "USD",
+		CategoryID:  sql.NullInt64{Int64: categoryID, Valid: true},
+	}
+
+	updated, err := UpdateExpense(database, updatedExpense)
+	if err != nil {
+		t.Errorf("Failed to update expense: %v", err)
+	}
+
+	if updated != 1 {
+		t.Errorf("updated should be 1 got: %d", updated)
+	}
+
+	retrievedExpense, err := GetExpense(database, 1)
+	if err != nil {
+		t.Fatalf("Failed to retrieve updated expense: %v", err)
+	}
+
+	if retrievedExpense.Source != "updated_source" {
+		t.Errorf("Expected source 'updated_source', got '%s'", retrievedExpense.Source)
+	}
+	if retrievedExpense.Amount != 2000 {
+		t.Errorf("Expected amount 2000, got %d", retrievedExpense.Amount)
+	}
+	if retrievedExpense.Description != "Updated description" {
+		t.Errorf("Expected description 'Updated description', got '%s'", retrievedExpense.Description)
+	}
+	if retrievedExpense.Type != IncomeType {
+		t.Errorf("Expected type IncomeType, got %v", retrievedExpense.Type)
+	}
+	if retrievedExpense.Currency != "USD" {
+		t.Errorf("Expected currency 'USD', got '%s'", retrievedExpense.Currency)
+	}
+	if !retrievedExpense.CategoryID.Valid || retrievedExpense.CategoryID.Int64 != categoryID {
+		t.Errorf("Expected category ID %d, got %v", categoryID, retrievedExpense.CategoryID)
+	}
+
+	if retrievedExpense.Date.Unix() != updatedDate.Unix() {
+		t.Errorf("Expected date %v, got %v", updatedDate, retrievedExpense.Date)
+	}
+}
+
+func TestUpdateExpenseNonExistent(t *testing.T) {
+	database := setupTestDB(t)
+
+	nonExistentExpense := &Expense{
+		ID:          999,
+		Source:      "test",
+		Amount:      1000,
+		Description: "Test",
+		Type:        ChargeType,
+		Date:        time.Now(),
+		Currency:    "USD",
+	}
+
+	updated, err := UpdateExpense(database, nonExistentExpense)
+
+	if err != nil {
+		t.Errorf("Unexpected error updating non-existent expense: %v", err)
+	}
+
+	if updated != 0 {
+		t.Errorf("Unexpected updated value for non existing expense")
+	}
+}
+
+func TestDeleteExpense(t *testing.T) {
+	database := setupTestDB(t)
+
+	now := time.Now()
+	expenses := []*Expense{
+		{
+			Source:      "test1",
+			Amount:      1000,
+			Description: "Test expense 1",
+			Type:        ChargeType,
+			Date:        now,
+			Currency:    "USD",
+		},
+		{
+			Source:      "test2",
+			Amount:      2000,
+			Description: "Test expense 2",
+			Type:        IncomeType,
+			Date:        now,
+			Currency:    "EUR",
+		},
+	}
+
+	_, err := InsertExpenses(database, expenses)
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
+	}
+
+	allExpenses, err := GetExpenses(database)
+	if err != nil {
+		t.Fatalf("Failed to get expenses: %v", err)
+	}
+	if len(allExpenses) != 2 {
+		t.Fatalf("Expected 2 expenses, got %d", len(allExpenses))
+	}
+
+	deleted, err := DeleteExpense(database, 1)
+	if err != nil {
+		t.Errorf("Failed to delete expense: %v", err)
+	}
+
+	if deleted != 1 {
+		t.Errorf("deleted should be 1 got: %d", deleted)
+	}
+
+	allExpenses, err = GetExpenses(database)
+	if err != nil {
+		t.Fatalf("Failed to get expenses after deletion: %v", err)
+	}
+	if len(allExpenses) != 1 {
+		t.Errorf("Expected 1 expense after deletion, got %d", len(allExpenses))
+	}
+
+	if allExpenses[0].Description != "Test expense 2" {
+		t.Errorf("Expected remaining expense 'Test expense 2', got '%s'", allExpenses[0].Description)
+	}
+
+	_, err = GetExpense(database, 1)
+	if err == nil {
+		t.Error("Expected error when getting deleted expense, but got none")
+	}
+}
+
+func TestDeleteExpenseNonExistent(t *testing.T) {
+	database := setupTestDB(t)
+
+	deleted, err := DeleteExpense(database, 999)
+
+	if err != nil {
+		t.Errorf("Unexpected error deleting non-existent expense: %v", err)
+	}
+
+	if deleted != 0 {
+		t.Errorf("deleted should be 0 got: %d", deleted)
+	}
+}
+
+func TestDeleteExpenseWithCategory(t *testing.T) {
+	database := setupTestDB(t)
+
+	categoryID, err := CreateCategory(database, "Test Category", "test")
+	if err != nil {
+		t.Fatalf("Failed to create test category: %v", err)
+	}
+
+	now := time.Now()
+	expense := []*Expense{
+		{
+			Source:      "test",
+			Amount:      1000,
+			Description: "Test expense with category",
+			Type:        ChargeType,
+			Date:        now,
+			Currency:    "USD",
+			CategoryID:  sql.NullInt64{Int64: categoryID, Valid: true},
+		},
+	}
+
+	_, err = InsertExpenses(database, expense)
+	if err != nil {
+		t.Fatalf("Failed to insert expense with category: %v", err)
+	}
+
+	_, err = DeleteExpense(database, 1)
+	if err != nil {
+		t.Errorf("Failed to delete expense with category: %v", err)
+	}
+
+	allExpenses, err := GetExpenses(database)
+	if err != nil {
+		t.Fatalf("Failed to get expenses after deletion: %v", err)
+	}
+	if len(allExpenses) != 0 {
+		t.Errorf("Expected 0 expenses after deletion, got %d", len(allExpenses))
+	}
+
+	categories, err := GetCategories(database)
+	if err != nil {
+		t.Fatalf("Failed to get categories: %v", err)
+	}
+	if len(categories) != 1 {
+		t.Errorf("Expected 1 category to remain, got %d", len(categories))
 	}
 }

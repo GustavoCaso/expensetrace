@@ -123,7 +123,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 	}
 
 	found := false
-	var categoryID int
+	var categoryID int64
 	for _, c := range categories {
 		if c.Name == "Entertainment" && c.Pattern == "cinema|movie|theater" {
 			found = true
@@ -146,7 +146,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 		t.Fatalf("Failed more expenses than it should: %v", err)
 	}
 
-	if expensesUpdated[0].CategoryID.Int64 != int64(categoryID) {
+	if expensesUpdated[0].CategoryID.Int64 != categoryID {
 		t.Fatal("Expense did not update the category ID")
 	}
 
@@ -203,7 +203,7 @@ func TestUpdateHandler(t *testing.T) {
 				}
 
 				for _, ex := range updatedExpenses {
-					if int(ex.CategoryID.Int64) != updatedCategory.ID {
+					if ex.CategoryID.Int64 != updatedCategory.ID {
 						t.Fatalf(
 							"Expense %s was incoreectly updated. Category ID must be %d. Got %d",
 							ex.Description,
@@ -227,7 +227,7 @@ func TestUpdateHandler(t *testing.T) {
 				}
 				for _, ex := range updatedExpenses {
 					if ex.Description == "cinema" {
-						if int(ex.CategoryID.Int64) != updatedCategory.ID {
+						if ex.CategoryID.Int64 != updatedCategory.ID {
 							t.Fatalf(
 								"Expense %s was incoreectly updated. Category ID must be %d. Got %d",
 								ex.Description,

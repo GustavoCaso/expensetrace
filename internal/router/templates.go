@@ -27,6 +27,9 @@ var templateFuncs = template.FuncMap{
 	"sub": func(a, b int) int {
 		return a - b
 	},
+	"divideFloat": func(a int64, b int64) float64 {
+		return float64(a) / float64(b)
+	},
 	"json": func(v interface{}) string {
 		jsonBytes, err := json.Marshal(v)
 		if err != nil {

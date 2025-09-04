@@ -130,7 +130,7 @@ func (router *router) updateCategoryHandler(
 			patternChanged = true
 		}
 
-		err = expenseDB.UpdateCategory(router.db, categoryID, name, pattern)
+		err = expenseDB.UpdateCategory(router.db, int64(categoryID), name, pattern)
 
 		if err != nil {
 			enhancedCat.Errors = true

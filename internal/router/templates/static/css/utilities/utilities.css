@@ -137,6 +137,10 @@
   font-size: var(--font-size-3xl);
 }
 
+.font-italic {
+  font-style: italic;
+}
+
 .font-medium {
   font-weight: var(--font-weight-medium);
 }

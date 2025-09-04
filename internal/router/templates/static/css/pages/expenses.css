@@ -63,16 +63,6 @@
   transform: rotate(-90deg);
 }
 
-/* Year content */
-.expense-content {
-  overflow: hidden;
-  transition: max-height var(--transition-normal) ease-out;
-}
-
-.expense-content.collapsed {
-  max-height: 0;
-}
-
 /* Month header styling */
 .month-header {
   background-color: var(--color-gray-50);
@@ -172,6 +162,43 @@
   opacity: 0.7;
 }
 
+.expense-info p {
+  margin-bottom: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+/* Danger zone styling */
+.danger-zone {
+  margin-top: var(--spacing-6);
+  padding: var(--spacing-4);
+  background-color: var(--color-danger-light);
+  border: 1px solid var(--color-danger-light);
+  border-radius: var(--border-radius);
+  border-left: 3px solid var(--color-danger);
+}
+
+.danger-zone h4 {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-danger);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+.danger-zone p {
+  color: var(--color-gray-600);
+  margin-bottom: var(--spacing-3);
+}
+
+.expense-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  margin-top: var(--spacing-1);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .expense-item {
@@ -198,5 +225,9 @@
 
   .expenses-search-form button {
     width: 100%;
+  }
+
+  .expense-actions {
+    margin-top: var(--spacing-2);
   }
 }

@@ -7,7 +7,7 @@ import (
 )
 
 type Category struct {
-	ID      int
+	ID      int64
 	Name    string
 	Pattern string
 }
@@ -44,7 +44,7 @@ func GetCategory(db *sql.DB, categoryID int64) (Category, error) {
 	return categoryFromRow(row.Scan)
 }
 
-func UpdateCategory(db *sql.DB, categoryID int, name, pattern string) error {
+func UpdateCategory(db *sql.DB, categoryID int64, name, pattern string) error {
 	_, err := db.ExecContext(context.Background(),
 		"UPDATE categories SET name = ?, pattern = ? WHERE id = ?;",
 		name,
@@ -94,7 +94,7 @@ func DeleteCategories(db *sql.DB) (int64, error) {
 
 func categoryFromRow(scan func(dest ...any) error) (Category, error) {
 	cat := Category{}
-	var id int
+	var id int64
 
 	if err := scan(&id, &cat.Name, &cat.Pattern); err != nil {
 		return cat, err

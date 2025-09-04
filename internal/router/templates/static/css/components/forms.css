@@ -127,10 +127,10 @@ textarea.error-input {
   margin-top: var(--spacing-6);
 }
 
-/* Category form */
-.category-form {
-  display: flex;
-  flex-direction: column;
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-4);
 }
 
 /* Responsive adjustments */

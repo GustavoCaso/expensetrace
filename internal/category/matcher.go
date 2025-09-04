@@ -12,7 +12,7 @@ var Exclude = "exclude"
 type matcher struct {
 	re       *regexp.Regexp
 	category string
-	id       int
+	id       int64
 }
 
 type Matcher struct {
@@ -45,7 +45,7 @@ func (c Matcher) Categories() []db.Category {
 func (c Matcher) Match(s string) (sql.NullInt64, string) {
 	for _, matcher := range c.matchers {
 		if matcher.re.MatchString(s) {
-			return sql.NullInt64{Int64: int64(matcher.id), Valid: true}, matcher.category
+			return sql.NullInt64{Int64: matcher.id, Valid: true}, matcher.category
 		}
 	}
 

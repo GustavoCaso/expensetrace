@@ -63,6 +63,35 @@ func (e InsertError) Error() string {
 	return fmt.Sprintf("error when trying to insert record on table. err: %v", e.err)
 }
 
+func GetExpense(db *sql.DB, id int64) (*Expense, error) {
+	row := db.QueryRowContext(context.Background(),
+		"SELECT * FROM expenses WHERE id = ?", id)
+	return expenseFromRow(db, row.Scan)
+}
+
+func UpdateExpense(db *sql.DB, expense *Expense) (int64, error) {
+	r, err := db.ExecContext(context.Background(),
+		`UPDATE expenses SET source = ?, amount = ?, description = ?, 
+		 expense_type = ?, date = ?, currency = ?, category_id = ? 
+		 WHERE id = ?`,
+		expense.Source, expense.Amount, expense.Description,
+		expense.Type, expense.Date.Unix(), expense.Currency,
+		expense.CategoryID, expense.ID)
+	if err != nil {
+		return 0, err
+	}
+	return r.RowsAffected()
+}
+
+func DeleteExpense(db *sql.DB, id int64) (int64, error) {
+	r, err := db.ExecContext(context.Background(),
+		"DELETE FROM expenses WHERE id = ?", id)
+	if err != nil {
+		return 0, err
+	}
+	return r.RowsAffected()
+}
+
 func InsertExpenses(db *sql.DB, expenses []*Expense) (int64, error) {
 	if len(expenses) == 0 {
 		return 0, nil
@@ -274,7 +303,7 @@ func GetFirstExpense(db *sql.DB) (*Expense, error) {
 	return ex, nil
 }
 
-func GetExpensesByCategory(db *sql.DB, categoryID int) ([]*Expense, error) {
+func GetExpensesByCategory(db *sql.DB, categoryID int64) ([]*Expense, error) {
 	rows, err := db.QueryContext(context.Background(), "SELECT * FROM expenses WHERE category_id = ?", categoryID)
 	if err != nil {
 		return []*Expense{}, err
