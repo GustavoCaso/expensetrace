@@ -48,11 +48,7 @@
                             <span class="source-info">via {{$expense.Source}}</span>
                           </div>
                         </div>
-                        {{if gt $expense.Type 0}}
-                          <span class="income"><b>{{formatMoney $expense.Amount "." ","}}€</b></span>
-                        {{else}}
-                          <span class="expense"><b>{{formatMoney $expense.Amount "." ","}}€</b></span>
-                        {{end}}
+                        <span class="amount {{if gt $expense.Amount 0}}income{{else}}expense{{end}}"><b>{{formatMoney $expense.Amount "." ","}}€</b></span>
                       </li>
                     {{end}}
                   </ul>

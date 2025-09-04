@@ -135,13 +135,8 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 		categoryID := r.PathValue("id")
 		name := r.FormValue("name")
 		pattern := r.FormValue("pattern")
-		categoryTypeStr := r.FormValue("type")
-		categoryType := expenseDB.ExpenseCategoryType // Default to expense
-		if categoryTypeStr == "1" {
-			categoryType = expenseDB.IncomeCategoryType
-		}
-
-		router.updateCategoryHandler(categoryID, name, pattern, categoryType, w)
+		// Category type is no longer needed - we only handle expenses
+		router.updateCategoryHandler(categoryID, name, pattern, w)
 	})
 
 	mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {
@@ -150,6 +145,10 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 
 	mux.HandleFunc("POST /category", func(w http.ResponseWriter, r *http.Request) {
 		router.createCategoryHandler(true, w, r)
+	})
+
+	mux.HandleFunc("POST /category/reset", func(w http.ResponseWriter, _ *http.Request) {
+		router.resetCategoryHandler(w)
 	})
 
 	mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {

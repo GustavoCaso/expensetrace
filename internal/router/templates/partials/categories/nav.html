@@ -1,9 +1,16 @@
 {{define "categories/nav"}}
   <div class="category-nav">
     <nav class="tabs">
-      <a href="/categories" hx-get="/categories" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "index"}}active{{end}}' hx-replace-url="true">All Categories</a>
-      <a href="/category/uncategorized" hx-get="/category/uncategorized" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "uncategorized"}}active{{end}}' hx-replace-url="true">Uncategorized</a>
-      <a href="/category/new" hx-get="/category/new" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "new"}}active{{end}}' hx-replace-url="true">New Category</a>
+        <a href="/categories" hx-get="/categories" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "index"}}active{{end}}' hx-replace-url="true">All Categories</a>
+        <a href="/category/uncategorized" hx-get="/category/uncategorized" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "uncategorized"}}active{{end}}' hx-replace-url="true">Uncategorized</a>
+        <a href="/category/new" hx-get="/category/new" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "new"}}active{{end}}' hx-replace-url="true">New Category</a>
+        <a class="btn-danger ml-auto" 
+                hx-post="/category/reset" 
+                hx-target="#page" 
+                hx-swap="outerHTML" 
+                hx-confirm="Are you sure you want to delete all categories? This action cannot be undone.">
+          Delete All Categories
+        </a>
     </nav>
   </div>
 {{end}}

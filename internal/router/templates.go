@@ -48,7 +48,8 @@ func (t *templates) Render(w io.Writer, templateName string, data interface{}) {
 		_, _ = fmt.Fprintf(w, "template '%s' is not available", templateName)
 		return
 	}
-	t.logger.Debug("Rendering template", "name", templateName)
+	prettyData, _ := json.MarshalIndent(data, "", " ")
+	t.logger.Debug("Rendering template", "name", templateName, "data", prettyData)
 	var err error
 	if strings.Contains(templateName, "partials") {
 		tName := strings.TrimSuffix(temp.Name(), ".html")

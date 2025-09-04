@@ -2,11 +2,6 @@
   <div class="card" id="category-{{.ID}}">
     <div class="card-header flex">
       <h3 class="card-title">{{.Name}}</h3>
-      {{if eq .Type 1}}
-        <span class="badge income">Income</span>
-      {{else}}
-        <span class="badge expense">Expense</span>
-      {{end}}
       <div class="card-actions">
         <button class="btn-icon toggle-details-swap" data-content="category-content-{{.ID}}" data-target="category-edit-{{.ID}}">
           <span class="icon">✏️</span>
@@ -46,25 +41,12 @@
           <label for="category-edit-pattern">Pattern</label>
           {{if index .ErrorStrings "pattern"}}
             <input type="text" class="error-input" id="category-edit-pattern-{{.ID}}" 
-              name="name" value="{{.Pattern}}" required>
+              name="pattern" value="{{.Pattern}}" required>
             <span class="form-group-error">{{ index .ErrorStrings "pattern"}}</span>
           {{else}}
             <input type="text" id="category-edit-pattern-{{.ID}}" 
-              name="name" value="{{.Pattern}}" required>
+              name="pattern" value="{{.Pattern}}" required>
           {{end}}
-        </div>
-        <div class="form-group">
-          <label>Category Type</label>
-          <div class="radio-group">
-            <label class="radio-label">
-              <input type="radio" name="type" value="0" {{if eq .Type 0}}checked{{end}}>
-              <span>Expense</span>
-            </label>
-            <label class="radio-label">
-              <input type="radio" name="type" value="1" {{if eq .Type 1}}checked{{end}}>
-              <span>Income</span>
-            </label>
-          </div>
         </div>
         <div class="form-actions">
           <button type="submit" class="btn-primary">Save</button>
@@ -84,17 +66,10 @@
         </div>
       </div>
       <div class="category-stats">
-        {{if gt .AvgAmount 0 }}
-          <div class="stat-item">
-            <span class="stat-label">Avg Amount:</span>
-            <span class="stat-value income">{{formatMoney .AvgAmount "." ","}}€</span>
-          </div>
-        {{else}}
-          <div class="stat-item">
-            <span class="stat-label">Avg Amount:</span>
-            <span class="stat-value expense">{{formatMoney .AvgAmount "." ","}}€</span>
-          </div>
-        {{end}}
+        <div class="stat-item">
+          <span class="stat-label">Avg Amount:</span>
+          <span class="stat-value">{{formatMoney .AvgAmount "." ","}}€</span>
+        </div>
         <div class="stat-item">
           <span class="stat-label">Last Transaction:</span>
           <span class="stat-value font-bold">{{.LastTransaction}}</span>

@@ -1,11 +1,10 @@
 package db
 
 import (
+	"database/sql"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
-
-	"github.com/GustavoCaso/expensetrace/internal/config"
 )
 
 func TestCreateCategoriesTable(t *testing.T) {
@@ -17,70 +16,6 @@ func TestCreateCategoriesTable(t *testing.T) {
 		t.Errorf("Failed to insert test category: %v", err)
 	}
 }
-
-func TestPopulateCategoriesFromConfig(t *testing.T) {
-	db := setupTestDB(t)
-
-	conf := &config.Config{
-		Categories: config.Categories{
-			Expense: []config.Category{
-				{Name: "Food", Pattern: "restaurant|food"},
-				{Name: "Transport", Pattern: "uber|taxi"},
-			},
-			Income: []config.Category{
-				{Name: "Salary", Pattern: "salary|income"},
-			},
-		},
-	}
-
-	err := PopulateCategoriesFromConfig(db, conf)
-	if err != nil {
-		t.Errorf("Failed to populate categories: %v", err)
-	}
-
-	// Verify categories were inserted
-	categories, err := GetCategories(db)
-	if err != nil {
-		t.Errorf("Failed to get categories: %v", err)
-	}
-
-	if len(categories) != 3 {
-		t.Errorf("Expected 3 categories, got %d", len(categories))
-	}
-
-	// Verify expense categories
-	expectedCategories := []Category{
-		{
-			Name:    "Food",
-			Pattern: "restaurant|food",
-			Type:    ExpenseCategoryType,
-		},
-		{
-			Name:    "Transport",
-			Pattern: "uber|taxi",
-			Type:    ExpenseCategoryType,
-		},
-		{
-			Name:    "Salary",
-			Pattern: "salary|income",
-			Type:    IncomeCategoryType,
-		},
-	}
-
-	// Verify category contents
-	for i, cat := range categories {
-		if cat.Name != expectedCategories[i].Name {
-			t.Errorf("Category[%d].Name = %v, want %v", i, cat.Name, expectedCategories[i].Name)
-		}
-		if cat.Pattern != expectedCategories[i].Pattern {
-			t.Errorf("Category[%d].Pattern = %v, want %v", i, cat.Pattern, expectedCategories[i].Pattern)
-		}
-		if cat.Type != expectedCategories[i].Type {
-			t.Errorf("Category[%d].Type = %v, want %v", i, cat.Type, expectedCategories[i].Type)
-		}
-	}
-}
-
 func TestGetCategories(t *testing.T) {
 	db := setupTestDB(t)
 
@@ -152,7 +87,7 @@ func TestGetCategory(t *testing.T) {
 func TestCreateCategory(t *testing.T) {
 	db := setupTestDB(t)
 
-	id, err := CreateCategory(db, "Test", "test.*", ExpenseCategoryType)
+	id, err := CreateCategory(db, "Test", "test.*")
 	if err != nil {
 		t.Errorf("Failed to create category: %v", err)
 	}
@@ -172,5 +107,121 @@ func TestCreateCategory(t *testing.T) {
 	}
 	if category.Pattern != "test.*" {
 		t.Errorf("Created category.Pattern = %v, want test.*", category.Pattern)
+	}
+}
+
+func TestDeleteCategories(t *testing.T) {
+	db := setupTestDB(t)
+
+	// Create test categories
+	_, err := CreateCategory(db, "Food", "restaurant|food")
+	if err != nil {
+		t.Fatalf("Failed to create test category: %v", err)
+	}
+
+	_, err = CreateCategory(db, "Transport", "uber|taxi")
+	if err != nil {
+		t.Fatalf("Failed to create test category: %v", err)
+	}
+
+	// Drop all categories
+	rowsAffected, err := DeleteCategories(db)
+	if err != nil {
+		t.Errorf("Failed to drop categories: %v", err)
+	}
+
+	if rowsAffected != 2 {
+		t.Errorf("Expected 2 rows affected, got %d", rowsAffected)
+	}
+
+	// Verify categories are deleted
+	categories, err := GetCategories(db)
+	if err != nil {
+		t.Errorf("Failed to get categories after drop: %v", err)
+	}
+	if len(categories) != 0 {
+		t.Errorf("Expected 0 categories after drop, got %d", len(categories))
+	}
+}
+
+func TestDeleteCategoriesWithExpenses(t *testing.T) {
+	db := setupTestDB(t)
+
+	catID, createCategoryErr := CreateCategory(db, "Food", "restaurant")
+	if createCategoryErr != nil {
+		t.Fatalf("Failed to create test category: %v", createCategoryErr)
+	}
+
+	expense := []*Expense{
+		{
+			Source:      "bank",
+			Amount:      -2500,
+			Description: "Restaurant dinner",
+			Type:        ChargeType,
+			Currency:    "EUR",
+			CategoryID: sql.NullInt64{
+				Int64: catID,
+				Valid: true,
+			},
+		},
+	}
+	_, insertErr := InsertExpenses(db, expense)
+	if insertErr != nil {
+		t.Fatalf("Failed to create test expense: %v", insertErr)
+	}
+
+	var expensesWithCategoryBefore int
+	row := db.QueryRow("SELECT COUNT(*) FROM expenses WHERE category_id IS NOT NULL")
+	if beforeQueryErr := row.Scan(&expensesWithCategoryBefore); beforeQueryErr != nil {
+		t.Fatalf("Failed to count categorized expenses before drop: %v", beforeQueryErr)
+	}
+	if expensesWithCategoryBefore != 1 {
+		t.Fatalf("Expected 1 categorized expense before drop, got %d", expensesWithCategoryBefore)
+	}
+
+	rowsAffected, deleteCategoryErr := DeleteCategories(db)
+	if deleteCategoryErr != nil {
+		t.Errorf("Failed to drop categories: %v", deleteCategoryErr)
+	}
+
+	if rowsAffected != 1 {
+		t.Errorf("Expected 1 category deleted, got %d", rowsAffected)
+	}
+
+	expenses, getExpensesErr := GetExpenses(db)
+	if getExpensesErr != nil {
+		t.Errorf("Failed to get expenses after drop: %v", getExpensesErr)
+	}
+	if len(expenses) != 1 {
+		t.Errorf("Expected 1 total expense after drop, got %d", len(expenses))
+	}
+	if expenses[0].CategoryID.Valid {
+		t.Errorf("Expected expense to have null category ID after delete categories")
+	}
+}
+
+func TestUpdateCategory(t *testing.T) {
+	db := setupTestDB(t)
+
+	catID, err := CreateCategory(db, "Food", "restaurant")
+	if err != nil {
+		t.Fatalf("Failed to create test category: %v", err)
+	}
+
+	err = UpdateCategory(db, int(catID), "Dining", "restaurant|dining|food")
+	if err != nil {
+		t.Errorf("Failed to update category: %v", err)
+	}
+
+	category, err := GetCategory(db, catID)
+	if err != nil {
+		t.Errorf("Failed to get updated category: %v", err)
+	}
+
+	if category.Name != "Dining" {
+		t.Errorf("Expected category name 'Dining', got '%s'", category.Name)
+	}
+	if category.Pattern != "restaurant|dining|food" {
+		t.Errorf("Expected pattern 'restaurant|dining|food', got '%s'", category.Pattern)
 	}
 }

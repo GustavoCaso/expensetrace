@@ -180,7 +180,7 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]*Ex
 }
 
 func GetExpensesWithoutCategory(db *sql.DB) ([]*Expense, error) {
-	rows, err := db.Query("SELECT * FROM expenses WHERE category_id IS NULL")
+	rows, err := db.Query("SELECT * FROM expenses WHERE category_id IS NULL AND expense_type is 0")
 	if err != nil {
 		return []*Expense{}, err
 	}

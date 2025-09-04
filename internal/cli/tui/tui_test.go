@@ -29,12 +29,12 @@ func TestInitialModel(t *testing.T) {
 
 	// Create test categories
 	categories := []expenseDB.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery", Type: expenseDB.ExpenseCategoryType},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit", Type: expenseDB.ExpenseCategoryType},
+		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
+		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
 	}
 
 	for _, c := range categories {
-		_, err := expenseDB.CreateCategory(db, c.Name, c.Pattern, c.Type)
+		_, err := expenseDB.CreateCategory(db, c.Name, c.Pattern)
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -96,12 +96,12 @@ func TestGenerateReports(t *testing.T) {
 
 	// Create test categories
 	categories := []expenseDB.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery", Type: expenseDB.ExpenseCategoryType},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit", Type: expenseDB.ExpenseCategoryType},
+		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
+		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
 	}
 
 	for _, c := range categories {
-		_, err := expenseDB.CreateCategory(db, c.Name, c.Pattern, c.Type)
+		_, err := expenseDB.CreateCategory(db, c.Name, c.Pattern)
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
