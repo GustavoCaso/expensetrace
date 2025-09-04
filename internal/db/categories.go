@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 )
@@ -12,7 +13,7 @@ type Category struct {
 }
 
 func GetCategories(db *sql.DB) ([]Category, error) {
-	rows, err := db.Query("SELECT * FROM categories")
+	rows, err := db.QueryContext(context.Background(), "SELECT * FROM categories")
 	if err != nil {
 		return []Category{}, err
 	}
@@ -39,12 +40,12 @@ func GetCategories(db *sql.DB) ([]Category, error) {
 }
 
 func GetCategory(db *sql.DB, categoryID int64) (Category, error) {
-	row := db.QueryRow("SELECT * FROM categories WHERE id=$1", categoryID)
+	row := db.QueryRowContext(context.Background(), "SELECT * FROM categories WHERE id=$1", categoryID)
 	return categoryFromRow(row.Scan)
 }
 
 func UpdateCategory(db *sql.DB, categoryID int, name, pattern string) error {
-	_, err := db.Exec(
+	_, err := db.ExecContext(context.Background(),
 		"UPDATE categories SET name = ?, pattern = ? WHERE id = ?;",
 		name,
 		pattern,
@@ -54,7 +55,8 @@ func UpdateCategory(db *sql.DB, categoryID int, name, pattern string) error {
 }
 
 func CreateCategory(db *sql.DB, name, pattern string) (int64, error) {
-	result, err := db.Exec("INSERT INTO categories(name, pattern) values(?, ?)", name, pattern)
+	result, err := db.ExecContext(context.Background(),
+		"INSERT INTO categories(name, pattern) values(?, ?)", name, pattern)
 
 	if err != nil {
 		return 0, err
@@ -64,18 +66,19 @@ func CreateCategory(db *sql.DB, name, pattern string) (int64, error) {
 }
 
 func DeleteCategories(db *sql.DB) (int64, error) {
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return 0, err
 	}
 
-	_, err = tx.Exec("UPDATE expenses SET category_id = NULL WHERE category_id IS NOT NULL")
+	_, err = tx.ExecContext(context.Background(),
+		"UPDATE expenses SET category_id = NULL WHERE category_id IS NOT NULL")
 	if err != nil {
 		_ = tx.Rollback()
 		return 0, fmt.Errorf("failed to uncategorize expenses: %w", err)
 	}
 
-	result, err := tx.Exec("DELETE FROM categories")
+	result, err := tx.ExecContext(context.Background(), "DELETE FROM categories")
 	if err != nil {
 		_ = tx.Rollback()
 		return 0, fmt.Errorf("failed to delete categories: %w", err)

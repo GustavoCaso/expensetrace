@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -9,7 +10,7 @@ import (
 )
 
 func createMigrationsTable(db *sql.DB) error {
-	statement, err := db.Prepare(`
+	statement, err := db.PrepareContext(context.Background(), `
 			CREATE TABLE IF NOT EXISTS schema_migrations (
 					version INTEGER PRIMARY KEY,
 					applied_at INTEGER NOT NULL
@@ -19,18 +20,18 @@ func createMigrationsTable(db *sql.DB) error {
 		return err
 	}
 	defer statement.Close()
-	_, err = statement.Exec()
+	_, err = statement.ExecContext(context.Background())
 	return err
 }
 
 func DropTables(db *sql.DB) error {
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction for dropping tables: %w", err)
 	}
 
 	// drop tables
-	_, err = tx.Exec("DROP TABLE IF EXISTS expenses;")
+	_, err = tx.ExecContext(context.Background(), "DROP TABLE IF EXISTS expenses;")
 	if err != nil {
 		rErr := tx.Rollback()
 		if rErr != nil {
@@ -39,7 +40,7 @@ func DropTables(db *sql.DB) error {
 		return err
 	}
 
-	_, err = tx.Exec("DROP TABLE IF EXISTS categories;")
+	_, err = tx.ExecContext(context.Background(), "DROP TABLE IF EXISTS categories;")
 	if err != nil {
 		rErr := tx.Rollback()
 		if rErr != nil {
@@ -48,7 +49,7 @@ func DropTables(db *sql.DB) error {
 		return err
 	}
 
-	_, err = tx.Exec("DROP TABLE IF EXISTS schema_migrations;")
+	_, err = tx.ExecContext(context.Background(), "DROP TABLE IF EXISTS schema_migrations;")
 	if err != nil {
 		rErr := tx.Rollback()
 		if rErr != nil {
@@ -72,7 +73,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 
 	// Get current schema version
 	currentVersion := 0
-	row := db.QueryRow("SELECT COALESCE(MAX(version), 0) FROM schema_migrations")
+	row := db.QueryRowContext(context.Background(), "SELECT COALESCE(MAX(version), 0) FROM schema_migrations")
 	if err := row.Scan(&currentVersion); err != nil {
 		return fmt.Errorf("failed to get current schema version: %w", err)
 	}
@@ -86,7 +87,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 			name: "Create expenses table",
 			up: func(tx *sql.Tx) error {
 				// Create Expense Table
-				_, err := tx.Exec(`
+				_, err := tx.ExecContext(context.Background(), `
 					CREATE TABLE IF NOT EXISTS expenses
 					(
 					id INTEGER PRIMARY KEY,
@@ -106,7 +107,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 			name: "Create categories table",
 			up: func(tx *sql.Tx) error {
 				// Create Categories Table
-				_, err := tx.Exec(`
+				_, err := tx.ExecContext(context.Background(), `
 					CREATE TABLE IF NOT EXISTS categories
 					(
 					 id INTEGER PRIMARY KEY,
@@ -122,7 +123,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 			up: func(tx *sql.Tx) error {
 				// Set all category_id from 0 to NULL
 				// That way we can run the next migration
-				_, err := tx.Exec(`
+				_, err := tx.ExecContext(context.Background(), `
 				UPDATE expenses 
 				SET category_id = NULL 
 				WHERE category_id = 0;
@@ -134,7 +135,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 			name: "Set foreign key constraints expenses <-> categories",
 			up: func(tx *sql.Tx) error {
 				// Add foreign key constraint to expenses table
-				_, err := tx.Exec(`
+				_, err := tx.ExecContext(context.Background(), `
 				PRAGMA foreign_keys=OFF;
 				CREATE TABLE expenses_new (
 					id INTEGER PRIMARY KEY,
@@ -160,7 +161,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 			name: "Add type column to categories",
 			up: func(tx *sql.Tx) error {
 				// 1. First add the column with a default value of 0 (expense)
-				_, alterErr := tx.Exec(`
+				_, alterErr := tx.ExecContext(context.Background(), `
 						ALTER TABLE categories ADD COLUMN type INTEGER NOT NULL DEFAULT 0;
 				`)
 				if alterErr != nil {
@@ -168,7 +169,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 				}
 
 				// 2. Fetch all categories to analyze them
-				rows, err := tx.Query("SELECT id, name, pattern FROM categories")
+				rows, err := tx.QueryContext(context.Background(), "SELECT id, name, pattern FROM categories")
 				if err != nil {
 					return err
 				}
@@ -195,7 +196,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 				// 3. For each category, analyze transactions to determine if it's income or expense
 				for _, cat := range categories {
 					// Analyze the transactions in this category
-					expenseTotalRow := tx.QueryRow(`
+					expenseTotalRow := tx.QueryRowContext(context.Background(), `
 						SELECT SUM(amount) FROM expenses WHERE category_id = ?
 					`, cat.id)
 					var totalAmount int64
@@ -208,7 +209,8 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 						categoryType = 1
 					}
 
-					_, err = tx.Exec("UPDATE categories SET type = ? WHERE id = ?", categoryType, cat.id)
+					_, err = tx.ExecContext(context.Background(),
+						"UPDATE categories SET type = ? WHERE id = ?", categoryType, cat.id)
 					if err != nil {
 						return err
 					}
@@ -221,7 +223,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 			name: "Remove column from categories",
 			up: func(tx *sql.Tx) error {
 				// 1. First add the column with a default value of 0 (expense)
-				_, alterErr := tx.Exec(`
+				_, alterErr := tx.ExecContext(context.Background(), `
 						ALTER TABLE categories DROP COLUMN type;
 				`)
 				if alterErr != nil {
@@ -244,7 +246,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 				"name", migration.name)
 
 			// Begin transaction for this migration
-			tx, err := db.Begin()
+			tx, err := db.BeginTx(context.Background(), nil)
 			if err != nil {
 				return fmt.Errorf("failed to begin transaction for migration %d: %w",
 					migrationVersion, err)
@@ -260,7 +262,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 			}
 
 			// Record migration
-			_, err = tx.Exec(
+			_, err = tx.ExecContext(context.Background(),
 				"INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
 				migrationVersion, time.Now().Unix(),
 			)

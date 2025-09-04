@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"embed"
 	"fmt"
@@ -85,7 +86,7 @@ func InsertExpenses(db *sql.DB, expenses []*Expense) (int64, error) {
 
 	formattedQuery := fmt.Sprintf(query, buffer.String())
 
-	result, err := db.Exec(formattedQuery)
+	result, err := db.ExecContext(context.Background(), formattedQuery)
 	if err != nil {
 		return 0, err
 	}
@@ -94,7 +95,7 @@ func InsertExpenses(db *sql.DB, expenses []*Expense) (int64, error) {
 }
 
 func GetExpenses(db *sql.DB) ([]*Expense, error) {
-	rows, err := db.Query("SELECT * FROM expenses")
+	rows, err := db.QueryContext(context.Background(), "SELECT * FROM expenses")
 	if err != nil {
 		return []*Expense{}, err
 	}
@@ -144,7 +145,7 @@ func UpdateExpenses(db *sql.DB, expenses []*Expense) (int64, error) {
 
 	formattedQuery := fmt.Sprintf(query, buffer.String())
 
-	result, err := db.Exec(formattedQuery)
+	result, err := db.ExecContext(context.Background(), formattedQuery)
 	if err != nil {
 		return 0, err
 	}
@@ -153,7 +154,8 @@ func UpdateExpenses(db *sql.DB, expenses []*Expense) (int64, error) {
 }
 
 func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]*Expense, error) {
-	rows, err := db.Query("SELECT * FROM expenses WHERE date BETWEEN ? and ?", start.Unix(), end.Unix())
+	rows, err := db.QueryContext(context.Background(),
+		"SELECT * FROM expenses WHERE date BETWEEN ? and ?", start.Unix(), end.Unix())
 	if err != nil {
 		return []*Expense{}, err
 	}
@@ -180,7 +182,8 @@ func GetExpensesFromDateRange(db *sql.DB, start time.Time, end time.Time) ([]*Ex
 }
 
 func GetExpensesWithoutCategory(db *sql.DB) ([]*Expense, error) {
-	rows, err := db.Query("SELECT * FROM expenses WHERE category_id IS NULL AND expense_type is 0")
+	rows, err := db.QueryContext(context.Background(),
+		"SELECT * FROM expenses WHERE category_id IS NULL AND expense_type is 0")
 	if err != nil {
 		return []*Expense{}, err
 	}
@@ -206,7 +209,8 @@ func GetExpensesWithoutCategory(db *sql.DB) ([]*Expense, error) {
 
 func SearchExpenses(db *sql.DB, keyword string) ([]*Expense, error) {
 	// search records
-	rows, err := db.Query(fmt.Sprintf("SELECT * FROM expenses WHERE description LIKE \"%%%s%%\"", keyword))
+	rows, err := db.QueryContext(context.Background(),
+		fmt.Sprintf("SELECT * FROM expenses WHERE description LIKE \"%%%s%%\"", keyword))
 	if err != nil {
 		return []*Expense{}, err
 	}
@@ -234,7 +238,8 @@ func SearchExpenses(db *sql.DB, keyword string) ([]*Expense, error) {
 
 func SearchExpensesByDescription(db *sql.DB, description string) ([]*Expense, error) {
 	// search records
-	rows, err := db.Query(fmt.Sprintf("SELECT * FROM expenses WHERE description == \"%s\"", description))
+	rows, err := db.QueryContext(context.Background(),
+		fmt.Sprintf("SELECT * FROM expenses WHERE description == \"%s\"", description))
 	if err != nil {
 		return []*Expense{}, err
 	}
@@ -259,7 +264,7 @@ func SearchExpensesByDescription(db *sql.DB, description string) ([]*Expense, er
 }
 
 func GetFirstExpense(db *sql.DB) (*Expense, error) {
-	row := db.QueryRow("SELECT * FROM expenses  ORDER BY date ASC LIMIT 1")
+	row := db.QueryRowContext(context.Background(), "SELECT * FROM expenses  ORDER BY date ASC LIMIT 1")
 	ex, err := expenseFromRow(db, row.Scan)
 
 	if err != nil {
@@ -270,7 +275,7 @@ func GetFirstExpense(db *sql.DB) (*Expense, error) {
 }
 
 func GetExpensesByCategory(db *sql.DB, categoryID int) ([]*Expense, error) {
-	rows, err := db.Query("SELECT * FROM expenses WHERE category_id = ?", categoryID)
+	rows, err := db.QueryContext(context.Background(), "SELECT * FROM expenses WHERE category_id = ?", categoryID)
 	if err != nil {
 		return []*Expense{}, err
 	}
@@ -294,7 +299,7 @@ func GetExpensesByCategory(db *sql.DB, categoryID int) ([]*Expense, error) {
 	return expenses, nil
 }
 
-func renderTemplate(out io.Writer, templateName string, value interface{}) error {
+func renderTemplate(out io.Writer, templateName string, value any) error {
 	tmpl, err := content.ReadFile(path.Join("templates", templateName))
 	if err != nil {
 		return err

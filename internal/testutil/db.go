@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"path/filepath"
@@ -30,7 +31,7 @@ func SetupTestDB(t *testing.T, logger *logger.Logger) *sql.DB {
 	}
 
 	// Enable foreign key constraints
-	_, err = database.Exec("PRAGMA foreign_keys = ON")
+	_, err = database.ExecContext(context.Background(), "PRAGMA foreign_keys = ON")
 	if err != nil {
 		t.Fatalf("Failed to enable PRAGMA: %v", err)
 	}
