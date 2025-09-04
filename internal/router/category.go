@@ -85,7 +85,6 @@ func (router *router) categoriesHandler(w http.ResponseWriter) {
 
 func (router *router) updateCategoryHandler(
 	id, name, pattern string,
-	categoryType expenseDB.CategoryType,
 	w http.ResponseWriter,
 ) {
 	categoryID, err := strconv.Atoi(id)
@@ -115,7 +114,7 @@ func (router *router) updateCategoryHandler(
 	updated := false
 	patternChanged := false
 	if (pattern != "" && categoryEntry.Pattern != pattern) ||
-		(name != "" && categoryEntry.Name != name || categoryEntry.Type != categoryType) {
+		(name != "" && categoryEntry.Name != name) {
 		if pattern != "" && categoryEntry.Pattern != pattern {
 			_, err = regexp.Compile(pattern)
 
@@ -131,7 +130,7 @@ func (router *router) updateCategoryHandler(
 			patternChanged = true
 		}
 
-		err = expenseDB.UpdateCategory(router.db, categoryID, name, pattern, categoryType)
+		err = expenseDB.UpdateCategory(router.db, categoryID, name, pattern)
 
 		if err != nil {
 			enhancedCat.Errors = true
@@ -206,7 +205,6 @@ func (router *router) updateCategoryHandler(
 
 	enhancedCat.Category.Name = name
 	enhancedCat.Category.Pattern = pattern
-	enhancedCat.Category.Type = categoryType
 
 	if patternChanged {
 		updateCategoryMatcherErr := router.updateCategoryMatcher()
@@ -300,21 +298,19 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 	}
 
 	data := struct {
-		Keys              []string
-		UncategorizeInfo  map[string]uncategorizedInfo
-		ExpenseCategories []expenseDB.Category
-		IncomeCategories  []expenseDB.Category
-		TotalExpenses     int
-		TotalAmount       int64
-		Error             error
+		Keys             []string
+		UncategorizeInfo map[string]uncategorizedInfo
+		Categories       []expenseDB.Category
+		TotalExpenses    int
+		TotalAmount      int64
+		Error            error
 	}{
-		Keys:              keys,
-		UncategorizeInfo:  uncategorizeInfo,
-		ExpenseCategories: router.matcher.ExpenseCategories(),
-		IncomeCategories:  router.matcher.IncomeCategories(),
-		TotalExpenses:     totalExpenses,
-		TotalAmount:       totalAmount,
-		Error:             nil,
+		Keys:             keys,
+		UncategorizeInfo: uncategorizeInfo,
+		Categories:       router.matcher.Categories(),
+		TotalExpenses:    totalExpenses,
+		TotalAmount:      totalAmount,
+		Error:            nil,
 	}
 	router.templates.Render(w, "pages/categories/uncategorized.html", data)
 }
@@ -391,7 +387,7 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	err = expenseDB.UpdateCategory(router.db, cat.ID, cat.Name, extendedRegex, cat.Type)
+	err = expenseDB.UpdateCategory(router.db, cat.ID, cat.Name, extendedRegex)
 	if err != nil {
 		log.Println("error UpdateCategory ", err.Error())
 		data := struct {
@@ -454,6 +450,25 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 	router.uncategorizedHandler(w)
 }
 
+func (router *router) resetCategoryHandler(w http.ResponseWriter) {
+	_, err := expenseDB.DeleteCategories(router.db)
+
+	if err != nil {
+		categoryIndexError(router, w, err)
+		return
+	}
+
+	updateCategoryMatcherErr := router.updateCategoryMatcher()
+	if updateCategoryMatcherErr != nil {
+		categoryIndexError(router, w, updateCategoryMatcherErr)
+		return
+	}
+
+	router.resetCache()
+
+	router.categoriesHandler(w)
+}
+
 func extendRegex(pattern, description string) (string, error) {
 	extendedPattern := fmt.Sprintf("%s|%s", pattern, regexp.QuoteMeta(description))
 	re, err := regexp.Compile(extendedPattern)
@@ -479,11 +494,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 
 	name := r.FormValue("name")
 	pattern := r.FormValue("pattern")
-	categoryTypeStr := r.FormValue("type")
-	categoryType := expenseDB.ExpenseCategoryType // Default to expense
-	if categoryTypeStr == "1" {
-		categoryType = expenseDB.IncomeCategoryType
-	}
+	// Category type is no longer needed - we only handle expenses
 
 	data := struct {
 		Name    string
@@ -535,7 +546,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	total := len(toUpdated)
 
 	if create && total > 0 {
-		categoryID, createErr := expenseDB.CreateCategory(router.db, name, pattern, categoryType)
+		categoryID, createErr := expenseDB.CreateCategory(router.db, name, pattern)
 
 		if createErr != nil {
 			data.Error = createErr

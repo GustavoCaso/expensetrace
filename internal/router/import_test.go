@@ -21,12 +21,12 @@ func TestImport(t *testing.T) {
 	database := testutil.SetupTestDB(t, logger)
 
 	// Create test categories
-	_, err := db.CreateCategory(database, "Food", "restaurant|food|grocery", db.ExpenseCategoryType)
+	_, err := db.CreateCategory(database, "Food", "restaurant|food|grocery")
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	_, err = db.CreateCategory(database, "Transport", "uber|taxi|transit", db.ExpenseCategoryType)
+	_, err = db.CreateCategory(database, "Transport", "uber|taxi|transit")
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}

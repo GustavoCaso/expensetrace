@@ -18,12 +18,12 @@ func TestImportCSV(t *testing.T) {
 
 	// Create test categories
 	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery", Type: db.ExpenseCategoryType},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit", Type: db.ExpenseCategoryType},
+		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
+		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
 	}
 
 	for _, c := range categories {
-		_, err := db.CreateCategory(database, c.Name, c.Pattern, c.Type)
+		_, err := db.CreateCategory(database, c.Name, c.Pattern)
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -98,12 +98,12 @@ func TestImportJSON(t *testing.T) {
 
 	// Create test categories
 	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery", Type: db.ExpenseCategoryType},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit", Type: db.ExpenseCategoryType},
+		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
+		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
 	}
 
 	for _, c := range categories {
-		_, err := db.CreateCategory(database, c.Name, c.Pattern, c.Type)
+		_, err := db.CreateCategory(database, c.Name, c.Pattern)
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}

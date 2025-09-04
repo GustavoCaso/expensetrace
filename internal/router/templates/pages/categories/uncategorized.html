@@ -41,10 +41,10 @@
               <div class="card-header">
                 <h3 class="card-title">{{$key}}</h3>
                 {{if gt $uncategorized.Total 0}}
-                  <span class="badge income">Income</span>
-                {{else}}
-                  <span class="badge expense">Expense</span>
-                {{end}}
+-                 <span class="badge income">Income</span>
+-               {{else}}
+-                 <span class="badge expense">Expense</span>
+-               {{end}}
               </div>
               
               <div class="category-meta">
@@ -56,8 +56,8 @@
                 </div>
                 
                 <div class="meta-item">
-                  <span class="meta-label">Total:</span>
                   <span class="{{if gt $uncategorized.Total 0}}income{{else}}expense{{end}}">
+                  <span class="meta-value">
                     {{formatMoney $uncategorized.Total "." ","}}€
                   </span>
                 </div>
@@ -115,16 +115,9 @@
                               class="category-select mb-1"
                               name="categoryID">
                         <option value="">-- Select a category --</option>
-                        <optgroup label="Expense Categories">
-                          {{ range $category := $.ExpenseCategories }}
-                            <option value={{$category.ID}}>{{$category.Name}}</option>
-                          {{ end }}
-                        </optgroup>
-                        <optgroup label="Income Categories">
-                          {{ range $category := $.IncomeCategories }}
-                            <option value={{$category.ID}}>{{$category.Name}}</option>
-                          {{ end }}
-                        </optgroup>
+                        {{ range $category := $.Categories }}
+                          <option value={{$category.ID}}>{{$category.Name}}</option>
+                        {{ end }}
                       </select>
                       <button type="submit" class="btn-primary btn-assign">
                         <span class="btn-text">Assign</span>

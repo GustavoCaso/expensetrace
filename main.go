@@ -75,11 +75,6 @@ func executeCommand(command cli.Command) {
 		appLogger.Fatal("Unable to create schema", "error", err.Error())
 	}
 
-	err = db.PopulateCategoriesFromConfig(dbInstance, conf)
-	if err != nil {
-		appLogger.Error("Error inserting category", "error", err.Error())
-	}
-
 	categories, err := db.GetCategories(dbInstance)
 	if err != nil {
 		appLogger.Fatal("Unable to get categories", "error", err.Error())

@@ -217,6 +217,20 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 				return nil
 			},
 		},
+		{
+			name: "Remove column from categories",
+			up: func(tx *sql.Tx) error {
+				// 1. First add the column with a default value of 0 (expense)
+				_, alterErr := tx.Exec(`
+						ALTER TABLE categories DROP COLUMN type;
+				`)
+				if alterErr != nil {
+					return alterErr
+				}
+
+				return nil
+			},
+		},
 	}
 
 	// Apply pending migrations
