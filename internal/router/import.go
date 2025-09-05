@@ -3,8 +3,8 @@ package router
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
-	"log"
 	"net/http"
 
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
@@ -14,15 +14,18 @@ const (
 	maxMemory = 32 << 20 // 32MB
 )
 
+type importViewData struct {
+	viewBase
+	importUtil.ImportInfo
+	Error string
+}
+
 func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
+	data := importViewData{}
 	err := r.ParseMultipartForm(maxMemory)
 
 	if err != nil {
-		data := struct {
-			Error string
-		}{
-			Error: "Error parsing form: " + err.Error(),
-		}
+		data.Error = fmt.Sprintf("Error parsing form: %s", err.Error())
 
 		router.templates.Render(w, "partials/import/result", data)
 		return
@@ -37,11 +40,7 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			errorMessage = "Error retrieving the file"
 		}
-		data := struct {
-			Error string
-		}{
-			Error: "Error parsing form: " + errorMessage,
-		}
+		data.Error = fmt.Sprintf("Error parsing form: %s", errorMessage)
 
 		router.templates.Render(w, "partials/import/result", data)
 		return
@@ -61,19 +60,17 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 		router.templates.Render(w, "partials/import/result", data)
 		return
 	}
-	log.Printf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len())
+	router.logger.Info(fmt.Sprintf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len()))
 	info := importUtil.Import(header.Filename, &buf, router.db, router.matcher)
 
 	if info.Error != nil && info.TotalImports == 0 {
-		data := struct {
-			Error string
-		}{
-			Error: "Error importing expenses: " + info.Error.Error(),
-		}
+		data.Error = fmt.Sprintf("Error importing expenses: %s", info.Error.Error())
 
 		router.templates.Render(w, "partials/import/result.html", data)
 		return
 	}
+
+	data.ImportInfo = info
 
 	router.templates.Render(w, "partials/import/result.html", info)
 

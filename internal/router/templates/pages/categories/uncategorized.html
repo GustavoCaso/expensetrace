@@ -2,7 +2,7 @@
 {{define "css"}}/static/css/categories.css{{end}}
 
 {{define "main"}}  
-  {{ if eq .Error nil }}
+  {{ if eq (len .Error) 0 }}
     {{template "categories/nav" "uncategorized"}}
   
     <div id="uncategorized">

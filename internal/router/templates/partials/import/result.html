@@ -1,5 +1,5 @@
 {{define "import/result"}}
-  {{if .Error}}
+  {{ if eq (len .Error) 0 }}
     <div class="error-message">
       <div class="error-icon">⚠️</div>
       <div>

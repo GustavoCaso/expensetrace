@@ -5,7 +5,7 @@
   {{template "categories/nav" "index"}}
 
   <div id="category-content">
-    {{ if eq .Error nil }}
+    {{ if eq (len .Error) 0 }}
       <div class="card-grid">
         <div class="card ta-center">
           <h3 class="card-title">Total Categories</h3>
