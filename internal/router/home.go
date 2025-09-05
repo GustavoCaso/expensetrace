@@ -19,10 +19,10 @@ type chartDataPoint struct {
 	SavingsPercentage float32 `json:"SavingsPercentage"`
 }
 
-type homeData struct {
+type homeViewData struct {
+	viewBase
 	Report    report.Report
 	ChartData []chartDataPoint
-	Error     error
 }
 
 func (router *router) generateChartData() []chartDataPoint {
@@ -83,25 +83,18 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 		chartData = router.generateChartData()
 	}
 
-	var data homeData
+	data := homeViewData{}
 	if err != nil {
-		data = homeData{
-			Error: err,
-		}
+		data.Error = err.Error()
 	} else {
 		reportKey := fmt.Sprintf("%d-%d", year, month)
 		report, ok := router.reports[reportKey]
 
 		if !ok {
-			data = homeData{
-				Error: fmt.Errorf("no report available. %s", reportKey),
-			}
+			data.Error = fmt.Sprintf("no report available. %s", reportKey)
 		} else {
-			data = homeData{
-				Report:    report,
-				ChartData: chartData,
-				Error:     nil,
-			}
+			data.Report = report
+			data.ChartData = chartData
 		}
 	}
 

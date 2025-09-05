@@ -174,7 +174,7 @@ func expeseCategory(ex *expenseDB.Expense) string {
 
 	if category == "" {
 		if ex.Type == expenseDB.IncomeType {
-			return "uncategorized income"
+			return "income"
 		}
 
 		return "uncategorized charge"

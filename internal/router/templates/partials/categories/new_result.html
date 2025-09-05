@@ -1,5 +1,5 @@
 {{define "categories/new_result"}}
-  {{if .Error}}
+  {{ if eq (len .Error) 0 }}
     <!-- Error in regex pattern or server error -->
     <div class="card error">
       <div class="card-header">

@@ -2,7 +2,7 @@
 {{define "css"}}/static/css/reports.css{{end}}
 
 {{define "main"}}
-  {{ if eq .Error nil }}
+  {{ if eq (len .Error) 0 }}
     <div id="report-content">
       {{if .ChartData}}
         <div class="mb-8">
