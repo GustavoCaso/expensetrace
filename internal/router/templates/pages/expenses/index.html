@@ -8,16 +8,18 @@
     </div>
     <button 
       class="btn-primary"
-      hx-post="/search" 
-      hx-target=".expenses-container" 
-      hx-swap="innerHTML"
+      hx-post="/expense/search" 
+      hx-target="#page" 
+      hx-swap="outerHTML"
       type="submit">
       Search
     </button>
   </form>
 
-  {{ if eq .Error nil }}
-    <!-- List of Expenses -->
+  {{ if eq (len .Error) 0 }}
+    {{ if gt (len .Query) 0 }}
+    <h2> Results for {{.Query}} </h2>
+    {{ end }}
     <div class="expenses-container">
         {{range $year := .Years}}
           {{$currentYear := (eq $year $.CurrentYear)}}
@@ -30,7 +32,7 @@
             
             <div class="expense-list {{if not $currentYear}}collapsed{{end}}">
               {{range $month := $.Months}}
-                {{$currentMonth := (eq $month $.CurrentMonth)}}
+                {{$currentMonth := (and (eq $month $.CurrentMonth) $currentYear)}}
                 {{$expenses := index $.Expenses $year $month}}
                 {{if gt (len $expenses) 0}}
                   <div class="month-header">
@@ -45,10 +47,21 @@
                           <div>{{$expense.Description}}</div>
                           <div class="expense-meta">
                             <span class="badge">{{$expense.Category}}</span>
-                            <span class="source-info">via {{$expense.Source}}</span>
+                            <span class="font-italic">via {{$expense.Source}}</span>
                           </div>
                         </div>
-                        <span class="amount {{if gt $expense.Amount 0}}income{{else}}expense{{end}}"><b>{{formatMoney $expense.Amount "." ","}}€</b></span>
+                        <span class="amount {{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
+                          <b>{{formatMoney $expense.Amount "." ","}}€</b>
+                        </span>
+                        <div class="expense-actions">
+                          <a 
+                            class="btn-secondary btn-small" 
+                            href="/expense/{{$expense.ID}}" 
+                            hx-target=".expenses-container" 
+                            hx-swap="innerHTML">
+                            Edit
+                          </a>
+                        </div>
                       </li>
                     {{end}}
                   </ul>
@@ -61,6 +74,7 @@
     </div>
   {{ else }}
     {{template "error" .Error}}
+    <button class="btn-primary" hx-get="/expenses">Expenses</button>
   {{ end }}
 {{end}}
  

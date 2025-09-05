@@ -208,7 +208,7 @@ func TestUpdateCategory(t *testing.T) {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	err = UpdateCategory(db, int(catID), "Dining", "restaurant|dining|food")
+	err = UpdateCategory(db, catID, "Dining", "restaurant|dining|food")
 	if err != nil {
 		t.Errorf("Failed to update category: %v", err)
 	}

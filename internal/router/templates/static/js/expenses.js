@@ -1,40 +1,39 @@
 document.addEventListener('DOMContentLoaded', function () {
-  // Set up year toggles
-  const yearHeaders = document.querySelectorAll('.year-header');
-  yearHeaders.forEach(header => {
-    header.addEventListener('click', function () {
-      const content = this.nextElementSibling;
+  // Set up year and month toggles using event delegation
+  document.body.addEventListener('click', function (e) {
+    // Handle year header clicks
+    if (e.target.closest('.year-header')) {
+      const header = e.target.closest('.year-header');
+      const content = header.nextElementSibling;
       const isCollapsed = content.classList.contains('collapsed');
 
       // Toggle collapse class
       if (isCollapsed) {
         content.classList.remove('collapsed');
-        this.classList.remove('collapsed');
+        header.classList.remove('collapsed');
       } else {
         content.classList.add('collapsed');
-        this.classList.add('collapsed');
+        header.classList.add('collapsed');
       }
-    });
-  });
+    }
 
-  // Set up month toggles
-  const monthHeaders = document.querySelectorAll('.month-header');
-  monthHeaders.forEach(header => {
-    header.addEventListener('click', function (e) {
+    // Handle month header clicks
+    if (e.target.closest('.month-header')) {
       // Prevent the click from bubbling up to parent elements
       e.stopPropagation();
-      const content = this.nextElementSibling;
+      const header = e.target.closest('.month-header');
+      const content = header.nextElementSibling;
       const isCollapsed = content.classList.contains('collapsed');
 
       // Toggle collapse class
       if (isCollapsed) {
         content.classList.remove('collapsed');
-        this.classList.remove('collapsed');
+        header.classList.remove('collapsed');
       } else {
         content.classList.add('collapsed');
-        this.classList.add('collapsed');
+        header.classList.add('collapsed');
       }
-    });
+    }
   });
 
   // Handle category tabs

@@ -90,12 +90,24 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 		router.homeHandler(w, r)
 	})
 
-	mux.HandleFunc("DELETE /expense/{id}", func(_ http.ResponseWriter, _ *http.Request) {
-		// TODO
+	mux.HandleFunc("GET /expense/{id}", func(w http.ResponseWriter, r *http.Request) {
+		router.expenseHandler(w, r)
+	})
+
+	mux.HandleFunc("PUT /expense/{id}", func(w http.ResponseWriter, r *http.Request) {
+		router.updateExpenseHandler(w, r)
+	})
+
+	mux.HandleFunc("DELETE /expense/{id}", func(w http.ResponseWriter, r *http.Request) {
+		router.deleteExpenseHandler(w, r)
 	})
 
 	mux.HandleFunc("GET /expenses", func(w http.ResponseWriter, _ *http.Request) {
 		router.expensesHandler(w)
+	})
+
+	mux.HandleFunc("POST /expense/search", func(w http.ResponseWriter, r *http.Request) {
+		router.expenseSearchHandler(w, r)
 	})
 
 	mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
@@ -153,10 +165,6 @@ func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Han
 
 	mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {
 		router.updateUncategorizedHandler(w, r)
-	})
-
-	mux.HandleFunc("POST /search", func(w http.ResponseWriter, r *http.Request) {
-		router.searchHandler(w, r)
 	})
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
