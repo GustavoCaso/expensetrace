@@ -10,8 +10,8 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/cli/tui"
 	"github.com/GustavoCaso/expensetrace/internal/cli/web"
 	"github.com/GustavoCaso/expensetrace/internal/config"
-	"github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
+	"github.com/GustavoCaso/expensetrace/internal/storage/sqlite"
 )
 
 var subcommands = map[string]cli.Command{
@@ -65,32 +65,32 @@ func executeCommand(command cli.Command) {
 
 	appLogger.Info("Using database", "path", conf.DB)
 
-	dbInstance, err := db.GetDB(conf.DB)
+	storage, err := sqlite.New(conf.DB)
 	if err != nil {
 		appLogger.Fatal("Unable to get DB", "error", err.Error())
 	}
 
-	err = db.ApplyMigrations(dbInstance, appLogger)
+	err = storage.ApplyMigrations(appLogger)
 	if err != nil {
 		appLogger.Fatal("Unable to create schema", "error", err.Error())
 	}
 
-	categories, err := db.GetCategories(dbInstance)
+	categories, err := storage.GetCategories()
 	if err != nil {
 		appLogger.Fatal("Unable to get categories", "error", err.Error())
 	}
 
 	matcher := categoryPkg.NewMatcher(categories)
 
-	err = command.Run(dbInstance, matcher, appLogger)
+	err = command.Run(storage, matcher, appLogger)
 	if err != nil {
 		appLogger.Error("Command execution failed", "error", err)
 		os.Exit(1)
 	}
 
-	err = dbInstance.Close()
+	err = storage.Close()
 	if err != nil {
-		appLogger.Error("Error closing DB", "error", err)
+		appLogger.Error("Error closing storage", "error", err)
 		os.Exit(1)
 	}
 

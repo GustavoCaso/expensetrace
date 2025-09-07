@@ -5,8 +5,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 
-	"github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/report"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
@@ -59,7 +59,7 @@ func (w wrapper) Categories() []report.Category {
 	return w.report.Categories
 }
 
-func (w wrapper) ExpensesToRow(expenses []*db.Expense, expending bool) []table.Row {
+func (w wrapper) ExpensesToRow(expenses []storage.Expense, expending bool) []table.Row {
 	rows := make([]table.Row, len(expenses))
 
 	for i, expense := range expenses {
@@ -67,17 +67,17 @@ func (w wrapper) ExpensesToRow(expenses []*db.Expense, expending bool) []table.R
 
 		if expending {
 			expenseAmount = util.ColorOutput(
-				fmt.Sprintf("%s€", util.FormatMoney(expense.Amount, ".", ",")),
+				fmt.Sprintf("%s€", util.FormatMoney(expense.Amount(), ".", ",")),
 				"red",
 				"underline",
 			)
 		} else {
-			expenseAmount = util.ColorOutput(fmt.Sprintf("%s€", util.FormatMoney(expense.Amount, ".", ",")), "green")
+			expenseAmount = util.ColorOutput(fmt.Sprintf("%s€", util.FormatMoney(expense.Amount(), ".", ",")), "green")
 		}
 
 		rows[i] = table.Row{
-			expense.Description,
-			expense.Source,
+			expense.Description(),
+			expense.Source(),
 			expenseAmount,
 		}
 	}

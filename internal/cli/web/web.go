@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/router"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 type webCommand struct {
@@ -33,7 +33,7 @@ const (
 	defaultTimeout = 5 * time.Second
 )
 
-func (c webCommand) Run(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) error {
+func (c webCommand) Run(storage storage.Storage, matcher *category.Matcher, logger *logger.Logger) error {
 	// Initialize configuration from environment variables
 	port := os.Getenv("EXPENSETRACE_PORT")
 	if port == "" {
@@ -54,7 +54,7 @@ func (c webCommand) Run(db *sql.DB, matcher *category.Matcher, logger *logger.Lo
 		timeout = defaultTimeout
 	}
 
-	handler, _ := router.New(db, matcher, logger)
+	handler, _ := router.New(storage, matcher, logger)
 	logger.Info("Starting web server", "url", fmt.Sprintf("http://localhost:%s", port))
 
 	server := &http.Server{
