@@ -1,7 +1,6 @@
 package router
 
 import (
-	"database/sql"
 	"embed"
 	"fmt"
 	"html/template"
@@ -17,9 +16,9 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/report"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
@@ -30,7 +29,7 @@ var staticFS, _ = fs.Sub(static, "templates/static")
 type router struct {
 	reload           bool
 	matcher          *category.Matcher
-	db               *sql.DB
+	storage          storage.Storage
 	templates        *templates
 	reports          map[string]report.Report
 	sortedReportKeys []string
@@ -39,11 +38,11 @@ type router struct {
 }
 
 //nolint:revive // We return the private router struct to allow testing some internal functions
-func New(db *sql.DB, matcher *category.Matcher, logger *logger.Logger) (http.Handler, *router) {
+func New(storage storage.Storage, matcher *category.Matcher, logger *logger.Logger) (http.Handler, *router) {
 	router := &router{
 		reload:      os.Getenv("LIVERELOAD") == "true",
 		matcher:     matcher,
-		db:          db,
+		storage:     storage,
 		reportsOnce: &sync.Once{},
 		logger:      logger,
 	}
@@ -190,13 +189,13 @@ func (router *router) generateReports() error {
 	month := now.Month()
 	year := now.Year()
 	skipYear := false
-	ex, err := expenseDB.GetFirstExpense(router.db)
+	ex, err := router.storage.GetFirstExpense()
 	if err != nil {
 		return err
 	}
 
-	lastMonth := ex.Date.Month()
-	lastYear := ex.Date.Year()
+	lastMonth := ex.Date().Month()
+	lastYear := ex.Date().Year()
 
 	reports := map[string]report.Report{}
 
@@ -207,13 +206,13 @@ func (router *router) generateReports() error {
 
 		firstDay, lastDay := util.GetMonthDates(int(month), year)
 
-		expenses, expenseErr := expenseDB.GetExpensesFromDateRange(router.db, firstDay, lastDay)
+		expenses, expenseErr := router.storage.GetExpensesFromDateRange(firstDay, lastDay)
 
 		if expenseErr != nil {
 			return expenseErr
 		}
 
-		result := report.Generate(firstDay, lastDay, expenses, "monthly")
+		result := report.Generate(firstDay, lastDay, router.storage, expenses, "monthly")
 
 		reports[fmt.Sprintf("%d-%d", year, month)] = result
 

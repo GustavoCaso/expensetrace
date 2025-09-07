@@ -2,7 +2,6 @@ package router
 
 import (
 	"bytes"
-	"database/sql"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -12,26 +11,26 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
-	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestImport(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	_, err := db.CreateCategory(database, "Food", "restaurant|food|grocery")
+	_, err := s.CreateCategory("Food", "restaurant|food|grocery")
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	_, err = db.CreateCategory(database, "Transport", "uber|taxi|transit")
+	_, err = s.CreateCategory("Transport", "uber|taxi|transit")
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	categories, err := db.GetCategories(database)
+	categories, err := s.GetCategories()
 	if err != nil {
 		t.Fatalf("Failed to get Categories: %v", err)
 	}
@@ -40,34 +39,18 @@ func TestImport(t *testing.T) {
 
 	// Create test expenses
 	now := time.Now()
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        now,
-			Description: "Restaurant bill",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
-		},
-		{
-			Source:      "Test Source",
-			Date:        now,
-			Description: "Uber ride",
-			Amount:      -50000,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(2), Valid: true},
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, storage.ChargeType, nil),
+		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, nil),
 	}
 
-	_, expenseError := db.InsertExpenses(database, expenses)
+	_, expenseError := s.InsertExpenses(expenses)
 	if expenseError != nil {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
 	// Create router
-	handler, router := New(database, matcher, logger)
+	handler, router := New(s, matcher, logger)
 
 	// Hit home to populate cache
 	req := httptest.NewRequest(http.MethodGet, "/", nil)

@@ -60,7 +60,7 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 	monthQuery := r.URL.Query().Get("month")
 	if monthQuery != "" {
 		if month, err = strconv.Atoi(monthQuery); err != nil {
-			fmt.Println("error strconv.Atoi ", err.Error())
+			router.logger.Warn(fmt.Sprintf("error strconv.Atoi with value %s. %s", monthQuery, err.Error()))
 			month = int(now.Month() - 1)
 		}
 		useReportTemplate = true
@@ -70,7 +70,7 @@ func (router *router) homeHandler(w http.ResponseWriter, r *http.Request) {
 	yearQuery := r.URL.Query().Get("year")
 	if yearQuery != "" {
 		if year, err = strconv.Atoi(yearQuery); err != nil {
-			fmt.Println("error strconv.Atoi ", err.Error())
+			router.logger.Warn(fmt.Sprintf("error strconv.Atoi with value %s. %s", yearQuery, err.Error()))
 			year = now.Year()
 		}
 		useReportTemplate = true

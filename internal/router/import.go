@@ -61,7 +61,7 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	router.logger.Info(fmt.Sprintf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len()))
-	info := importUtil.Import(header.Filename, &buf, router.db, router.matcher)
+	info := importUtil.Import(header.Filename, &buf, router.storage, router.matcher)
 
 	if info.Error != nil && info.TotalImports == 0 {
 		data.Error = fmt.Sprintf("Error importing expenses: %s", info.Error.Error())

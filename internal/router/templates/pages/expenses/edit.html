@@ -111,7 +111,7 @@
             <select id="expense-category" name="category_id">
               <option value="">None</option>
               {{range .Categories}}
-                <option value="{{.ID}}" {{if and $.Expense.CategoryID.Valid (eq $.Expense.CategoryID.Int64 .ID)}}selected{{end}}>
+                <option value="{{.ID}}" {{if eq $.Expense.CategoryID .ID}}selected{{end}}>
                   {{.Name}}
                 </option>
               {{end}}
@@ -141,8 +141,8 @@
             </p>
             <p><strong>Date:</strong> {{.Expense.Date.Format "January 2, 2006"}}</p>
             <p><strong>Source:</strong> {{.Expense.Source}}</p>
-            {{if .Expense.CategoryID.Valid}}
-              <p><strong>Category:</strong> <span class="badge">{{.Expense.Category}}</span></p>
+            {{if gt .Expense.CategoryID 0}}
+              <p><strong>Category:</strong> <span class="badge">{{.Expense.Category.Name}}</span></p>
             {{else}}
               <p><strong>Category:</strong> <span class="text-gray-500">Uncategorized</span></p>
             {{end}}

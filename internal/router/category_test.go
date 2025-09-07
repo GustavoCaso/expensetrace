@@ -1,7 +1,6 @@
 package router
 
 import (
-	"database/sql"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,21 +9,21 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
-	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestCategoriesHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 	matcher := category.NewMatcher(categories)
 
-	handler, _ := New(database, matcher, logger)
+	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/categories", nil)
 	w := httptest.NewRecorder()
@@ -39,30 +38,32 @@ func TestCategoriesHandler(t *testing.T) {
 
 func TestUncategorizedHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
 	}
 	matcher := category.NewMatcher(categories)
 
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        time.Now(),
-			Description: "Uncategorized expense",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"Uncategorized expense",
+			"USD",
+			-123456,
+			time.Now(),
+			storage.ChargeType,
+			nil,
+		),
 	}
 
-	_, err := db.InsertExpenses(database, expenses)
+	_, err := s.InsertExpenses(expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	handler, _ := New(database, matcher, logger)
+	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/uncategorized", nil)
 	w := httptest.NewRecorder()
@@ -77,30 +78,23 @@ func TestUncategorizedHandler(t *testing.T) {
 
 func TestCreateCategoryHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
 	}
 	matcher := category.NewMatcher(categories)
 
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        time.Now(),
-			Description: "cinema",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Test Source", "cinema", "USD", -123456, time.Now(), storage.ChargeType, nil),
 	}
 
-	_, expenseError := db.InsertExpenses(database, expenses)
+	_, expenseError := s.InsertExpenses(expenses)
 	if expenseError != nil {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
-	handler, router := New(database, matcher, logger)
+	handler, router := New(s, matcher, logger)
 
 	oldMatcher := router.matcher
 	oldSyncOnce := router.reportsOnce
@@ -117,7 +111,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 		t.Errorf("Expected status OK; got %v", resp.Status)
 	}
 
-	categories, err := db.GetCategories(database)
+	categories, err := s.GetCategories()
 	if err != nil {
 		t.Fatalf("Failed to get categories: %v", err)
 	}
@@ -125,9 +119,9 @@ func TestCreateCategoryHandler(t *testing.T) {
 	found := false
 	var categoryID int64
 	for _, c := range categories {
-		if c.Name == "Entertainment" && c.Pattern == "cinema|movie|theater" {
+		if c.Name() == "Entertainment" && c.Pattern() == "cinema|movie|theater" {
 			found = true
-			categoryID = c.ID
+			categoryID = c.ID()
 			break
 		}
 	}
@@ -136,7 +130,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 		t.Error("Category was not created")
 	}
 
-	expensesUpdated, err := db.SearchExpensesByDescription(database, "cinema")
+	expensesUpdated, err := s.SearchExpensesByDescription("cinema")
 
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
@@ -146,7 +140,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 		t.Fatalf("Failed more expenses than it should: %v", err)
 	}
 
-	if expensesUpdated[0].CategoryID.Int64 != categoryID {
+	if expensesUpdated[0].CategoryID() != nil && *expensesUpdated[0].CategoryID() != categoryID {
 		t.Fatal("Expense did not update the category ID")
 	}
 
@@ -164,26 +158,26 @@ func TestUpdateHandler(t *testing.T) {
 		name          string
 		body          string
 		updateMatcher bool
-		assertion     func(t *testing.T, updatedCategory db.Category, updatedExpenses []*db.Expense)
+		assertion     func(t *testing.T, updatedCategory storage.Category, updatedExpenses []storage.Expense)
 	}{
 		{
 			"modify pattern and set expense to NULL category",
 			"pattern=test_pattern",
 			true,
-			func(t *testing.T, updatedCategory db.Category, updatedExpenses []*db.Expense) {
-				if updatedCategory.Pattern != "test_pattern" {
+			func(t *testing.T, updatedCategory storage.Category, updatedExpenses []storage.Expense) {
+				if updatedCategory.Pattern() != "test_pattern" {
 					t.Fatalf(
 						"Category was not updated properly. Expected pattern to be `test_pattern` but was %s",
-						updatedCategory.Pattern,
+						updatedCategory.Pattern(),
 					)
 				}
 
 				for _, ex := range updatedExpenses {
-					if ex.Description == "cinema" {
-						if ex.CategoryID.Valid {
+					if ex.Description() == "cinema" {
+						if ex.CategoryID() != nil {
 							t.Fatalf(
 								"Expense was not properly updated. Category ID must be NULL. Got %d",
-								ex.CategoryID.Int64,
+								*ex.CategoryID(),
 							)
 						}
 					}
@@ -194,21 +188,21 @@ func TestUpdateHandler(t *testing.T) {
 			"modify pattern and update existing expenses",
 			"pattern=restaurant|bars|cinema|gym",
 			true,
-			func(t *testing.T, updatedCategory db.Category, updatedExpenses []*db.Expense) {
-				if updatedCategory.Pattern != "restaurant|bars|cinema|gym" {
+			func(t *testing.T, updatedCategory storage.Category, updatedExpenses []storage.Expense) {
+				if updatedCategory.Pattern() != "restaurant|bars|cinema|gym" {
 					t.Fatalf(
 						"Category was not updated properly. Expected pattern to be `restaurant|bars|cinema|gym` but was %s",
-						updatedCategory.Pattern,
+						updatedCategory.Pattern(),
 					)
 				}
 
 				for _, ex := range updatedExpenses {
-					if ex.CategoryID.Int64 != updatedCategory.ID {
+					if ex.CategoryID() != nil && *ex.CategoryID() != updatedCategory.ID() {
 						t.Fatalf(
 							"Expense %s was incoreectly updated. Category ID must be %d. Got %d",
-							ex.Description,
-							updatedCategory.ID,
-							ex.CategoryID.Int64,
+							ex.Description(),
+							updatedCategory.ID(),
+							*ex.CategoryID(),
 						)
 					}
 				}
@@ -218,28 +212,28 @@ func TestUpdateHandler(t *testing.T) {
 			"modify name",
 			"name=Enjoyment",
 			false,
-			func(t *testing.T, updatedCategory db.Category, updatedExpenses []*db.Expense) {
-				if updatedCategory.Name != "Enjoyment" {
+			func(t *testing.T, updatedCategory storage.Category, updatedExpenses []storage.Expense) {
+				if updatedCategory.Name() != "Enjoyment" {
 					t.Fatalf(
 						"Category was not updated properly. Expected name to be `Enjoyment` but was %s",
-						updatedCategory.Name,
+						updatedCategory.Name(),
 					)
 				}
 				for _, ex := range updatedExpenses {
-					if ex.Description == "cinema" {
-						if ex.CategoryID.Int64 != updatedCategory.ID {
+					if ex.Description() == "cinema" {
+						if ex.CategoryID() == nil && *ex.CategoryID() != updatedCategory.ID() {
 							t.Fatalf(
 								"Expense %s was incoreectly updated. Category ID must be %d. Got %d",
-								ex.Description,
-								updatedCategory.ID,
-								ex.CategoryID.Int64,
+								ex.Description(),
+								updatedCategory.ID(),
+								*ex.CategoryID(),
 							)
 						}
 					}
 
-					if ex.Description == "gym" {
-						if ex.CategoryID.Valid {
-							t.Fatalf("Expense was updated. Category ID must be NULL. Got %d", ex.CategoryID.Int64)
+					if ex.Description() == "gym" {
+						if ex.CategoryID() != nil {
+							t.Fatalf("Expense was updated. Category ID must be NULL. Got %d", *ex.CategoryID())
 						}
 					}
 				}
@@ -250,10 +244,9 @@ func TestUpdateHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			logger := testutil.TestLogger(t)
-			database := testutil.SetupTestDB(t, logger)
+			s := testutil.SetupTestStorage(t, logger)
 
-			categoryID, err := db.CreateCategory(
-				database,
+			categoryID, err := s.CreateCategory(
 				"Entertainment",
 				"restaurant|bars|cinema",
 			)
@@ -261,42 +254,33 @@ func TestUpdateHandler(t *testing.T) {
 				t.Fatalf("Failed to create Category: %v", err)
 			}
 
-			categories, err := db.GetCategories(database)
+			categories, err := s.GetCategories()
 			if err != nil {
 				t.Fatalf("Failed to get Categories: %v", err)
 			}
 
 			matcher := category.NewMatcher(categories)
 
-			expenses := []*db.Expense{
-
-				{
-					Source:      "Test Source",
-					Date:        time.Now(),
-					Description: "cinema",
-					Amount:      -123456,
-					Type:        db.ChargeType,
-					Currency:    "USD",
-					CategoryID:  sql.NullInt64{Int64: categoryID, Valid: true},
-				},
-
-				{
-					Source:      "Test Source",
-					Date:        time.Now(),
-					Description: "gym",
-					Amount:      -123,
-					Type:        db.ChargeType,
-					Currency:    "USD",
-					CategoryID:  sql.NullInt64{Int64: int64(0), Valid: false},
-				},
+			expenses := []storage.Expense{
+				storage.NewExpense(
+					0,
+					"Test Source",
+					"cinema",
+					"USD",
+					-123456,
+					time.Now(),
+					storage.ChargeType,
+					&categoryID,
+				),
+				storage.NewExpense(0, "Test Source", "gym", "USD", -123, time.Now(), storage.ChargeType, nil),
 			}
 
-			_, expenseError := db.InsertExpenses(database, expenses)
+			_, expenseError := s.InsertExpenses(expenses)
 			if expenseError != nil {
 				t.Fatalf("Failed to insert test expenses: %v", expenseError)
 			}
 
-			handler, router := New(database, matcher, logger)
+			handler, router := New(s, matcher, logger)
 
 			oldSyncOnce := router.reportsOnce
 			oldMatcher := router.matcher
@@ -313,12 +297,12 @@ func TestUpdateHandler(t *testing.T) {
 				t.Errorf("Expected status OK; got %v", resp.Status)
 			}
 
-			categoryUpdated, err := db.GetCategory(database, categoryID)
+			categoryUpdated, err := s.GetCategory(categoryID)
 
 			if err != nil {
 				t.Fatalf("Failed to get category: %v", err)
 			}
-			updatedExpenses, err := db.GetExpenses(database)
+			updatedExpenses, err := s.GetExpenses()
 
 			if err != nil {
 				t.Fatalf("Failed to get expenses: %v", err)
@@ -341,37 +325,39 @@ func TestUpdateHandler(t *testing.T) {
 
 func TestUpdateUncategorizedHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := db.CreateCategory(database, "Entertainment", "restaurant|bars")
+	categoryID, err := s.CreateCategory("Entertainment", "restaurant|bars")
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	categories, err := db.GetCategories(database)
+	categories, err := s.GetCategories()
 	if err != nil {
 		t.Fatalf("Failed to get Categories: %v", err)
 	}
 
 	matcher := category.NewMatcher(categories)
 
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        time.Now(),
-			Description: "cinema. with friends",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"cinema. with friends",
+			"USD",
+			-123456,
+			time.Now(),
+			storage.ChargeType,
+			nil,
+		),
 	}
 
-	_, expenseError := db.InsertExpenses(database, expenses)
+	_, expenseError := s.InsertExpenses(expenses)
 	if expenseError != nil {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
-	handler, router := New(database, matcher, logger)
+	handler, router := New(s, matcher, logger)
 
 	oldSyncOnce := router.reportsOnce
 
@@ -387,19 +373,19 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 		t.Errorf("Expected status OK; got %v", resp.Status)
 	}
 
-	categoryUpdated, err := db.GetCategory(database, categoryID)
+	categoryUpdated, err := s.GetCategory(categoryID)
 	if err != nil {
 		t.Fatalf("Failed to get category: %v", err)
 	}
 
-	if categoryUpdated.Pattern != "restaurant|bars|cinema\\. with friends" {
+	if categoryUpdated.Pattern() != "restaurant|bars|cinema\\. with friends" {
 		t.Fatalf(
 			"Category was not updated properly. Expected pattern to be `restaurant|bars|cinema\\. with friends` but was %s",
-			categoryUpdated.Pattern,
+			categoryUpdated.Pattern(),
 		)
 	}
 
-	expensesUpdated, err := db.SearchExpensesByDescription(database, "cinema. with friends")
+	expensesUpdated, err := s.SearchExpensesByDescription("cinema. with friends")
 
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
@@ -409,11 +395,11 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 		t.Fatalf("Failed to find expenses")
 	}
 
-	if int(expensesUpdated[0].CategoryID.Int64) != int(categoryID) {
+	if expensesUpdated[0].CategoryID() != nil && *expensesUpdated[0].CategoryID() != categoryID {
 		t.Fatalf(
 			"Expense did not update the category ID. Expected %d but got %d",
 			categoryID,
-			expensesUpdated[0].CategoryID.Int64,
+			*expensesUpdated[0].CategoryID(),
 		)
 	}
 
@@ -424,45 +410,29 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 
 func TestResetCategoryHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	cat1ID, err := db.CreateCategory(database, "Food", "restaurant")
+	cat1ID, err := s.CreateCategory("Food", "restaurant")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	cat2ID, err := db.CreateCategory(database, "Transport", "uber|taxi")
+	cat2ID, err := s.CreateCategory("Transport", "uber|taxi")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	expenses := []*db.Expense{
-		{
-			Source:      "bank",
-			Date:        time.Now(),
-			Description: "Restaurant dinner",
-			Amount:      -2500,
-			Type:        db.ChargeType,
-			Currency:    "EUR",
-			CategoryID:  sql.NullInt64{Int64: cat1ID, Valid: true},
-		},
-		{
-			Source:      "bank",
-			Date:        time.Now(),
-			Description: "Uber ride",
-			Amount:      -1500,
-			Type:        db.ChargeType,
-			Currency:    "EUR",
-			CategoryID:  sql.NullInt64{Int64: cat2ID, Valid: true},
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "bank", "Restaurant dinner", "EUR", -2500, time.Now(), storage.ChargeType, &cat1ID),
+		storage.NewExpense(0, "bank", "Uber ride", "EUR", -1500, time.Now(), storage.ChargeType, &cat2ID),
 	}
 
-	_, err = db.InsertExpenses(database, expenses)
+	_, err = s.InsertExpenses(expenses)
 	if err != nil {
 		t.Fatalf("Failed to create test expenses: %v", err)
 	}
 
-	categories, err := db.GetCategories(database)
+	categories, err := s.GetCategories()
 	if err != nil {
 		t.Errorf("Failed to get categories: %v", err)
 	}
@@ -471,7 +441,7 @@ func TestResetCategoryHandler(t *testing.T) {
 	}
 
 	matcher := category.NewMatcher(categories)
-	handler, router := New(database, matcher, logger)
+	handler, router := New(s, matcher, logger)
 
 	oldSyncOnce := router.reportsOnce
 	oldMatcher := router.matcher
@@ -486,7 +456,7 @@ func TestResetCategoryHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", resp.StatusCode, http.StatusOK)
 	}
 
-	categories, err = db.GetCategories(database)
+	categories, err = s.GetCategories()
 	if err != nil {
 		t.Errorf("Failed to get categories after reset: %v", err)
 	}
@@ -494,17 +464,17 @@ func TestResetCategoryHandler(t *testing.T) {
 		t.Errorf("Expected 0 categories after reset, got %d", len(categories))
 	}
 
-	expenses, getExpensesErr := db.GetExpenses(database)
+	expenses, getExpensesErr := s.GetExpenses()
 	if getExpensesErr != nil {
 		t.Errorf("Failed to get expenses after delete: %v", getExpensesErr)
 	}
 	if len(expenses) != 2 {
 		t.Errorf("Expected 2 total expense after delete, got %d", len(expenses))
 	}
-	if expenses[0].CategoryID.Valid {
+	if expenses[0].CategoryID() != nil {
 		t.Errorf("Expected expense to have null category ID after delete categories")
 	}
-	if expenses[1].CategoryID.Valid {
+	if expenses[1].CategoryID() != nil {
 		t.Errorf("Expected expense to have null category ID after delete categories")
 	}
 
@@ -524,11 +494,11 @@ func TestResetCategoryHandler(t *testing.T) {
 
 func TestResetCategoryHandlerEmptyDatabase(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	categories, _ := db.GetCategories(database)
+	categories, _ := s.GetCategories()
 	matcher := category.NewMatcher(categories)
-	handler, router := New(database, matcher, logger)
+	handler, router := New(s, matcher, logger)
 
 	oldSyncOnce := router.reportsOnce
 
@@ -542,7 +512,7 @@ func TestResetCategoryHandlerEmptyDatabase(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", resp.StatusCode, http.StatusOK)
 	}
 
-	categories, err := db.GetCategories(database)
+	categories, err := s.GetCategories()
 	if err != nil {
 		t.Errorf("Failed to get categories after reset: %v", err)
 	}

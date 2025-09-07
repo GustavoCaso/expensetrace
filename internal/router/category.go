@@ -1,10 +1,8 @@
 package router
 
 import (
-	"database/sql"
 	"fmt"
 	"io"
-	"log"
 	"maps"
 	"net/http"
 	"regexp"
@@ -15,12 +13,12 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
-// enhancedCategory extends db.Category with extra UI-friendly fields.
+// enhancedCategory extends storage.Category with extra UI-friendly fields.
 type enhancedCategory struct {
-	expenseDB.Category
+	storage.Category
 	AvgAmount       int64
 	LastTransaction string
 	Total           int
@@ -39,7 +37,7 @@ type categoriesViewData struct {
 }
 
 func (router *router) categoriesHandler(w http.ResponseWriter) {
-	categories, err := expenseDB.GetCategories(router.db)
+	categories, err := router.storage.GetCategories()
 
 	if err != nil {
 		categoryIndexError(router, w, fmt.Errorf("error fetch categories: %s", err.Error()))
@@ -47,7 +45,7 @@ func (router *router) categoriesHandler(w http.ResponseWriter) {
 	}
 
 	// Get counts for uncategorized expenses
-	uncategorizedInfos, err := expenseDB.GetExpensesWithoutCategory(router.db)
+	uncategorizedInfos, err := router.storage.GetExpensesWithoutCategory()
 	if err != nil {
 		categoryIndexError(router, w, err)
 		return
@@ -62,7 +60,7 @@ func (router *router) categoriesHandler(w http.ResponseWriter) {
 
 	for i, cat := range categories {
 		// Get expenses for this category
-		expenses, expensesErr := expenseDB.GetExpensesByCategory(router.db, cat.ID)
+		expenses, expensesErr := router.storage.GetExpensesByCategory(cat.ID())
 
 		if expensesErr != nil {
 			categoryIndexError(router, w, expensesErr)
@@ -94,7 +92,7 @@ func (router *router) updateCategoryHandler(
 		return
 	}
 
-	categoryEntry, err := expenseDB.GetCategory(router.db, int64(categoryID))
+	categoryEntry, err := router.storage.GetCategory(int64(categoryID))
 
 	if err != nil {
 		categoryIndexError(router, w, err)
@@ -102,7 +100,7 @@ func (router *router) updateCategoryHandler(
 	}
 
 	// Get expenses for this category
-	expenses, err := expenseDB.GetExpensesByCategory(router.db, categoryEntry.ID)
+	expenses, err := router.storage.GetExpensesByCategory(categoryEntry.ID())
 
 	if err != nil {
 		categoryIndexError(router, w, err)
@@ -113,9 +111,9 @@ func (router *router) updateCategoryHandler(
 
 	updated := false
 	patternChanged := false
-	if (pattern != "" && categoryEntry.Pattern != pattern) ||
-		(name != "" && categoryEntry.Name != name) {
-		if pattern != "" && categoryEntry.Pattern != pattern {
+	if (pattern != "" && categoryEntry.Pattern() != pattern) ||
+		(name != "" && categoryEntry.Name() != name) {
+		if pattern != "" && categoryEntry.Pattern() != pattern {
 			_, err = regexp.Compile(pattern)
 
 			if err != nil {
@@ -130,7 +128,7 @@ func (router *router) updateCategoryHandler(
 			patternChanged = true
 		}
 
-		err = expenseDB.UpdateCategory(router.db, int64(categoryID), name, pattern)
+		err = router.storage.UpdateCategory(int64(categoryID), name, pattern)
 
 		if err != nil {
 			enhancedCat.Errors = true
@@ -147,7 +145,7 @@ func (router *router) updateCategoryHandler(
 
 	//nolint:nestif // No need to extract this code to a function for now as is clear
 	if updated {
-		categories, categoryErr := expenseDB.GetCategories(router.db)
+		categories, categoryErr := router.storage.GetCategories()
 		if err != nil {
 			categoryIndexError(router, w, categoryErr)
 			return
@@ -157,40 +155,49 @@ func (router *router) updateCategoryHandler(
 		router.matcher = matcher
 
 		if patternChanged {
-			allExpenses, expensesErr := expenseDB.GetExpenses(router.db)
+			allExpenses, expensesErr := router.storage.GetExpenses()
 
 			if expensesErr != nil {
 				categoryIndexError(router, w, expensesErr)
 				return
 			}
 
-			toUpdated := []*expenseDB.Expense{}
+			toUpdated := []storage.Expense{}
 
 			for _, ex := range allExpenses {
-				id, _ := matcher.Match(ex.Description)
-				if id.Valid {
-					if ex.CategoryID.Valid {
-						// Update exiting expense with a new category
-						if id.Int64 != ex.CategoryID.Int64 {
-							ex.CategoryID = id
-							toUpdated = append(toUpdated, ex)
+				id, _ := matcher.Match(ex.Description())
+				if id != nil {
+					if ex.CategoryID() != nil {
+						// Update existing expense with a new category
+						if *id != *ex.CategoryID() {
+							expense := storage.NewExpense(
+								ex.ID(),
+								ex.Source(),
+								ex.Description(),
+								ex.Currency(),
+								ex.Amount(),
+								ex.Date(),
+								ex.Type(),
+								id,
+							)
+							toUpdated = append(toUpdated, expense)
 						}
-						// Update exiting expense without category with category
 					} else {
-						ex.CategoryID = id
-						toUpdated = append(toUpdated, ex)
+						// Update existing expense without category with category
+						expense := storage.NewExpense(ex.ID(), ex.Source(), ex.Description(), ex.Currency(), ex.Amount(), ex.Date(), ex.Type(), id)
+						toUpdated = append(toUpdated, expense)
 					}
 				} else {
-					if ex.CategoryID.Valid {
-						// Changing a category pattern could render exiting expenses to have category NULL
-						ex.CategoryID = sql.NullInt64{}
-						toUpdated = append(toUpdated, ex)
+					if ex.CategoryID() != nil {
+						// Changing a category pattern could render existing expenses to have category NULL
+						expense := storage.NewExpense(ex.ID(), ex.Source(), ex.Description(), ex.Currency(), ex.Amount(), ex.Date(), ex.Type(), nil)
+						toUpdated = append(toUpdated, expense)
 					}
 				}
 			}
 
 			if len(toUpdated) > 0 {
-				updated, updateErr := expenseDB.UpdateExpenses(router.db, toUpdated)
+				updated, updateErr := router.storage.UpdateExpenses(toUpdated)
 				if updateErr != nil {
 					categoryIndexError(router, w, updateErr)
 					return
@@ -203,8 +210,8 @@ func (router *router) updateCategoryHandler(
 		}
 	}
 
-	enhancedCat.Category.Name = name
-	enhancedCat.Category.Pattern = pattern
+	// Note: We need to refresh the category from storage since interfaces are immutable
+	// The template will use the updated values from the storage
 
 	if patternChanged {
 		updateCategoryMatcherErr := router.updateCategoryMatcher()
@@ -236,13 +243,13 @@ type uncategorizedViewData struct {
 	viewBase
 	Keys             []string
 	UncategorizeInfo map[string]uncategorizedInfo
-	Categories       []expenseDB.Category
+	Categories       []storage.Category
 	TotalExpenses    int
 	TotalAmount      int64
 }
 
 func (router *router) uncategorizedHandler(w http.ResponseWriter) {
-	expenses, err := expenseDB.GetExpensesWithoutCategory(router.db)
+	expenses, err := router.storage.GetExpensesWithoutCategory()
 	if err != nil {
 		data := struct {
 			Error error
@@ -258,40 +265,40 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 	var totalAmount int64
 
 	for _, ex := range expenses {
-		if r, ok := uncategorizeInfo[ex.Description]; ok {
+		if r, ok := uncategorizeInfo[ex.Description()]; ok {
 			r.Count++
 			r.Expenses = append(r.Expenses, struct {
 				Date   time.Time
 				Amount int64
 				Source string
 			}{
-				Date:   ex.Date,
-				Amount: ex.Amount,
-				Source: ex.Source,
+				Date:   ex.Date(),
+				Amount: ex.Amount(),
+				Source: ex.Source(),
 			})
-			r.Total += ex.Amount
-			uncategorizeInfo[ex.Description] = r
+			r.Total += ex.Amount()
+			uncategorizeInfo[ex.Description()] = r
 		} else {
-			uncategorizeInfo[ex.Description] = uncategorizedInfo{
+			uncategorizeInfo[ex.Description()] = uncategorizedInfo{
 				Count: 1,
-				Total: ex.Amount,
+				Total: ex.Amount(),
 				Expenses: []struct {
 					Date   time.Time
 					Amount int64
 					Source string
 				}{
 					{
-						Date:   ex.Date,
-						Amount: ex.Amount,
-						Source: ex.Source,
+						Date:   ex.Date(),
+						Amount: ex.Amount(),
+						Source: ex.Source(),
 					},
 				},
-				Slug: slugify(ex.Description),
+				Slug: slugify(ex.Description()),
 			}
 		}
 
 		totalExpenses++
-		totalAmount += ex.Amount
+		totalAmount += ex.Amount()
 	}
 
 	keys := slices.Collect(maps.Keys(uncategorizeInfo))
@@ -346,16 +353,17 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 	}
 
 	expenseDescription := r.FormValue("description")
-	categoryID, err := strconv.Atoi(r.FormValue("categoryID"))
+	categoryIDStr := r.FormValue("categoryID")
+	categoryID, err := strconv.Atoi(categoryIDStr)
 
 	if err != nil {
-		router.logger.Error(fmt.Sprintf("error strconv.Atoi %s", err.Error()))
+		router.logger.Error(fmt.Sprintf("error strconv.Atoi with value %s. %s", categoryIDStr, err.Error()))
 
 		data.Error = err.Error()
 		router.templates.Render(w, "pages/categories/uncategorized.html", data)
 	}
 
-	cat, err := expenseDB.GetCategory(router.db, int64(categoryID))
+	cat, err := router.storage.GetCategory(int64(categoryID))
 
 	if err != nil {
 		router.logger.Error(fmt.Sprintf("error GetCategory %s", err.Error()))
@@ -365,7 +373,7 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	extendedRegex, err := extendRegex(cat.Pattern, expenseDescription)
+	extendedRegex, err := extendRegex(cat.Pattern(), expenseDescription)
 
 	if err != nil {
 		router.logger.Error(fmt.Sprintf("error extendRegex %s", err.Error()))
@@ -374,7 +382,7 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	err = expenseDB.UpdateCategory(router.db, cat.ID, cat.Name, extendedRegex)
+	err = router.storage.UpdateCategory(cat.ID(), cat.Name(), extendedRegex)
 	if err != nil {
 		router.logger.Error(fmt.Sprintf("error UpdateCategory %s", err.Error()))
 		data.Error = err.Error()
@@ -382,7 +390,7 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	expenses, err := expenseDB.SearchExpensesByDescription(router.db, expenseDescription)
+	expenses, err := router.storage.SearchExpensesByDescription(expenseDescription)
 
 	if err != nil {
 		router.logger.Error(fmt.Sprintf("error SearchExpensesByDescription %s", err.Error()))
@@ -393,11 +401,22 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 	}
 
 	if len(expenses) > 0 {
-		for _, ex := range expenses {
-			ex.CategoryID = sql.NullInt64{Int64: int64(categoryID), Valid: true}
+		updatedExpenses := make([]storage.Expense, len(expenses))
+		categoryID := int64(categoryID)
+		for i, ex := range expenses {
+			expense := storage.NewExpense(
+				ex.ID(),
+				ex.Source(),
+				ex.Description(),
+				ex.Currency(),
+				ex.Amount(),
+				ex.Date(),
+				ex.Type(),
+				&categoryID,
+			)
+			updatedExpenses[i] = expense
 		}
-
-		updated, updateErr := expenseDB.UpdateExpenses(router.db, expenses)
+		updated, updateErr := router.storage.UpdateExpenses(updatedExpenses)
 		if updateErr != nil {
 			data.Error = updateErr.Error()
 			router.templates.Render(w, "pages/categories/uncategorized.html", data)
@@ -405,7 +424,7 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 		}
 
 		if updated != int64(len(expenses)) {
-			log.Print("not all expenses updated succesfully")
+			router.logger.Warn("not all expenses updated succesfully")
 		}
 
 		updateCategoryMatcherErr := router.updateCategoryMatcher()
@@ -422,7 +441,7 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 }
 
 func (router *router) resetCategoryHandler(w http.ResponseWriter) {
-	_, err := expenseDB.DeleteCategories(router.db)
+	_, err := router.storage.DeleteCategories()
 
 	if err != nil {
 		categoryIndexError(router, w, err)
@@ -453,7 +472,7 @@ type createCategoryViewData struct {
 	viewBase
 	Name    string
 	Pattern string
-	Results []*expenseDB.Expense
+	Results []storage.Expense
 	Total   int
 	Create  bool
 }
@@ -471,7 +490,6 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 
 	name := r.FormValue("name")
 	pattern := r.FormValue("pattern")
-	// Category type is no longer needed - we only handle expenses
 
 	data.Name = name
 	data.Pattern = pattern
@@ -493,7 +511,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 		return
 	}
 
-	expenses, err := expenseDB.GetExpensesWithoutCategory(router.db)
+	expenses, err := router.storage.GetExpensesWithoutCategory()
 
 	if err != nil {
 		data.Error = err.Error()
@@ -502,10 +520,10 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 		return
 	}
 
-	toUpdated := []*expenseDB.Expense{}
+	toUpdated := []storage.Expense{}
 
 	for _, ex := range expenses {
-		if re.MatchString(ex.Description) {
+		if re.MatchString(ex.Description()) {
 			toUpdated = append(toUpdated, ex)
 		}
 	}
@@ -513,7 +531,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	total := len(toUpdated)
 
 	if create && total > 0 {
-		categoryID, createErr := expenseDB.CreateCategory(router.db, name, pattern)
+		categoryID, createErr := router.storage.CreateCategory(name, pattern)
 
 		if createErr != nil {
 			data.Error = createErr.Error()
@@ -522,13 +540,23 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			return
 		}
 
-		sqlCategoryID := sql.NullInt64{Int64: categoryID, Valid: true}
+		updatedExpenses := make([]storage.Expense, len(toUpdated))
 
-		for _, ex := range expenses {
-			ex.CategoryID = sqlCategoryID
+		for i, ex := range toUpdated {
+			expense := storage.NewExpense(
+				ex.ID(),
+				ex.Source(),
+				ex.Description(),
+				ex.Currency(),
+				ex.Amount(),
+				ex.Date(),
+				ex.Type(),
+				&categoryID,
+			)
+			updatedExpenses[i] = expense
 		}
 
-		updated, updateErr := expenseDB.UpdateExpenses(router.db, toUpdated)
+		updated, updateErr := router.storage.UpdateExpenses(updatedExpenses)
 		if updateErr != nil {
 			data.Error = updateErr.Error()
 
@@ -559,24 +587,23 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	router.templates.Render(w, "partials/categories/new_result.html", data)
 }
 
-func createEnhancedCategory(category expenseDB.Category, expenses []*expenseDB.Expense) enhancedCategory {
-	// Calculate average amount and last transaction
+func createEnhancedCategory(category storage.Category, expenses []storage.Expense) enhancedCategory {
 	var totalAmount int64
 	var lastTransaction time.Time
 	spendingCount := 0
 	incomeCount := 0
 
 	for _, exp := range expenses {
-		totalAmount += exp.Amount
+		totalAmount += exp.Amount()
 
-		if exp.Amount < 0 {
+		if exp.Amount() < 0 {
 			spendingCount++
 		} else {
 			incomeCount++
 		}
 
-		if lastTransaction.IsZero() || exp.Date.After(lastTransaction) {
-			lastTransaction = exp.Date
+		if lastTransaction.IsZero() || exp.Date().After(lastTransaction) {
+			lastTransaction = exp.Date()
 		}
 	}
 
@@ -611,7 +638,7 @@ func categoryIndexError(router *router, w io.Writer, err error) {
 }
 
 func (router *router) updateCategoryMatcher() error {
-	categories, categoryErr := expenseDB.GetCategories(router.db)
+	categories, categoryErr := router.storage.GetCategories()
 	if categoryErr != nil {
 		return categoryErr
 	}
