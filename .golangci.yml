@@ -409,6 +409,7 @@ linters:
           - gosec
           - noctx
           - wrapcheck
+          - cyclop
       - text: 'avoid meaningless package names'
         path: 'internal/util/'
         linters: [ revive ]
