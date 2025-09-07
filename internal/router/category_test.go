@@ -436,8 +436,8 @@ func TestResetCategoryHandler(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to get categories: %v", err)
 	}
-	if len(categories) != 2 {
-		t.Fatalf("Expected 2 categories initially, got %d", len(categories))
+	if len(categories) != 3 {
+		t.Fatalf("Expected three categories (two + exclude) initially, got %d", len(categories))
 	}
 
 	matcher := category.NewMatcher(categories)
@@ -460,8 +460,8 @@ func TestResetCategoryHandler(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to get categories after reset: %v", err)
 	}
-	if len(categories) != 0 {
-		t.Errorf("Expected 0 categories after reset, got %d", len(categories))
+	if len(categories) != 1 {
+		t.Errorf("Expected one category (exclude) after reset, got %d", len(categories))
 	}
 
 	expenses, getExpensesErr := s.GetExpenses()
@@ -516,8 +516,8 @@ func TestResetCategoryHandlerEmptyDatabase(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to get categories after reset: %v", err)
 	}
-	if len(categories) != 0 {
-		t.Errorf("Expected 0 categories after reset, got %d", len(categories))
+	if len(categories) != 1 {
+		t.Errorf("Expected one category (exclude) after reset, got %d", len(categories))
 	}
 
 	if oldSyncOnce == router.reportsOnce {

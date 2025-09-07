@@ -125,6 +125,8 @@ func (e *expense) CategoryID() *int64 {
 	return e.categoryID
 }
 
+const ExcludeCategory = "🚫 Exclude"
+
 type Storage interface {
 	// Migrations
 	ApplyMigrations(*logger.Logger) error
@@ -150,6 +152,7 @@ type Storage interface {
 	UpdateCategory(categoryID int64, name, pattern string) error
 	CreateCategory(name, pattern string) (int64, error)
 	DeleteCategories() (int64, error)
+	GetExcludeCategory() (Category, error)
 
 	// Resource managment
 	Close() error

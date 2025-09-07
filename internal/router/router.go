@@ -61,9 +61,8 @@ func New(storage storage.Storage, matcher *category.Matcher, logger *logger.Logg
 			err := router.generateReports()
 
 			if err != nil {
-				// If we fail to generate reports servers do not start
-				// TODO: fix
-				logger.Fatal("Failed to generate reports", "error", err)
+				logger.Warn("Failed to generate reports", "error", err)
+				return
 			}
 
 			reportKeys := slices.Collect(maps.Keys(router.reports))
@@ -212,7 +211,11 @@ func (router *router) generateReports() error {
 			return expenseErr
 		}
 
-		result := report.Generate(firstDay, lastDay, router.storage, expenses, "monthly")
+		result, reportErr := report.Generate(firstDay, lastDay, router.storage, expenses, "monthly")
+
+		if reportErr != nil {
+			return reportErr
+		}
 
 		reports[fmt.Sprintf("%d-%d", year, month)] = result
 

@@ -41,6 +41,11 @@ func (s *sqliteStorage) GetCategory(categoryID int64) (storage.Category, error) 
 	return categoryFromRow(row.Scan)
 }
 
+func (s *sqliteStorage) GetExcludeCategory() (storage.Category, error) {
+	row := s.db.QueryRowContext(context.Background(), "SELECT * FROM categories WHERE name=?", storage.ExcludeCategory)
+	return categoryFromRow(row.Scan)
+}
+
 func (s *sqliteStorage) UpdateCategory(categoryID int64, name, pattern string) error {
 	_, err := s.db.ExecContext(context.Background(),
 		"UPDATE categories SET name = ?, pattern = ? WHERE id = ?;",
@@ -63,19 +68,31 @@ func (s *sqliteStorage) CreateCategory(name, pattern string) (int64, error) {
 }
 
 func (s *sqliteStorage) DeleteCategories() (int64, error) {
-	tx, err := s.db.BeginTx(context.Background(), nil)
+	ctx := context.Background()
+
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
 
-	_, err = tx.ExecContext(context.Background(),
-		"UPDATE expenses SET category_id = NULL WHERE category_id IS NOT NULL")
+	excludeRow := tx.QueryRowContext(ctx, "SELECT * FROM categories WHERE name=?", storage.ExcludeCategory)
+	excludeCategory, excludeErr := categoryFromRow(excludeRow.Scan)
+	if excludeErr != nil {
+		_ = tx.Rollback()
+		return 0, fmt.Errorf("failed to fetch exclude category: %w", excludeErr)
+	}
+
+	_, err = tx.ExecContext(
+		ctx,
+		"UPDATE expenses SET category_id = NULL WHERE category_id IS NOT NULL AND category_id IS NOT ?",
+		excludeCategory.ID(),
+	)
 	if err != nil {
 		_ = tx.Rollback()
 		return 0, fmt.Errorf("failed to uncategorize expenses: %w", err)
 	}
 
-	result, err := tx.ExecContext(context.Background(), "DELETE FROM categories")
+	result, err := tx.ExecContext(ctx, "DELETE FROM categories WHERE id IS NOT ?", excludeCategory.ID())
 	if err != nil {
 		_ = tx.Rollback()
 		return 0, fmt.Errorf("failed to delete categories: %w", err)
