@@ -10,13 +10,13 @@ import (
 	"time"
 
 	pkgCategory "github.com/GustavoCaso/expensetrace/internal/category"
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 type Category struct {
 	Name              string
 	Amount            int64
-	Expenses          []*expenseDB.Expense
+	Expenses          []pkgStorage.Expense
 	PercentageOfTotal float64
 	LastTransaction   time.Time
 	AvgAmount         int64
@@ -41,10 +41,15 @@ const (
 	percentageOfTotal = 100
 )
 
-func Generate(startDate, endDate time.Time, expenses []*expenseDB.Expense, reportType string) Report {
+func Generate(
+	startDate, endDate time.Time,
+	storage pkgStorage.Storage,
+	expenses []pkgStorage.Expense,
+	reportType string,
+) Report {
 	var report Report
 
-	categories, duplicates, income, spending := Categories(expenses)
+	categories, duplicates, income, spending := Categories(storage, expenses)
 
 	report.Income = income
 	report.Spending = spending
@@ -80,7 +85,10 @@ func Generate(startDate, endDate time.Time, expenses []*expenseDB.Expense, repor
 	return report
 }
 
-func Categories(expenses []*expenseDB.Expense) (map[string]Category, []string, int64, int64) {
+func Categories(
+	storage pkgStorage.Storage,
+	expenses []pkgStorage.Expense,
+) (map[string]Category, []string, int64, int64) {
 	var income int64
 	var spending int64
 	categories := make(map[string]Category)
@@ -88,30 +96,35 @@ func Categories(expenses []*expenseDB.Expense) (map[string]Category, []string, i
 	duplicates := []string{}
 
 	for _, ex := range expenses {
-		category, err := ex.Category()
-		if err != nil {
-			fmt.Printf("error fetching category: %+v\n", err.Error())
+		categoryName := ""
+		if ex.CategoryID() != nil {
+			category, err := storage.GetCategory(*ex.CategoryID())
+			// If there is an error fetching the category
+			// we place the expense in the uncategorized bucket
+			if err == nil {
+				categoryName = category.Name()
+			}
 		}
 
-		if category == pkgCategory.Exclude {
+		if categoryName == pkgCategory.Exclude {
 			continue
 		}
 
-		_, ok := seen[ex.Description]
+		_, ok := seen[ex.Description()]
 		if !ok {
-			seen[ex.Description] = true
+			seen[ex.Description()] = true
 		} else {
-			duplicates = append(duplicates, ex.Description)
+			duplicates = append(duplicates, ex.Description())
 		}
 
-		switch ex.Type {
-		case expenseDB.ChargeType:
-			spending += ex.Amount
-		case expenseDB.IncomeType:
-			income += ex.Amount
+		switch ex.Type() {
+		case pkgStorage.ChargeType:
+			spending += ex.Amount()
+		case pkgStorage.IncomeType:
+			income += ex.Amount()
 		}
 
-		addExpenseToCategory(categories, ex)
+		addExpenseToCategory(categories, ex, categoryName)
 	}
 
 	for key, category := range categories {
@@ -126,14 +139,14 @@ func Categories(expenses []*expenseDB.Expense) (map[string]Category, []string, i
 
 		// Find most recent transaction
 		if len(category.Expenses) > 0 {
-			category.LastTransaction = category.Expenses[0].Date
+			category.LastTransaction = category.Expenses[0].Date()
 			// Calculate average amount
 			total := int64(0)
 			for _, exp := range category.Expenses {
-				total += exp.Amount
+				total += exp.Amount()
 
-				if exp.Date.After(category.LastTransaction) {
-					category.LastTransaction = exp.Date
+				if exp.Date().After(category.LastTransaction) {
+					category.LastTransaction = exp.Date()
 				}
 			}
 			category.AvgAmount = total / int64(len(category.Expenses))
@@ -145,20 +158,20 @@ func Categories(expenses []*expenseDB.Expense) (map[string]Category, []string, i
 	return categories, duplicates, income, spending
 }
 
-func addExpenseToCategory(categories map[string]Category, ex *expenseDB.Expense) {
-	categoryName := expeseCategory(ex)
+func addExpenseToCategory(categories map[string]Category, ex pkgStorage.Expense, categoryString string) {
+	categoryName := expeseCategoryName(ex, categoryString)
 
 	c, ok := categories[categoryName]
 	if ok {
-		c.Amount += ex.Amount
+		c.Amount += ex.Amount()
 		c.Expenses = append(c.Expenses, ex)
 		categories[categoryName] = c
 	} else {
-		amount := ex.Amount
+		amount := ex.Amount()
 		cat := Category{
 			Amount: amount,
 			Name:   categoryName,
-			Expenses: []*expenseDB.Expense{
+			Expenses: []pkgStorage.Expense{
 				ex,
 			},
 		}
@@ -166,20 +179,15 @@ func addExpenseToCategory(categories map[string]Category, ex *expenseDB.Expense)
 	}
 }
 
-func expeseCategory(ex *expenseDB.Expense) string {
-	category, err := ex.Category()
-	if err != nil {
-		fmt.Printf("error fetching the category: %+v\n", err.Error())
-	}
-
-	if category == "" {
-		if ex.Type == expenseDB.IncomeType {
+func expeseCategoryName(ex pkgStorage.Expense, categoryName string) string {
+	if categoryName == "" {
+		if ex.Type() == pkgStorage.IncomeType {
 			return "income"
 		}
 
 		return "uncategorized charge"
 	}
-	return category
+	return categoryName
 }
 
 const (

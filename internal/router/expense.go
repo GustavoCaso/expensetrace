@@ -1,17 +1,33 @@
 package router
 
 import (
-	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
 	"time"
 
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
-type expensesByYear map[int]map[string][]*expenseDB.Expense
+type expenseView struct {
+	pkgStorage.Expense
+	category pkgStorage.Category
+}
+
+func (e *expenseView) Category() pkgStorage.Category {
+	return e.category
+}
+
+func (e *expenseView) CategoryID() int64 {
+	if e.Expense.CategoryID() != nil {
+		return *e.Expense.CategoryID()
+	}
+	return 0
+}
+
+type expensesByYear map[int]map[string][]*expenseView
 
 const centsMultiplier = 100
 
@@ -42,14 +58,19 @@ type expesesViewData struct {
 
 func (router *router) expensesHandler(w http.ResponseWriter) {
 	data := expesesViewData{}
-	expenses, err := expenseDB.GetExpenses(router.db)
+	expenses, err := router.storage.GetExpenses()
 	if err != nil {
 		data.Error = err.Error()
 		router.templates.Render(w, "pages/expenses/index.html", data)
 		return
 	}
 
-	groupedExpenses, years := expensesGroupByYearAndMonth(expenses)
+	groupedExpenses, years, err := expensesGroupByYearAndMonth(expenses, router.storage)
+	if err != nil {
+		data.Error = fmt.Sprintf("Error grouping expenses: %s", err.Error())
+		router.templates.Render(w, "pages/expenses/index.html", data)
+	}
+
 	today := time.Now()
 
 	data.Expenses = groupedExpenses
@@ -61,33 +82,56 @@ func (router *router) expensesHandler(w http.ResponseWriter) {
 	router.templates.Render(w, "pages/expenses/index.html", data)
 }
 
-func expensesGroupByYearAndMonth(expenses []*expenseDB.Expense) (expensesByYear, []int) {
+func expensesGroupByYearAndMonth(
+	expenses []pkgStorage.Expense,
+	storage pkgStorage.Storage,
+) (expensesByYear, []int, error) {
 	groupedExpenses := expensesByYear{}
 	years := []int{}
 
 	for _, expense := range expenses {
-		expenseYear := expense.Date.Year()
-		expenseMonth := expense.Date.Month().String()
+		var category pkgStorage.Category
+
+		if expense.CategoryID() != nil {
+			c, categoryErr := storage.GetCategory(*expense.CategoryID())
+			if categoryErr != nil {
+				if !errors.Is(categoryErr, &pkgStorage.NotFoundError{}) {
+					return groupedExpenses, years, categoryErr
+				}
+			}
+			category = c
+		}
+
+		expenseYear := expense.Date().Year()
+		expenseMonth := expense.Date().Month().String()
 
 		year, okYear := groupedExpenses[expenseYear]
 
 		if okYear {
 			month, okMonth := year[expenseMonth]
 			if okMonth {
-				month = append(month, expense)
-			} else {
-				month = []*expenseDB.Expense{
-					expense,
+				expenseview := &expenseView{
+					Expense:  expense,
+					category: category,
 				}
+				month = append(month, expenseview)
+			} else {
+				expenseview := &expenseView{
+					Expense:  expense,
+					category: category,
+				}
+				month = []*expenseView{expenseview}
 			}
 
 			year[expenseMonth] = month
 		} else {
 			years = append(years, expenseYear)
-			newYear := map[string][]*expenseDB.Expense{}
-			newYear[expenseMonth] = []*expenseDB.Expense{
-				expense,
+			newYear := map[string][]*expenseView{}
+			expenseview := &expenseView{
+				Expense:  expense,
+				category: category,
 			}
+			newYear[expenseMonth] = []*expenseView{expenseview}
 			groupedExpenses[expenseYear] = newYear
 		}
 	}
@@ -96,13 +140,13 @@ func expensesGroupByYearAndMonth(expenses []*expenseDB.Expense) (expensesByYear,
 		return years[i] > years[j]
 	})
 
-	return groupedExpenses, years
+	return groupedExpenses, years, nil
 }
 
 type expenseViewData struct {
 	viewBase
-	Expense    *expenseDB.Expense
-	Categories []expenseDB.Category
+	Expense    *expenseView
+	Categories []pkgStorage.Category
 	FormErrors map[string]string
 }
 
@@ -116,20 +160,34 @@ func (router *router) expenseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expense, err := expenseDB.GetExpense(router.db, id)
+	expense, err := router.storage.GetExpenseByID(id)
 	if err != nil {
 		data.Error = err.Error()
 		router.templates.Render(w, "pages/expenses/edit.html", data)
 		return
 	}
 
-	categories, err := expenseDB.GetCategories(router.db)
+	categories, err := router.storage.GetCategories()
 	if err != nil {
 		router.logger.Error("Failed to get categories", "error", err)
-		categories = []expenseDB.Category{}
+		categories = []pkgStorage.Category{}
 	}
 
-	data.Expense = expense
+	var category pkgStorage.Category
+	if expense.CategoryID() != nil {
+		c, categoryErr := router.storage.GetCategory(*expense.CategoryID())
+		if categoryErr != nil {
+			router.logger.Error("Failed to get category", "error", categoryErr)
+		}
+		category = c
+	}
+
+	expenseview := &expenseView{
+		Expense:  expense,
+		category: category,
+	}
+
+	data.Expense = expenseview
 	data.Categories = categories
 
 	router.templates.Render(w, "pages/expenses/edit.html", data)
@@ -196,7 +254,7 @@ func (router *router) updateExpenseHandler(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	var expenseType expenseDB.ExpenseType
+	var expenseType pkgStorage.ExpenseType
 	if typeStr == "" {
 		data.FormErrors["type"] = "Type is required"
 	} else {
@@ -204,23 +262,38 @@ func (router *router) updateExpenseHandler(w http.ResponseWriter, r *http.Reques
 		if parseErr != nil {
 			data.FormErrors["type"] = "Invalid type"
 		} else {
-			expenseType = expenseDB.ExpenseType(typeInt)
+			expenseType = pkgStorage.ExpenseType(typeInt)
 		}
 	}
 
-	var categoryID sql.NullInt64
+	var categoryID *int64
 	if categoryIDStr != "" {
 		catID, parseErr := strconv.ParseInt(categoryIDStr, 10, 64)
 		if parseErr != nil {
 			data.FormErrors["category_id"] = "Invalid category"
+			categoryID = nil
 		} else {
-			categoryID = sql.NullInt64{Int64: catID, Valid: true}
+			categoryID = &catID
 		}
+	} else {
+		categoryID = nil
 	}
 
-	categories, _ := expenseDB.GetCategories(router.db)
-	expense, _ := expenseDB.GetExpense(router.db, id)
-	data.Expense = expense
+	categories, _ := router.storage.GetCategories()
+	expense, _ := router.storage.GetExpenseByID(id)
+	var category pkgStorage.Category
+	if expense.CategoryID() != nil {
+		c, categoryErr := router.storage.GetCategory(*expense.CategoryID())
+		if categoryErr != nil {
+			router.logger.Error("Failed to get category", "error", categoryErr)
+		}
+		category = c
+	}
+
+	data.Expense = &expenseView{
+		Expense:  expense,
+		category: category,
+	}
 	data.Categories = categories
 
 	if len(data.FormErrors) > 0 {
@@ -228,18 +301,9 @@ func (router *router) updateExpenseHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	updatedExpense := &expenseDB.Expense{
-		ID:          int(id),
-		Source:      source,
-		Description: description,
-		Amount:      amount,
-		Date:        date,
-		Type:        expenseType,
-		Currency:    currency,
-		CategoryID:  categoryID,
-	}
+	updatedExpense := pkgStorage.NewExpense(id, source, description, currency, amount, date, expenseType, categoryID)
 
-	updated, err := expenseDB.UpdateExpense(router.db, updatedExpense)
+	updated, err := router.storage.UpdateExpense(updatedExpense)
 	if err != nil {
 		router.logger.Error("Failed to update expense", "error", err, "id", id)
 		data.FormErrors["failed to update expense"] = err.Error()
@@ -257,7 +321,20 @@ func (router *router) updateExpenseHandler(w http.ResponseWriter, r *http.Reques
 	router.logger.Info("Expense updated successfully", "id", id)
 
 	router.resetCache()
-	data.Expense = updatedExpense
+	var updatedCategroy pkgStorage.Category
+	if updatedExpense.CategoryID() != nil {
+		c, categoryErr := router.storage.GetCategory(*updatedExpense.CategoryID())
+		if categoryErr != nil {
+			router.logger.Error("Failed to get category", "error", categoryErr)
+		}
+		updatedCategroy = c
+	}
+
+	data.Expense = &expenseView{
+		Expense:  expense,
+		category: updatedCategroy,
+	}
+
 	data.Banner = "Expense Updated"
 	router.templates.Render(w, "pages/expenses/edit.html", data)
 }
@@ -272,7 +349,7 @@ func (router *router) deleteExpenseHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	_, err = expenseDB.DeleteExpense(router.db, id)
+	_, err = router.storage.DeleteExpense(id)
 	if err != nil {
 		router.logger.Error("Failed to delete expense", "error", err, "id", id)
 
@@ -307,13 +384,17 @@ func (router *router) expenseSearchHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	expenses, err := expenseDB.SearchExpenses(router.db, query)
+	expenses, err := router.storage.SearchExpenses(query)
 	if err != nil {
 		data.Error = "You must provide a search criteria"
 		router.templates.Render(w, "pages/expenses/index.html", data)
 	}
 
-	groupedExpenses, years := expensesGroupByYearAndMonth(expenses)
+	groupedExpenses, years, err := expensesGroupByYearAndMonth(expenses, router.storage)
+	if err != nil {
+		data.Error = fmt.Sprintf("Error grouping expenses: %s", err.Error())
+		router.templates.Render(w, "pages/expenses/index.html", data)
+	}
 	today := time.Now()
 
 	data.Expenses = groupedExpenses

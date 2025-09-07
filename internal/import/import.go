@@ -1,7 +1,6 @@
 package importutil
 
 import (
-	"database/sql"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -14,7 +13,7 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	storageType "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 var re = regexp.MustCompile(`(?P<charge>-)?(?P<amount>\d+)\.?(?P<decimal>\d*)`)
@@ -22,7 +21,7 @@ var chargeIndex = re.SubexpIndex("charge")
 var amountIndex = re.SubexpIndex("amount")
 var decimalIndex = re.SubexpIndex("decimal")
 
-type expense struct {
+type jsonExpense struct {
 	Source      string    `json:"source"`
 	Date        time.Time `json:"date"`
 	Description string    `json:"description"`
@@ -32,14 +31,19 @@ type expense struct {
 
 type ImportInfo struct {
 	TotalImports          int
-	ImportWithoutCategory []*expenseDB.Expense
-	ImportWithCategory    []*expenseDB.Expense
+	ImportWithoutCategory []storageType.Expense
+	ImportWithCategory    []storageType.Expense
 	Error                 error
 }
 
-func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *category.Matcher) ImportInfo {
+func Import(
+	filename string,
+	reader io.Reader,
+	storage storageType.Storage,
+	categoryMatcher *category.Matcher,
+) ImportInfo {
 	info := ImportInfo{}
-	expenses := []*expenseDB.Expense{}
+	expenses := []storageType.Expense{}
 
 	fileFormat := path.Ext(filename)
 
@@ -70,7 +74,7 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 			}
 
 			description := strings.ToLower(record[2])
-			id, category := categoryMatcher.Match(description)
+			categoryID, category := categoryMatcher.Match(description)
 
 			matches := re.FindStringSubmatch(record[3])
 			if len(matches) == 0 {
@@ -94,22 +98,23 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 				return info
 			}
 
-			var et expenseDB.ExpenseType
+			var et storageType.ExpenseType
 			if parsedAmount < 0 {
-				et = expenseDB.ChargeType
+				et = storageType.ChargeType
 			} else {
-				et = expenseDB.IncomeType
+				et = storageType.IncomeType
 			}
 
-			expense := &expenseDB.Expense{
-				Source:      record[0],
-				Date:        t,
-				Description: description,
-				Amount:      parsedAmount,
-				Type:        et,
-				Currency:    record[4],
-				CategoryID:  id,
-			}
+			expense := storageType.NewExpense(
+				0,
+				record[0],
+				description,
+				record[4],
+				parsedAmount,
+				t,
+				et,
+				categoryID,
+			)
 
 			if category == "" {
 				info.ImportWithoutCategory = append(info.ImportWithoutCategory, expense)
@@ -120,7 +125,7 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 			expenses = append(expenses, expense)
 		}
 	case ".json":
-		e := []expense{}
+		e := []jsonExpense{}
 
 		err := json.NewDecoder(reader).Decode(&e)
 		if err != nil {
@@ -128,26 +133,27 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 			return info
 		}
 
-		for _, expense := range e {
-			description := strings.ToLower(expense.Description)
-			id, category := categoryMatcher.Match(description)
+		for _, jsonExp := range e {
+			description := strings.ToLower(jsonExp.Description)
+			categoryID, category := categoryMatcher.Match(description)
 
-			var et expenseDB.ExpenseType
-			if expense.Amount < 0 {
-				et = expenseDB.ChargeType
+			var et storageType.ExpenseType
+			if jsonExp.Amount < 0 {
+				et = storageType.ChargeType
 			} else {
-				et = expenseDB.IncomeType
+				et = storageType.IncomeType
 			}
 
-			expense := &expenseDB.Expense{
-				Source:      expense.Source,
-				Date:        expense.Date,
-				Description: description,
-				Amount:      expense.Amount,
-				Type:        et,
-				Currency:    expense.Currency,
-				CategoryID:  id,
-			}
+			expense := storageType.NewExpense(
+				0,
+				jsonExp.Source,
+				description,
+				jsonExp.Currency,
+				jsonExp.Amount,
+				jsonExp.Date,
+				et,
+				categoryID,
+			)
 
 			if category == "" {
 				info.ImportWithoutCategory = append(info.ImportWithoutCategory, expense)
@@ -163,7 +169,7 @@ func Import(filename string, reader io.Reader, db *sql.DB, categoryMatcher *cate
 		return info
 	}
 
-	inserted, err := expenseDB.InsertExpenses(db, expenses)
+	inserted, err := storage.InsertExpenses(expenses)
 
 	info.TotalImports = int(inserted)
 	if err != nil {

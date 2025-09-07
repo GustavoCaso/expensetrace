@@ -46,7 +46,11 @@
                         <div class="mx-4">
                           <div>{{$expense.Description}}</div>
                           <div class="expense-meta">
-                            <span class="badge">{{$expense.Category}}</span>
+                            {{if $expense.Category}}
+                              <span class="badge">{{$expense.Category.Name}}</span>
+                            {{else}}
+                              <span class="badge"></span>
+                            {{end}}
                             <span class="font-italic">via {{$expense.Source}}</span>
                           </div>
                         </div>

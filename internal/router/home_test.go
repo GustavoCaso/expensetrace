@@ -1,29 +1,28 @@
 package router
 
 import (
-	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
-	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestHomeHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 
 	for _, c := range categories {
-		_, err := db.CreateCategory(database, c.Name, c.Pattern)
+		_, err := s.CreateCategory(c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -33,34 +32,18 @@ func TestHomeHandler(t *testing.T) {
 
 	// Create test expenses
 	now := time.Now()
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        now,
-			Description: "Restaurant bill",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
-		},
-		{
-			Source:      "Test Source",
-			Date:        now,
-			Description: "Uber ride",
-			Amount:      -50000,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(2), Valid: true},
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, storage.ChargeType, nil),
+		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, nil),
 	}
 
-	_, err := db.InsertExpenses(database, expenses)
+	_, err := s.InsertExpenses(expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
 	// Create router
-	handler, _ := New(database, matcher, logger)
+	handler, _ := New(s, matcher, logger)
 
 	tests := []struct {
 		name           string

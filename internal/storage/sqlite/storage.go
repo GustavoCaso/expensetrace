@@ -1,4 +1,4 @@
-package db
+package sqlite
 
 import (
 	"context"
@@ -6,9 +6,15 @@ import (
 
 	// import sqlite driver.
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
-func GetDB(dbsource string) (*sql.DB, error) {
+type sqliteStorage struct {
+	db *sql.DB
+}
+
+func New(dbsource string) (storage.Storage, error) {
 	db, err := sql.Open("sqlite3", dbsource)
 	if err != nil {
 		return nil, err
@@ -20,5 +26,9 @@ func GetDB(dbsource string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	return db, nil
+	return &sqliteStorage{db: db}, nil
+}
+
+func (s *sqliteStorage) Close() error {
+	return s.db.Close()
 }

@@ -1,7 +1,6 @@
 package router
 
 import (
-	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -11,56 +10,50 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
-	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestExpensesHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
-
-	for _, c := range categories {
-		_, err := db.CreateCategory(database, c.Name, c.Pattern)
+	categoryIDs := make([]int64, 2)
+	for i, c := range categories {
+		id, err := s.CreateCategory(c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
+		categoryIDs[i] = id
 	}
 
 	matcher := category.NewMatcher(categories)
 
 	now := time.Now()
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        now,
-			Description: "Restaurant bill",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
-		},
-		{
-			Source:      "Test Source",
-			Date:        now,
-			Description: "Uber ride",
-			Amount:      -50000,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(2), Valid: true},
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"Restaurant bill",
+			"USD",
+			-123456,
+			now,
+			storage.ChargeType,
+			&categoryIDs[0],
+		),
+		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, &categoryIDs[1]),
 	}
 
-	_, err := db.InsertExpenses(database, expenses)
+	_, err := s.InsertExpenses(expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	handler, _ := New(database, matcher, logger)
+	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
 	w := httptest.NewRecorder()
@@ -74,29 +67,23 @@ func TestExpensesHandler(t *testing.T) {
 }
 
 func TestExpensesGroupByYearAndMonth(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
+	cat1 := int64(1)
+	cat2 := int64(2)
 	now := time.Now()
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        now,
-			Description: "Restaurant bill",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
-		},
-		{
-			Source:      "Test Source",
-			Date:        now,
-			Description: "Uber ride",
-			Amount:      -50000,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(2), Valid: true},
-		},
+
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, storage.ChargeType, &cat1),
+		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, &cat2),
 	}
 
-	groupedExpenses, years := expensesGroupByYearAndMonth(expenses)
+	groupedExpenses, years, err := expensesGroupByYearAndMonth(expenses, s)
+
+	if err != nil {
+		t.Fatalf("Got error grouping expenses: %s", err.Error())
+	}
 
 	if len(years) != 1 {
 		t.Errorf("Expected 1 year, got %d", len(years))
@@ -122,10 +109,10 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 	foundFood := false
 	foundTransport := false
 	for _, expense := range monthExpenses {
-		if expense.CategoryID.Int64 == 1 {
+		if expense.CategoryID() == cat1 {
 			foundFood = true
 		}
-		if expense.CategoryID.Int64 == 2 {
+		if expense.CategoryID() == cat2 {
 			foundTransport = true
 		}
 	}
@@ -140,33 +127,34 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 
 func TestExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := db.CreateCategory(database, "Test Category", "test")
+	categoryID, err := s.CreateCategory("Test Category", "test")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
 	now := time.Now()
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        now,
-			Description: "Test expense for edit",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: categoryID, Valid: true},
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"Test expense for edit",
+			"USD",
+			-123456,
+			now,
+			storage.ChargeType,
+			&categoryID,
+		),
 	}
 
-	_, err = db.InsertExpenses(database, expenses)
+	_, err = s.InsertExpenses(expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	matcher := category.NewMatcher([]db.Category{})
-	handler, _ := New(database, matcher, logger)
+	matcher := category.NewMatcher([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/1", nil)
 	req.SetPathValue("id", "1")
@@ -187,10 +175,10 @@ func TestExpenseHandler(t *testing.T) {
 
 func TestExpenseHandlerNotFound(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	matcher := category.NewMatcher([]db.Category{})
-	handler, _ := New(database, matcher, logger)
+	matcher := category.NewMatcher([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/999", nil)
 	req.SetPathValue("id", "999")
@@ -206,10 +194,10 @@ func TestExpenseHandlerNotFound(t *testing.T) {
 
 func TestExpenseHandlerInvalidID(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	matcher := category.NewMatcher([]db.Category{})
-	handler, _ := New(database, matcher, logger)
+	matcher := category.NewMatcher([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/invalid", nil)
 	req.SetPathValue("id", "invalid")
@@ -225,32 +213,25 @@ func TestExpenseHandlerInvalidID(t *testing.T) {
 
 func TestUpdateExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := db.CreateCategory(database, "Updated Category", "updated")
+	categoryID, err := s.CreateCategory("Updated Category", "updated")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
 	now := time.Now()
-	expenses := []*db.Expense{
-		{
-			Source:      "Original Source",
-			Date:        now,
-			Description: "Original description",
-			Amount:      -100000,
-			Type:        db.ChargeType,
-			Currency:    "EUR",
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, storage.ChargeType, nil),
 	}
 
-	_, err = db.InsertExpenses(database, expenses)
+	_, err = s.InsertExpenses(expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	matcher := category.NewMatcher([]db.Category{})
-	handler, _ := New(database, matcher, logger)
+	matcher := category.NewMatcher([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
 
 	formData := url.Values{}
 	formData.Set("source", "Updated Source")
@@ -273,54 +254,47 @@ func TestUpdateExpenseHandler(t *testing.T) {
 		t.Errorf("Expected status OK; got %v", resp.Status)
 	}
 
-	updatedExpense, err := db.GetExpense(database, 1)
+	updatedExpense, err := s.GetExpenseByID(1)
 	if err != nil {
 		t.Fatalf("Failed to retrieve updated expense: %v", err)
 	}
 
-	if updatedExpense.Source != "Updated Source" {
-		t.Errorf("Expected source 'Updated Source', got '%s'", updatedExpense.Source)
+	if updatedExpense.Source() != "Updated Source" {
+		t.Errorf("Expected source 'Updated Source', got '%s'", updatedExpense.Source())
 	}
-	if updatedExpense.Description != "Updated description" {
-		t.Errorf("Expected description 'Updated description', got '%s'", updatedExpense.Description)
+	if updatedExpense.Description() != "Updated description" {
+		t.Errorf("Expected description 'Updated description', got '%s'", updatedExpense.Description())
 	}
-	if updatedExpense.Amount != 2050 {
-		t.Errorf("Expected amount 2050, got %d", updatedExpense.Amount)
+	if updatedExpense.Amount() != 2050 {
+		t.Errorf("Expected amount 2050, got %d", updatedExpense.Amount())
 	}
-	if updatedExpense.Currency != "USD" {
-		t.Errorf("Expected currency 'USD', got '%s'", updatedExpense.Currency)
+	if updatedExpense.Currency() != "USD" {
+		t.Errorf("Expected currency 'USD', got '%s'", updatedExpense.Currency())
 	}
-	if updatedExpense.Type != db.IncomeType {
-		t.Errorf("Expected type IncomeType, got %v", updatedExpense.Type)
+	if updatedExpense.Type() != storage.IncomeType {
+		t.Errorf("Expected type IncomeType, got %v", updatedExpense.Type())
 	}
-	if !updatedExpense.CategoryID.Valid || updatedExpense.CategoryID.Int64 != categoryID {
-		t.Errorf("Expected category ID %d, got %v", categoryID, updatedExpense.CategoryID)
+	if *updatedExpense.CategoryID() != categoryID {
+		t.Errorf("Expected category ID %d, got %d", categoryID, *updatedExpense.CategoryID())
 	}
 }
 
 func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        now,
-			Description: "Test expense",
-			Amount:      -100000,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Test Source", "Test expense", "USD", -100000, now, storage.ChargeType, nil),
 	}
 
-	_, err := db.InsertExpenses(database, expenses)
+	_, err := s.InsertExpenses(expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	matcher := category.NewMatcher([]db.Category{})
-	handler, _ := New(database, matcher, logger)
+	matcher := category.NewMatcher([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
 
 	tests := []struct {
 		name        string
@@ -408,35 +382,21 @@ func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 
 func TestDeleteExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source 1",
-			Date:        now,
-			Description: "Test expense 1",
-			Amount:      -100000,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-		},
-		{
-			Source:      "Test Source 2",
-			Date:        now,
-			Description: "Test expense 2",
-			Amount:      -200000,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Test Source 1", "Test expense 1", "USD", -100000, now, storage.ChargeType, nil),
+		storage.NewExpense(0, "Test Source 2", "Test expense 2", "USD", -200000, now, storage.ChargeType, nil),
 	}
 
-	_, err := db.InsertExpenses(database, expenses)
+	_, err := s.InsertExpenses(expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	matcher := category.NewMatcher([]db.Category{})
-	handler, _ := New(database, matcher, logger)
+	matcher := category.NewMatcher([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expense/1", nil)
 	req.SetPathValue("id", "1")
@@ -453,7 +413,7 @@ func TestDeleteExpenseHandler(t *testing.T) {
 		t.Error("Expected Hx-Redirect header to /expenses")
 	}
 
-	allExpenses, err := db.GetExpenses(database)
+	allExpenses, err := s.GetExpenses()
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -462,11 +422,11 @@ func TestDeleteExpenseHandler(t *testing.T) {
 		t.Errorf("Expected 1 expense after deletion, got %d", len(allExpenses))
 	}
 
-	if allExpenses[0].Description != "Test expense 2" {
-		t.Errorf("Expected remaining expense 'Test expense 2', got '%s'", allExpenses[0].Description)
+	if allExpenses[0].Description() != "Test expense 2" {
+		t.Errorf("Expected remaining expense 'Test expense 2', got '%s'", allExpenses[0].Description())
 	}
 
-	_, err = db.GetExpense(database, 1)
+	_, err = s.GetExpenseByID(1)
 	if err == nil {
 		t.Error("Expected error when getting deleted expense")
 	}
@@ -474,10 +434,10 @@ func TestDeleteExpenseHandler(t *testing.T) {
 
 func TestDeleteExpenseHandlerNotFound(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	matcher := category.NewMatcher([]db.Category{})
-	handler, _ := New(database, matcher, logger)
+	matcher := category.NewMatcher([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expense/999", nil)
 	req.SetPathValue("id", "999")
@@ -494,31 +454,33 @@ func TestDeleteExpenseHandlerNotFound(t *testing.T) {
 
 func TestExpenseHandlersIntegration(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := db.CreateCategory(database, "Integration Category", "integration")
+	categoryID, err := s.CreateCategory("Integration Category", "integration")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	matcher := category.NewMatcher([]db.Category{
-		{ID: categoryID, Name: "Integration Category", Pattern: "integration"},
+	matcher := category.NewMatcher([]storage.Category{
+		storage.NewCategory(categoryID, "Integration Category", "integration"),
 	})
-	handler, _ := New(database, matcher, logger)
+	handler, _ := New(s, matcher, logger)
 
 	now := time.Now()
-	expenses := []*db.Expense{
-		{
-			Source:      "Integration Source",
-			Date:        now,
-			Description: "Integration test expense",
-			Amount:      -500000,
-			Type:        db.ChargeType,
-			Currency:    "EUR",
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(
+			0,
+			"Integration Source",
+			"Integration test expense",
+			"EUR",
+			-500000,
+			now,
+			storage.ChargeType,
+			&categoryID,
+		),
 	}
 
-	_, err = db.InsertExpenses(database, expenses)
+	_, err = s.InsertExpenses(expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
@@ -551,18 +513,18 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		t.Errorf("PUT /expense/1 failed with status %v", w.Result().Status)
 	}
 
-	updatedExpense, err := db.GetExpense(database, 1)
+	updatedExpense, err := s.GetExpenseByID(1)
 	if err != nil {
 		t.Fatalf("Failed to get updated expense: %v", err)
 	}
 
-	if updatedExpense.Source != "Updated Integration Source" {
+	if updatedExpense.Source() != "Updated Integration Source" {
 		t.Errorf("Source not updated correctly")
 	}
-	if updatedExpense.Amount != 7525 {
-		t.Errorf("Amount not updated correctly: got %d, expected 7525", updatedExpense.Amount)
+	if updatedExpense.Amount() != 7525 {
+		t.Errorf("Amount not updated correctly: got %d, expected 7525", updatedExpense.Amount())
 	}
-	if updatedExpense.Type != db.IncomeType {
+	if updatedExpense.Type() != storage.IncomeType {
 		t.Errorf("Type not updated correctly")
 	}
 
@@ -584,7 +546,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		t.Errorf("DELETE /expense/1 failed with status %v", w.Result().Status)
 	}
 
-	allExpenses, err := db.GetExpenses(database)
+	allExpenses, err := s.GetExpenses()
 	if err != nil {
 		t.Fatalf("Failed to get expenses after deletion: %v", err)
 	}
@@ -596,42 +558,41 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 
 func TestExpenseSearchHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
+	categoryID, err := s.CreateCategory("Food", "restaurant|food|grocery")
+	if err != nil {
+		t.Fatalf("Failed to create category: %v", err)
 	}
 
-	for _, c := range categories {
-		_, err := db.CreateCategory(database, c.Name, c.Pattern)
-		if err != nil {
-			t.Fatalf("Failed to create category: %v", err)
-		}
+	categories := []storage.Category{
+		storage.NewCategory(categoryID, "Food", "restaurant|food|grocery"),
 	}
 
 	matcher := category.NewMatcher(categories)
 
 	// Create test expenses
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        time.Now(),
-			Description: "Restaurant bill",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"Restaurant bill",
+			"USD",
+			-123456,
+			time.Now(),
+			storage.ChargeType,
+			&categoryID,
+		),
 	}
 
-	_, err := db.InsertExpenses(database, expenses)
+	_, err = s.InsertExpenses(expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
 	// Create router
-	handler, _ := New(database, matcher, logger)
+	handler, _ := New(s, matcher, logger)
 
 	// Create test request
 	body := strings.NewReader("keyword=restaurant")

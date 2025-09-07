@@ -1,4 +1,4 @@
-package db
+package sqlite
 
 import (
 	"context"
@@ -65,15 +65,15 @@ func DropTables(db *sql.DB) error {
 	return nil
 }
 
-func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
+func (s *sqliteStorage) ApplyMigrations(logger *logger.Logger) error {
 	// Create migrations table if it doesn't exist
-	if err := createMigrationsTable(db); err != nil {
+	if err := createMigrationsTable(s.db); err != nil {
 		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
 
 	// Get current schema version
 	currentVersion := 0
-	row := db.QueryRowContext(context.Background(), "SELECT COALESCE(MAX(version), 0) FROM schema_migrations")
+	row := s.db.QueryRowContext(context.Background(), "SELECT COALESCE(MAX(version), 0) FROM schema_migrations")
 	if err := row.Scan(&currentVersion); err != nil {
 		return fmt.Errorf("failed to get current schema version: %w", err)
 	}
@@ -246,7 +246,7 @@ func ApplyMigrations(db *sql.DB, logger *logger.Logger) error {
 				"name", migration.name)
 
 			// Begin transaction for this migration
-			tx, err := db.BeginTx(context.Background(), nil)
+			tx, err := s.db.BeginTx(context.Background(), nil)
 			if err != nil {
 				return fmt.Errorf("failed to begin transaction for migration %d: %w",
 					migrationVersion, err)

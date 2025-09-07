@@ -9,22 +9,22 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestRun(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	db := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categories := []expenseDB.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 
 	for _, c := range categories {
-		_, err := expenseDB.CreateCategory(db, c.Name, c.Pattern)
+		_, err := s.CreateCategory(c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -42,7 +42,7 @@ func TestRun(t *testing.T) {
 	// Start the server in a goroutine
 	errChan := make(chan error, 1)
 	go func() {
-		errChan <- cmd.Run(db, matcher, logger)
+		errChan <- cmd.Run(s, matcher, logger)
 	}()
 
 	// Give the server a moment to start

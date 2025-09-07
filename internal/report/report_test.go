@@ -1,50 +1,46 @@
 package report
 
 import (
-	"database/sql"
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestGenerate(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
 	// Create test expenses
 	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	endDate := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
 
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        startDate,
-			Description: "Restaurant bill",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
-		},
-		{
-			Source:      "Test Source",
-			Date:        startDate.Add(24 * time.Hour),
-			Description: "Uber ride",
-			Amount:      -50000,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(2), Valid: true},
-		},
-		{
-			Source:      "Test Source",
-			Date:        startDate.Add(48 * time.Hour),
-			Description: "Salary",
-			Amount:      5000000,
-			Type:        db.IncomeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(3), Valid: true},
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, startDate, storage.ChargeType, nil),
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"Uber ride",
+			"USD",
+			-50000,
+			startDate.Add(24*time.Hour),
+			storage.ChargeType,
+			nil,
+		),
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"Salary",
+			"USD",
+			5000000,
+			startDate.Add(48*time.Hour),
+			storage.IncomeType,
+			nil,
+		),
 	}
 
 	// Test monthly report
-	report := Generate(startDate, endDate, expenses, "monthly")
+	report := Generate(startDate, endDate, s, expenses, "monthly")
 
 	// Verify report fields
 	if report.Title != "January 2024" {
@@ -80,47 +76,59 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Test yearly report
-	yearlyReport := Generate(startDate, endDate, expenses, "yearly")
+	yearlyReport := Generate(startDate, endDate, s, expenses, "yearly")
 	if yearlyReport.Title != "2024" {
 		t.Errorf("Report.Title = %v, want 2024", yearlyReport.Title)
 	}
 }
 
 func TestCategories(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
 	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	// Test with duplicate expenses
-	expenses := []*db.Expense{
-		{
-			Source:      "Test Source",
-			Date:        startDate,
-			Description: "Restaurant bill",
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
-		},
-		{
-			Source:      "Test Source",
-			Date:        startDate.Add(24 * time.Hour),
-			Description: "Restaurant bill", // Duplicate description
-			Amount:      -123456,
-			Type:        db.ChargeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(1), Valid: true},
-		},
-		{
-			Source:      "Test Source",
-			Date:        startDate.Add(48 * time.Hour),
-			Description: "Salary",
-			Amount:      5000000,
-			Type:        db.IncomeType,
-			Currency:    "USD",
-			CategoryID:  sql.NullInt64{Int64: int64(3), Valid: true},
-		},
+	catID, catErr := s.CreateCategory("Food", "restaurant|food|grocery")
+	if catErr != nil {
+		t.Fatalf("Error creating category: %s", catErr.Error())
 	}
 
-	categories, duplicates, income, spending := Categories(expenses)
+	// Test with duplicate expenses
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, startDate, storage.ChargeType, nil),
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"Restaurant bill",
+			"USD",
+			-123456,
+			startDate.Add(24*time.Hour),
+			storage.ChargeType,
+			nil,
+		), // Duplicate description
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"Salary",
+			"USD",
+			5000000,
+			startDate.Add(48*time.Hour),
+			storage.IncomeType,
+			nil,
+		),
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"Expense with category",
+			"USD",
+			-123456,
+			startDate.Add(48*time.Hour),
+			storage.ChargeType,
+			&catID,
+		),
+	}
+
+	categories, duplicates, income, spending := Categories(s, expenses)
 
 	// Verify duplicates
 	if len(duplicates) != 1 {
@@ -134,13 +142,16 @@ func TestCategories(t *testing.T) {
 	if income != 5000000 {
 		t.Errorf("income = %v, want 5000000", income)
 	}
-	if spending != -246912 {
-		t.Errorf("spending = %v, want -246912", spending)
+	if spending != -370368 {
+		t.Errorf("spending = %v, want -370368", spending)
 	}
 
 	// Verify categories
-	if len(categories) != 2 {
-		t.Errorf("len(categories) = %v, want 2", len(categories))
+	// uncategorized charge
+	// Food
+	// income
+	if len(categories) != 3 {
+		t.Errorf("len(categories) = %v, want 3", len(categories))
 	}
 }
 

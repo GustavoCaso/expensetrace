@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"time"
@@ -14,9 +13,9 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/report"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
@@ -155,12 +154,12 @@ type model struct {
 	height int
 }
 
-func initialModel(db *sql.DB, width int, height int) (model, error) {
+func initialModel(storage storage.Storage, width int, height int) (model, error) {
 	now := time.Now()
 	month := now.Month()
 	year := now.Year()
 
-	reports, err := generateReports(db, month, year)
+	reports, err := generateReports(storage, month, year)
 	if err != nil {
 		return model{}, err
 	}
@@ -181,17 +180,17 @@ func initialModel(db *sql.DB, width int, height int) (model, error) {
 	}, nil
 }
 
-func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) {
+func generateReports(storage storage.Storage, month time.Month, year int) ([]wrapper, error) {
 	reports := []wrapper{}
 	skipYear := false
 	timeMonth := month
-	ex, err := expenseDB.GetFirstExpense(db)
+	ex, err := storage.GetFirstExpense()
 	if err != nil {
 		return reports, err
 	}
 
-	lastMonth := ex.Date.Month()
-	lastYear := ex.Date.Year()
+	lastMonth := ex.Date().Month()
+	lastYear := ex.Date().Year()
 
 	for year >= lastYear {
 		if timeMonth == time.January {
@@ -200,13 +199,13 @@ func generateReports(db *sql.DB, month time.Month, year int) ([]wrapper, error) 
 
 		firstDay, lastDay := util.GetMonthDates(int(timeMonth), year)
 
-		expenses, expensesErr := expenseDB.GetExpensesFromDateRange(db, firstDay, lastDay)
+		expenses, expensesErr := storage.GetExpensesFromDateRange(firstDay, lastDay)
 
 		if expensesErr != nil {
 			return reports, expensesErr
 		}
 
-		result := report.Generate(firstDay, lastDay, expenses, "monthly")
+		result := report.Generate(firstDay, lastDay, storage, expenses, "monthly")
 
 		reports = append(reports, wrapper{
 			report: result,
@@ -302,7 +301,7 @@ func (m *model) SetWidth(width int) {
 	m.width = width
 }
 
-func (c tuiCommand) Run(db *sql.DB, _ *category.Matcher, _ *logger.Logger) error {
+func (c tuiCommand) Run(storage storage.Storage, _ *category.Matcher, _ *logger.Logger) error {
 	w, h, err := term.GetSize(os.Stdout.Fd())
 	if err != nil {
 		return fmt.Errorf("failed to get terminal size: %w", err)
@@ -316,7 +315,7 @@ func (c tuiCommand) Run(db *sql.DB, _ *category.Matcher, _ *logger.Logger) error
 		defer f.Close()
 	}
 
-	m, err := initialModel(db, w, h)
+	m, err := initialModel(storage, w, h)
 
 	if err != nil {
 		return fmt.Errorf("failed to create initia model: %w", err)

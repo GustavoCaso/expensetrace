@@ -1,10 +1,9 @@
 package category
 
 import (
-	"database/sql"
 	"regexp"
 
-	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 var Exclude = "exclude"
@@ -17,17 +16,17 @@ type matcher struct {
 
 type Matcher struct {
 	matchers   []matcher
-	categories []db.Category
+	categories []storage.Category
 }
 
-func NewMatcher(categories []db.Category) *Matcher {
+func NewMatcher(categories []storage.Category) *Matcher {
 	matchers := make([]matcher, len(categories))
 
 	for i, category := range categories {
 		m := matcher{
-			re:       regexp.MustCompile(category.Pattern),
-			category: category.Name,
-			id:       category.ID,
+			re:       regexp.MustCompile(category.Pattern()),
+			category: category.Name(),
+			id:       category.ID(),
 		}
 		matchers[i] = m
 	}
@@ -38,16 +37,16 @@ func NewMatcher(categories []db.Category) *Matcher {
 	}
 }
 
-func (c Matcher) Categories() []db.Category {
+func (c Matcher) Categories() []storage.Category {
 	return c.categories
 }
 
-func (c Matcher) Match(s string) (sql.NullInt64, string) {
+func (c Matcher) Match(s string) (*int64, string) {
 	for _, matcher := range c.matchers {
 		if matcher.re.MatchString(s) {
-			return sql.NullInt64{Int64: matcher.id, Valid: true}, matcher.category
+			return &matcher.id, matcher.category
 		}
 	}
 
-	return sql.NullInt64{Int64: 0, Valid: false}, ""
+	return nil, ""
 }

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	expenseDB "github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -25,44 +25,38 @@ func TestDescription(t *testing.T) {
 
 func TestInitialModel(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	db := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categories := []expenseDB.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 
 	for _, c := range categories {
-		_, err := expenseDB.CreateCategory(db, c.Name, c.Pattern)
+		_, err := s.CreateCategory(c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
 	}
 
 	// Create test expenses
-	expenses := []*expenseDB.Expense{
-		{
-			Description: "Restaurant bill",
-			Date:        time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-			Amount:      -1000,
-			Type:        expenseDB.ChargeType,
-		},
-		{
-			Description: "Uber ride",
-			Date:        time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-			Amount:      -2000,
-			Type:        expenseDB.ChargeType,
-		},
-		{
-			Description: "Salary",
-			Date:        time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC),
-			Amount:      5000,
-			Type:        expenseDB.IncomeType,
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(int64(1), "test", "EUR", "Restaurant bill", -1000,
+			time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			storage.ChargeType, nil,
+		),
+		storage.NewExpense(int64(2), "test", "EUR", "Uber drive", -2000,
+			time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			storage.ChargeType, nil,
+		),
+		storage.NewExpense(int64(2), "test", "EUR", "Salary", 5000,
+			time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			storage.IncomeType, nil,
+		),
 	}
 
-	_, insertErr := expenseDB.InsertExpenses(db, expenses)
+	_, insertErr := s.InsertExpenses(expenses)
 	if insertErr != nil {
 		t.Fatalf("Failed to create expenses: %v", insertErr)
 	}
@@ -70,7 +64,7 @@ func TestInitialModel(t *testing.T) {
 	// Test initial model creation
 	width := 80
 	height := 24
-	m, err := initialModel(db, width, height)
+	m, err := initialModel(s, width, height)
 	if err != nil {
 		t.Fatalf("initialModel() error = %v", err)
 	}
@@ -92,50 +86,44 @@ func TestInitialModel(t *testing.T) {
 
 func TestGenerateReports(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	db := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categories := []expenseDB.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 
 	for _, c := range categories {
-		_, err := expenseDB.CreateCategory(db, c.Name, c.Pattern)
+		_, err := s.CreateCategory(c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
 	}
 
 	// Create test expenses
-	expenses := []*expenseDB.Expense{
-		{
-			Description: "Restaurant bill",
-			Date:        time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-			Amount:      -1000,
-			Type:        expenseDB.ChargeType,
-		},
-		{
-			Description: "Uber ride",
-			Date:        time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-			Amount:      -2000,
-			Type:        expenseDB.ChargeType,
-		},
-		{
-			Description: "Salary",
-			Date:        time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC),
-			Amount:      5000,
-			Type:        expenseDB.IncomeType,
-		},
+	expenses := []storage.Expense{
+		storage.NewExpense(int64(1), "test", "EUR", "Restaurant bill", -1000,
+			time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			storage.ChargeType, nil,
+		),
+		storage.NewExpense(int64(2), "test", "EUR", "Uber drive", -2000,
+			time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			storage.ChargeType, nil,
+		),
+		storage.NewExpense(int64(2), "test", "EUR", "Salary", 5000,
+			time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			storage.IncomeType, nil,
+		),
 	}
 
-	_, insertErr := expenseDB.InsertExpenses(db, expenses)
+	_, insertErr := s.InsertExpenses(expenses)
 	if insertErr != nil {
 		t.Fatalf("Failed to create expenses: %v", insertErr)
 	}
 
 	// Test report generation
-	reports, err := generateReports(db, time.January, 2024)
+	reports, err := generateReports(s, time.January, 2024)
 	if err != nil {
 		t.Fatalf("generateReports() error = %v", err)
 	}

@@ -1,46 +1,36 @@
 package testutil
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	// import sqlite driver.
-	_ "github.com/mattn/go-sqlite3"
-
-	"github.com/GustavoCaso/expensetrace/internal/db"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/storage/sqlite"
 )
 
-func SetupTestDB(t *testing.T, logger *logger.Logger) *sql.DB {
+func SetupTestStorage(t *testing.T, logger *logger.Logger) storage.Storage {
 	t.Helper()
 	// We use a tempDir + the unique test name (t.Name) that way we can warranty that any test has its own DB
 	// Using a tempDir ensure it gets clean after each test
 	sqlFile := filepath.Join(t.TempDir(), fmt.Sprintf(":memory:%s", strings.ReplaceAll(t.Name(), "/", ":")))
-	database, err := sql.Open("sqlite3", sqlFile)
+	stor, err := sqlite.New(sqlFile)
 	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
+		t.Fatalf("Failed to create test storage: %v", err)
 	}
 
-	err = db.ApplyMigrations(database, logger)
+	err = stor.ApplyMigrations(logger)
 	if err != nil {
-		t.Fatalf("Failed to create schema: %v", err)
-	}
-
-	// Enable foreign key constraints
-	_, err = database.ExecContext(context.Background(), "PRAGMA foreign_keys = ON")
-	if err != nil {
-		t.Fatalf("Failed to enable PRAGMA: %v", err)
+		t.Fatalf("Failed to apply migrations: %v", err)
 	}
 
 	t.Cleanup(func() {
-		if err = database.Close(); err != nil {
-			t.Errorf("Failed to close test database: %v", err)
+		if err = stor.Close(); err != nil {
+			t.Errorf("Failed to close test storage: %v", err)
 		}
 	})
 
-	return database
+	return stor
 }
