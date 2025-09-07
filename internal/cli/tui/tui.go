@@ -205,10 +205,14 @@ func generateReports(storage storage.Storage, month time.Month, year int) ([]wra
 			return reports, expensesErr
 		}
 
-		result := report.Generate(firstDay, lastDay, storage, expenses, "monthly")
+		report, reportError := report.Generate(firstDay, lastDay, storage, expenses, "monthly")
+
+		if reportError != nil {
+			return reports, reportError
+		}
 
 		reports = append(reports, wrapper{
-			report: result,
+			report: report,
 		})
 
 		if skipYear {

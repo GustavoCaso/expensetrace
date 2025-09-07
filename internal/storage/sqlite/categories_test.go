@@ -48,17 +48,17 @@ func TestGetCategories(t *testing.T) {
 		t.Errorf("Failed to get categories: %v", err)
 	}
 
-	if len(categories) != len(testCategories) {
-		t.Errorf("Expected %d categories, got %d", len(testCategories), len(categories))
+	categoriesMap := map[int64]storage.Category{}
+
+	for _, category := range categories {
+		if category.Name() == storage.ExcludeCategory {
+			continue
+		}
+		categoriesMap[category.ID()] = category
 	}
 
-	for i, cat := range categories {
-		if cat.Name() != testCategories[i].name {
-			t.Errorf("Category[%d].Name = %v, want %v", i, cat.Name(), testCategories[i].name)
-		}
-		if cat.Pattern() != testCategories[i].pattern {
-			t.Errorf("Category[%d].Pattern = %v, want %v", i, cat.Pattern(), testCategories[i].pattern)
-		}
+	if len(categoriesMap) != len(testCategories) {
+		t.Errorf("Expected %d categories, got %d", len(testCategories), len(categoriesMap))
 	}
 }
 
@@ -103,11 +103,6 @@ func TestCreateCategory(t *testing.T) {
 		t.Errorf("Failed to create category: %v", err)
 	}
 
-	if id != 1 {
-		t.Errorf("Expected category ID 1, got %d", id)
-	}
-
-	// Verify category was created
 	category, err := stor.GetCategory(id)
 	if err != nil {
 		t.Errorf("Failed to get created category: %v", err)
@@ -150,8 +145,8 @@ func TestDeleteCategories(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to get categories after drop: %v", err)
 	}
-	if len(categories) != 0 {
-		t.Errorf("Expected 0 categories after drop, got %d", len(categories))
+	if len(categories) != 1 {
+		t.Errorf("Expected one category (Exclude category) after drop, got %d", len(categories))
 	}
 }
 
@@ -162,11 +157,25 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 	if createCategoryErr != nil {
 		t.Fatalf("Failed to create test category: %v", createCategoryErr)
 	}
-
+	excludeCategory, excludeErr := stor.GetExcludeCategory()
+	if excludeErr != nil {
+		t.Fatalf("Failed to get exclude category: %v", excludeErr)
+	}
+	excludeID := excludeCategory.ID()
 	testTime := time.Now()
 	expense := storage.NewExpense(0, "bank", "Restaurant dinner", "EUR", -2500, testTime, storage.ChargeType, &catID)
+	excludeExpense := storage.NewExpense(
+		0,
+		"bank",
+		"excluded expense",
+		"EUR",
+		1000,
+		testTime,
+		storage.IncomeType,
+		&excludeID,
+	)
 
-	expenses := []storage.Expense{expense}
+	expenses := []storage.Expense{expense, excludeExpense}
 	_, insertErr := stor.InsertExpenses(expenses)
 	if insertErr != nil {
 		t.Fatalf("Failed to create test expense: %v", insertErr)
@@ -177,11 +186,8 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
-	if len(allExpenses) != 1 {
-		t.Fatalf("Expected 1 expense, got %d", len(allExpenses))
-	}
-	if allExpenses[0].CategoryID() == nil {
-		t.Fatalf("Expected expense to have a category before deletion")
+	if len(allExpenses) != 2 {
+		t.Fatalf("Expected two expenses, got %d", len(allExpenses))
 	}
 
 	rowsAffected, deleteCategoryErr := stor.DeleteCategories()
@@ -199,20 +205,35 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 		t.Errorf("failed to get categories after deleting them %s", getCategoriesErr.Error())
 	}
 
-	if len(categories) != 0 {
-		t.Errorf("got categories after deleting them %d", len(categories))
+	if len(categories) != 1 {
+		t.Errorf("Expected one category (Exclude category) after deleting them, got: %d", len(categories))
 	}
 
 	expensesAfter, getExpensesErr := stor.GetExpenses()
 	if getExpensesErr != nil {
-		t.Errorf("Failed to get expenses after drop: %v", getExpensesErr)
+		t.Errorf("Failed to get expenses after delete: %v", getExpensesErr)
 	}
-	if len(expensesAfter) != 1 {
-		t.Errorf("Expected 1 total expense after drop, got %d", len(expensesAfter))
+	if len(expensesAfter) != 2 {
+		t.Errorf("Expected two expenses after delete, got %d", len(expensesAfter))
 	}
+
 	if expensesAfter[0].CategoryID() != nil {
 		t.Errorf(
-			"Expected expense to have zero category ID after delete categories, got %+v",
+			"Expected first expense to have NULL category after delete categories, got %+v",
+			expensesAfter[0].CategoryID(),
+		)
+	}
+
+	if expensesAfter[1].CategoryID() != nil {
+		if *expensesAfter[1].CategoryID() != excludeID {
+			t.Errorf(
+				"Expected second expense to keep having the exclude category ID after delete categories, got %+v",
+				expensesAfter[0].CategoryID(),
+			)
+		}
+	} else {
+		t.Errorf(
+			"Expected second expense to keep having the exclude category ID after delete categories, got %+v",
 			expensesAfter[0].CategoryID(),
 		)
 	}

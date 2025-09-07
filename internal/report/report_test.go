@@ -40,7 +40,11 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Test monthly report
-	report := Generate(startDate, endDate, s, expenses, "monthly")
+	report, err := Generate(startDate, endDate, s, expenses, "monthly")
+
+	if err != nil {
+		t.Fatalf("Got error generating report: %s", err.Error())
+	}
 
 	// Verify report fields
 	if report.Title != "January 2024" {
@@ -76,7 +80,11 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Test yearly report
-	yearlyReport := Generate(startDate, endDate, s, expenses, "yearly")
+	yearlyReport, err := Generate(startDate, endDate, s, expenses, "yearly")
+	if err != nil {
+		t.Fatalf("Got error generating report: %s", err.Error())
+	}
+
 	if yearlyReport.Title != "2024" {
 		t.Errorf("Report.Title = %v, want 2024", yearlyReport.Title)
 	}
@@ -128,7 +136,11 @@ func TestCategories(t *testing.T) {
 		),
 	}
 
-	categories, duplicates, income, spending := Categories(s, expenses)
+	categories, duplicates, income, spending, err := Categories(s, expenses)
+
+	if err != nil {
+		t.Fatalf("Got error generating categories: %s", err.Error())
+	}
 
 	// Verify duplicates
 	if len(duplicates) != 1 {

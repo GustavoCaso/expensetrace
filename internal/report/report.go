@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	pkgCategory "github.com/GustavoCaso/expensetrace/internal/category"
 	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
@@ -46,10 +45,14 @@ func Generate(
 	storage pkgStorage.Storage,
 	expenses []pkgStorage.Expense,
 	reportType string,
-) Report {
+) (Report, error) {
 	var report Report
 
-	categories, duplicates, income, spending := Categories(storage, expenses)
+	categories, duplicates, income, spending, err := Categories(storage, expenses)
+
+	if err != nil {
+		return report, err
+	}
 
 	report.Income = income
 	report.Spending = spending
@@ -82,13 +85,13 @@ func Generate(
 		report.Title = strconv.Itoa(startDate.Year())
 	}
 
-	return report
+	return report, nil
 }
 
 func Categories(
 	storage pkgStorage.Storage,
 	expenses []pkgStorage.Expense,
-) (map[string]Category, []string, int64, int64) {
+) (map[string]Category, []string, int64, int64, error) {
 	var income int64
 	var spending int64
 	categories := make(map[string]Category)
@@ -98,16 +101,16 @@ func Categories(
 	for _, ex := range expenses {
 		categoryName := ""
 		if ex.CategoryID() != nil {
-			category, err := storage.GetCategory(*ex.CategoryID())
-			// If there is an error fetching the category
-			// we place the expense in the uncategorized bucket
-			if err == nil {
-				categoryName = category.Name()
-			}
-		}
+			category, categoryError := storage.GetCategory(*ex.CategoryID())
 
-		if categoryName == pkgCategory.Exclude {
-			continue
+			if categoryError != nil {
+				return categories, duplicates, income, spending, categoryError
+			}
+
+			if category.Name() == pkgStorage.ExcludeCategory {
+				continue
+			}
+			categoryName = category.Name()
 		}
 
 		_, ok := seen[ex.Description()]
@@ -155,7 +158,7 @@ func Categories(
 		categories[key] = category
 	}
 
-	return categories, duplicates, income, spending
+	return categories, duplicates, income, spending, nil
 }
 
 func addExpenseToCategory(categories map[string]Category, ex pkgStorage.Expense, categoryString string) {

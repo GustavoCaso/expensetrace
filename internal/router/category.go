@@ -43,6 +43,14 @@ func (router *router) categoriesHandler(w http.ResponseWriter) {
 		categoryIndexError(router, w, fmt.Errorf("error fetch categories: %s", err.Error()))
 		return
 	}
+	categoriesWithoutExclude := []storage.Category{}
+	for _, category := range categories {
+		if category.Name() == storage.ExcludeCategory {
+			continue
+		}
+
+		categoriesWithoutExclude = append(categoriesWithoutExclude, category)
+	}
 
 	// Get counts for uncategorized expenses
 	uncategorizedInfos, err := router.storage.GetExpensesWithoutCategory()
@@ -56,9 +64,9 @@ func (router *router) categoriesHandler(w http.ResponseWriter) {
 	totalCategorized := 0
 
 	// Enhance categories with additional data
-	enhancedCategories := make([]enhancedCategory, len(categories))
+	enhancedCategories := make([]enhancedCategory, len(categoriesWithoutExclude))
 
-	for i, cat := range categories {
+	for i, cat := range categoriesWithoutExclude {
 		// Get expenses for this category
 		expenses, expensesErr := router.storage.GetExpensesByCategory(cat.ID())
 
