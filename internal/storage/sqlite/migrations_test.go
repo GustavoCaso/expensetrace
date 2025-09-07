@@ -1,0 +1,27 @@
+package sqlite
+
+import (
+	"testing"
+)
+
+func TestMigrations(t *testing.T) {
+	stor := setupTestStorage(t)
+
+	// Test that storage was created successfully with migrations applied
+	// This verifies that all tables exist and are properly structured
+	_, err := stor.GetExpenses()
+	if err != nil {
+		t.Fatalf("Failed to query expenses table after migrations: %v", err)
+	}
+
+	_, err = stor.GetCategories()
+	if err != nil {
+		t.Fatalf("Failed to query categories table after migrations: %v", err)
+	}
+
+	// Test that we can create data (which verifies schema)
+	_, err = stor.CreateCategory("Test Category", "test.*")
+	if err != nil {
+		t.Fatalf("Failed to create category after migrations: %v", err)
+	}
+}
