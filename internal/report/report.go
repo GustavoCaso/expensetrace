@@ -98,12 +98,6 @@ func Categories(
 	seen := map[string]bool{}
 	duplicates := []string{}
 
-	excludeCategory, err := storage.GetExcludeCategory()
-
-	if err != nil {
-		return categories, duplicates, income, spending, err
-	}
-
 	for _, ex := range expenses {
 		categoryName := ""
 		if ex.CategoryID() != nil {
@@ -113,7 +107,7 @@ func Categories(
 				return categories, duplicates, income, spending, categoryError
 			}
 
-			if category.ID() == excludeCategory.ID() {
+			if category.Name() == pkgStorage.ExcludeCategory {
 				continue
 			}
 			categoryName = category.Name()
