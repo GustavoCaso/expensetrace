@@ -53,14 +53,6 @@ type templateExpense struct {
 //go:embed templates/*
 var content embed.FS
 
-type InsertError struct {
-	err error
-}
-
-func (e InsertError) Error() string {
-	return fmt.Sprintf("error when trying to insert record on table. err: %v", e.err)
-}
-
 func (s *sqliteStorage) GetExpense() (storage.Expense, error) {
 	row := s.db.QueryRowContext(context.Background(), "SELECT * FROM expenses LIMIT 1")
 	return s.expenseFromRow(row.Scan)
