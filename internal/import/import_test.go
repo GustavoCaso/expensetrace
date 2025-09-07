@@ -1,4 +1,3 @@
-//nolint:cyclop // This is a test file and cyclomatic complexity is not a concern
 package importutil
 
 import (
@@ -8,27 +7,26 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/GustavoCaso/expensetrace/internal/category"
-	"github.com/GustavoCaso/expensetrace/internal/db"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestImportCSV(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 
 	for _, c := range categories {
-		_, err := db.CreateCategory(database, c.Name, c.Pattern)
+		_, err := s.CreateCategory(c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
 	}
-
 	matcher := category.NewMatcher(categories)
 
 	// Test CSV data
@@ -37,13 +35,13 @@ Test Source,02/01/2024,Uber ride,-5000.00,USD
 Test Source,03/01/2024,Salary,500000.00,USD`
 
 	reader := strings.NewReader(csvData)
-	info := Import("test.csv", reader, database, matcher)
+	info := Import("test.csv", reader, s, matcher)
 	if info.Error != nil {
 		t.Errorf("Import failed with error: %v", info.Error)
 	}
 
 	// Verify imported expenses
-	expenses, err := db.GetExpenses(database)
+	expenses, err := s.GetExpenses()
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -53,57 +51,57 @@ Test Source,03/01/2024,Salary,500000.00,USD`
 	}
 
 	// Verify first expense
-	if expenses[0].Source != "Test Source" {
-		t.Errorf("Expense[0].Source = %v, want Test Source", expenses[0].Source)
+	if expenses[0].Source() != "Test Source" {
+		t.Errorf("Expense[0].Source = %v, want Test Source", expenses[0].Source())
 	}
-	if expenses[0].Description != "restaurant bill" {
-		t.Errorf("Expense[0].Description = %v, want restaurant bill", expenses[0].Description)
+	if expenses[0].Description() != "restaurant bill" {
+		t.Errorf("Expense[0].Description = %v, want restaurant bill", expenses[0].Description())
 	}
-	if expenses[0].Amount != -123456 {
-		t.Errorf("Expense[0].Amount = %v, want -123456", expenses[0].Amount)
+	if expenses[0].Amount() != -123456 {
+		t.Errorf("Expense[0].Amount = %v, want -123456", expenses[0].Amount())
 	}
-	if expenses[0].Type != db.ChargeType {
-		t.Errorf("Expense[0].Type = %v, want ChargeType", expenses[0].Type)
+	if expenses[0].Type() != storage.ChargeType {
+		t.Errorf("Expense[0].Type = %v, want ChargeType", expenses[0].Type())
 	}
-	if expenses[0].Currency != "USD" {
-		t.Errorf("Expense[0].Currency = %v, want USD", expenses[0].Currency)
+	if expenses[0].Currency() != "USD" {
+		t.Errorf("Expense[0].Currency = %v, want USD", expenses[0].Currency())
 	}
-	if expenses[0].CategoryID.Int64 != 1 {
-		t.Errorf("Expense[0].CategoryID = %v, want 1", expenses[0].CategoryID)
+	if expenses[0].CategoryID() == nil && *expenses[0].CategoryID() == 1 {
+		t.Errorf("Expense[0].CategoryID = %v, want 1", expenses[0].CategoryID())
 	}
 
 	// Verify second expense
-	if expenses[1].Description != "uber ride" {
-		t.Errorf("Expense[1].Description = %v, want uber ride", expenses[1].Description)
+	if expenses[1].Description() != "uber ride" {
+		t.Errorf("Expense[1].Description = %v, want uber ride", expenses[1].Description())
 	}
-	if expenses[1].Amount != -500000 {
-		t.Errorf("Expense[1].Amount = %v, want -500000", expenses[1].Amount)
+	if expenses[1].Amount() != -500000 {
+		t.Errorf("Expense[1].Amount = %v, want -500000", expenses[1].Amount())
 	}
-	if expenses[1].CategoryID.Int64 != 2 {
-		t.Errorf("Expense[1].CategoryID = %v, want 2", expenses[1].CategoryID)
+	if expenses[1].CategoryID() == nil && *expenses[0].CategoryID() == 2 {
+		t.Errorf("Expense[1].CategoryID = %v, want 2", expenses[1].CategoryID())
 	}
 
 	// Verify third expense
-	if expenses[2].Amount != 50000000 {
-		t.Errorf("Expense[2].Amount = %v, want 50000000", expenses[2].Amount)
+	if expenses[2].Amount() != 50000000 {
+		t.Errorf("Expense[2].Amount = %v, want 50000000", expenses[2].Amount())
 	}
-	if expenses[2].Type != db.IncomeType {
-		t.Errorf("Expense[2].Type = %v, want IncomeType", expenses[2].Type)
+	if expenses[2].Type() != storage.IncomeType {
+		t.Errorf("Expense[2].Type = %v, want IncomeType", expenses[2].Type())
 	}
 }
 
 func TestImportJSON(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
-		{ID: 2, Name: "Transport", Pattern: "uber|taxi|transit"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 
 	for _, c := range categories {
-		_, err := db.CreateCategory(database, c.Name, c.Pattern)
+		_, err := s.CreateCategory(c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -137,13 +135,13 @@ func TestImportJSON(t *testing.T) {
 	]`
 
 	reader := strings.NewReader(jsonData)
-	info := Import("test.json", reader, database, matcher)
+	info := Import("test.json", reader, s, matcher)
 	if info.Error != nil {
 		t.Errorf("Import failed with error: %v", info.Error)
 	}
 
 	// Verify imported expenses
-	expenses, err := db.GetExpenses(database)
+	expenses, err := s.GetExpenses()
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -153,58 +151,60 @@ func TestImportJSON(t *testing.T) {
 	}
 
 	// Verify first expense
-	if expenses[0].Source != "Test Source" {
-		t.Errorf("Expense[0].Source = %v, want Test Source", expenses[0].Source)
+	if expenses[0].Source() != "Test Source" {
+		t.Errorf("Expense[0].Source = %v, want Test Source", expenses[0].Source())
 	}
-	if expenses[0].Description != "restaurant bill" {
-		t.Errorf("Expense[0].Description = %v, want restaurant bill", expenses[0].Description)
+	if expenses[0].Description() != "restaurant bill" {
+		t.Errorf("Expense[0].Description = %v, want restaurant bill", expenses[0].Description())
 	}
-	if expenses[0].Amount != -123456 {
-		t.Errorf("Expense[0].Amount = %v, want -123456", expenses[0].Amount)
+	if expenses[0].Amount() != -123456 {
+		t.Errorf("Expense[0].Amount = %v, want -123456", expenses[0].Amount())
 	}
-	if expenses[0].Type != db.ChargeType {
-		t.Errorf("Expense[0].Type = %v, want ChargeType", expenses[0].Type)
+	if expenses[0].Type() != storage.ChargeType {
+		t.Errorf("Expense[0].Type = %v, want ChargeType", expenses[0].Type())
 	}
-	if expenses[0].Currency != "USD" {
-		t.Errorf("Expense[0].Currency = %v, want USD", expenses[0].Currency)
+	if expenses[0].Currency() != "USD" {
+		t.Errorf("Expense[0].Currency = %v, want USD", expenses[0].Currency())
 	}
-	if expenses[0].CategoryID.Int64 != 1 {
-		t.Errorf("Expense[0].CategoryID = %v, want 1", expenses[0].CategoryID)
+	if expenses[0].CategoryID() == nil && *expenses[0].CategoryID() == 1 {
+		t.Errorf("Expense[0].CategoryID = %v, want 1", expenses[0].CategoryID())
 	}
 
 	// Verify second expense
-	if expenses[1].Description != "uber ride" {
-		t.Errorf("Expense[1].Description = %v, want uber ride", expenses[1].Description)
+	if expenses[1].Description() != "uber ride" {
+		t.Errorf("Expense[1].Description = %v, want uber ride", expenses[1].Description())
 	}
-	if expenses[1].Amount != -500000 {
-		t.Errorf("Expense[1].Amount = %v, want -500000", expenses[1].Amount)
+	if expenses[1].Amount() != -500000 {
+		t.Errorf("Expense[1].Amount = %v, want -500000", expenses[1].Amount())
 	}
-	if expenses[1].CategoryID.Int64 != 2 {
-		t.Errorf("Expense[1].CategoryID = %v, want 2", expenses[1].CategoryID)
+	if expenses[1].CategoryID() == nil && *expenses[0].CategoryID() == 2 {
+		t.Errorf("Expense[1].CategoryID = %v, want 2", expenses[1].CategoryID())
 	}
 
 	// Verify third expense
-	if expenses[2].Amount != 50000000 {
-		t.Errorf("Expense[2].Amount = %v, want 50000000", expenses[2].Amount)
+	if expenses[2].Amount() != 50000000 {
+		t.Errorf("Expense[2].Amount = %v, want 50000000", expenses[2].Amount())
 	}
-	if expenses[2].Type != db.IncomeType {
-		t.Errorf("Expense[2].Type = %v, want IncomeType", expenses[2].Type)
+	if expenses[2].Type() != storage.IncomeType {
+		t.Errorf("Expense[2].Type = %v, want IncomeType", expenses[2].Type())
 	}
 }
 
 func TestImportInvalidFormat(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
+
 	matcher := category.NewMatcher(categories)
 
 	// Test with invalid file format
 	reader := strings.NewReader("test data")
-	info := Import("test.txt", reader, database, matcher)
+	info := Import("test.txt", reader, s, matcher)
 	if info.Error == nil || info.Error.Error() != "unsupported file format: .txt" {
 		t.Errorf("Expected error for unsupported file format")
 	}
@@ -212,11 +212,12 @@ func TestImportInvalidFormat(t *testing.T) {
 
 func TestImportInvalidCSV(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 	matcher := category.NewMatcher(categories)
 
@@ -224,7 +225,7 @@ func TestImportInvalidCSV(t *testing.T) {
 	csvData := `Test Source,invalid-date,Restaurant bill,-1234.56,USD`
 
 	reader := strings.NewReader(csvData)
-	info := Import("test.csv", reader, database, matcher)
+	info := Import("test.csv", reader, s, matcher)
 	if info.Error == nil {
 		t.Errorf("Expected 1 error")
 	}
@@ -235,11 +236,12 @@ func TestImportInvalidCSV(t *testing.T) {
 
 func TestImportInvalidJSON(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	database := testutil.SetupTestDB(t, logger)
+	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categories := []db.Category{
-		{ID: 1, Name: "Food", Pattern: "restaurant|food|grocery"},
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 	matcher := category.NewMatcher(categories)
 
@@ -255,7 +257,7 @@ func TestImportInvalidJSON(t *testing.T) {
 	]`
 
 	reader := strings.NewReader(jsonData)
-	info := Import("test.json", reader, database, matcher)
+	info := Import("test.json", reader, s, matcher)
 	if info.Error == nil {
 		t.Errorf("Expected 1 error")
 	}
