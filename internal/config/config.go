@@ -9,24 +9,18 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 )
 
-type Category struct {
-	Name    string `yaml:"name"`
-	Pattern string `yaml:"pattern"`
-}
-type Categories struct {
-	Expense []Category `yaml:"expense"`
-	Income  []Category `yaml:"income"`
-}
-
 type Config struct {
-	DB         string        `yaml:"db"`
-	Categories Categories    `yaml:"categories"`
-	Logger     logger.Config `yaml:"logger"`
+	DB     string        `yaml:"db"`
+	Logger logger.Config `yaml:"logger"`
 }
 
 func (c *Config) parseEnv() {
 	if c.DB == "" {
-		c.DB = os.Getenv("EXPENSETRACE_DB")
+		if db := os.Getenv("EXPENSETRACE_DB"); db != "" {
+			c.DB = db
+		} else {
+			c.DB = "expensetrace.db"
+		}
 	}
 
 	if c.Logger.Level == "" {
@@ -54,32 +48,27 @@ func (c *Config) parseEnv() {
 	}
 }
 
-func (c *Config) validate() error {
-	if c.DB == "" {
-		return errors.New("DB is not set")
-	}
-
-	return nil
-}
-
 func Parse(file string) (*Config, error) {
-	bytes, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
+	conf := &Config{}
+
+	_, statErr := os.Stat(file)
+	if statErr != nil && !errors.Is(statErr, os.ErrNotExist) {
+		return nil, statErr
 	}
 
-	conf := &Config{}
-	err = yaml.Unmarshal(bytes, conf)
-	if err != nil {
-		return nil, err
+	if statErr == nil {
+		bytes, err := os.ReadFile(file)
+		if err != nil {
+			return nil, err
+		}
+
+		err = yaml.Unmarshal(bytes, conf)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	conf.parseEnv()
-
-	err = conf.validate()
-	if err != nil {
-		return nil, err
-	}
 
 	return conf, nil
 }

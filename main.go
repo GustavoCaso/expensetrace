@@ -52,7 +52,7 @@ func main() {
 func executeCommand(command cli.Command) {
 	configPath := os.Getenv("EXPENSETRACE_CONFIG")
 	if configPath == "" {
-		configPath = "expense.yml"
+		configPath = "expensetrace.yml"
 	}
 
 	conf, err := config.Parse(configPath)
@@ -100,7 +100,11 @@ func executeCommand(command cli.Command) {
 func printHelp() {
 	fmt.Printf("usage: expensetrace <subcommand>\n\n")
 	fmt.Printf("Configuration is managed through environment variables and config file.\n")
-	fmt.Printf("Use EXPENSETRACE_CONFIG to specify config file path (default: expense.yml)\n\n")
+	fmt.Printf("Use EXPENSETRACE_CONFIG to specify config file path (default: expensetrace.yml)\n")
+	fmt.Printf("Use EXPENSETRACE_DB to specify db file (default: expensetrace.db)\n")
+	fmt.Printf("Use EXPENSETRACE_LOG_LEVEL to specify log level (default: info)\n")
+	fmt.Printf("Use EXPENSETRACE_LOG_FORMAT to specify log format (default: text)\n")
+	fmt.Printf("Use EXPENSETRACE_LOG_OUTPUT to specify log output (default: stdout)\n\n")
 
 	for commandName, cliCommand := range subcommands {
 		fmt.Printf("subcommmand <%s>: %s\n", commandName, cliCommand.Description())
