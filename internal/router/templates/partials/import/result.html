@@ -1,5 +1,5 @@
 {{define "import/result"}}
-  {{ if eq (len .Error) 0 }}
+  {{ if gt (len .Error) 0 }}
     <div class="error-message">
       <div class="error-icon">⚠️</div>
       <div>
@@ -15,7 +15,7 @@
       <div class="card-body">
         <p><span class="font-bold">{{.TotalImports}}</span> expenses imported</p>
         
-        {{if .ImportWithoutCategory}}
+        {{if and (gt .TotalImports 0) .ImportWithoutCategory}}
           <div class="mt-2">
             <p><span class="font-bold">Expenses without category:</span></p>
             <div class="card-grid">
