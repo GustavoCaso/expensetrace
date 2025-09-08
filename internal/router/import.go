@@ -51,16 +51,13 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	_, err = io.Copy(&buf, file)
 	if err != nil {
-		data := struct {
-			Error string
-		}{
-			Error: "Error parsing form: " + err.Error(),
-		}
+		data.Error = fmt.Sprintf("Error copying bytes: %s", err.Error())
 
 		router.templates.Render(w, "partials/import/result", data)
 		return
 	}
-	router.logger.Info(fmt.Sprintf("Importing File name %s. Size %dKB\n", header.Filename, buf.Len()))
+	router.logger.Info("Importing started", "file_name", header.Filename, "size", fmt.Sprintf("%dKB", buf.Len()))
+
 	info := importUtil.Import(header.Filename, &buf, router.storage, router.matcher)
 
 	if info.Error != nil && info.TotalImports == 0 {
@@ -69,6 +66,7 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 		router.templates.Render(w, "partials/import/result.html", data)
 		return
 	}
+	router.logger.Info("Imported succeeded 🎉", "total", info.TotalImports)
 
 	data.ImportInfo = info
 
