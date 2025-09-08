@@ -3,7 +3,7 @@
 .DEFAULT_GOAL := help
 
 build:
-	CGO_ENABLED=1 go build -o expensetrace .
+	CGO_ENABLED=1 go build -o expensetrace ./cmd/
 
 test:
 	go test ./...

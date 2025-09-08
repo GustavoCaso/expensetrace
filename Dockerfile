@@ -7,7 +7,7 @@ WORKDIR /app
 COPY . .
 RUN apk add build-base
 RUN go mod download
-RUN CGO_ENABLED=1 GOOS=linux go build -o expensetrace .
+RUN CGO_ENABLED=1 GOOS=linux go build -o expensetrace /app/cmd/
 
 # Final stage
 FROM alpine:latest
