@@ -69,11 +69,6 @@ logger:
   level: info
   format: text
   output: stdout
-categories:
-  - name: "Groceries"
-    pattern: "supermarket"
-  - name: "Transportation"
-    pattern: "uber|taxi|metro"
 ```
 
 ## Environment Variables
@@ -82,8 +77,8 @@ ExpenseTrace can be configured entirely through environment variables, which ove
 
 ### Core Configuration
 
-- `EXPENSETRACE_CONFIG`: Path to configuration file (default: `expense.yml`)
-- `EXPENSETRACE_DB`: Path to SQLite database file (default: from config file)
+- `EXPENSETRACE_CONFIG`: Path to configuration file (default: `expensetrace.yml`)
+- `EXPENSETRACE_DB`: Path to SQLite database file (default: `expensetrace.db`)
 
 ### Web Server Configuration
 
@@ -185,15 +180,10 @@ The `expense.yaml` file allows you to:
 ExpenseTrace uses regular expressions (regex) to automatically categorize your expenses based on transaction descriptions. Here's how to effectively use pattern matching:
 
 ```yaml
-categories:
-  - name: "Groceries"
-    pattern: "supermarket|grocery|food market"  # Matches any of these terms
-  - name: "Transportation"
-    pattern: "uber|taxi|metro|bus|train"        # Matches various transport services
-  - name: "Entertainment"
-    pattern: "netflix|spotify|cinema|theater"   # Matches entertainment services
-  - name: "Utilities"
-    pattern: "electricity|water|gas|internet"   # Matches utility bills
+  - "Groceries" -> "supermarket|grocery|food market"  # Matches any of these terms
+  - "Transportation" -> "uber|taxi|metro|bus|train"        # Matches various transport services
+  - "Entertainment" -> "netflix|spotify|cinema|theater"   # Matches entertainment services
+  - "Utilities" -> "electricity|water|gas|internet"   # Matches utility bills
 ```
 
 Pattern matching tips:
@@ -209,15 +199,10 @@ Note: Transaction descriptions are automatically converted to lowercase before m
 Example with complex patterns:
 
 ```yaml
-categories:
-  - name: "Online Shopping"
-    pattern: "amazon.*|ebay.*|walmart.*"  # Matches any transaction from these retailers
-  - name: "Dining Out"
-    pattern: "^restaurant|^cafe|^bar|^pizza"  # Matches only if these terms appear at the start
-  - name: "Subscriptions"
-    pattern: ".*subscription$|.*membership$"  # Matches if these terms appear at the end
-  - name: "Healthcare"
-    pattern: "pharmacy|doctor|hospital|medical"  # Matches healthcare-related expenses
+  - "Online Shopping" -> "amazon.*|ebay.*|walmart.*"  # Matches any transaction from these retailers
+  - "Dining Out" -> "^restaurant|^cafe|^bar|^pizza"  # Matches only if these terms appear at the start
+  - "Subscriptions" -> ".*subscription$|.*membership$"  # Matches if these terms appear at the end
+  - "Healthcare" -> "pharmacy|doctor|hospital|medical"  # Matches healthcare-related expenses
 ```
 
 #### Logging Configuration
@@ -230,8 +215,6 @@ logger:
   level: info      # Log level: debug, info, warn, error
   format: text     # Log format: text or json
   output: stdout   # Output: stdout, stderr, or file path
-categories:
-  # ... your categories
 ```
 
 **Logging Options:**

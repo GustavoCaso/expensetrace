@@ -149,6 +149,7 @@ func (router *router) updateCategoryHandler(
 		}
 
 		updated = true
+		router.logger.Info("Category updated successfully", "id", categoryID)
 	}
 
 	//nolint:nestif // No need to extract this code to a function for now as is clear
@@ -211,8 +212,10 @@ func (router *router) updateCategoryHandler(
 					return
 				}
 
+				router.logger.Info("Category's expenses updated successfully", "id", categoryID, "total", updated)
+
 				if int(updated) != len(toUpdated) {
-					fmt.Println("not all categories were updated")
+					router.logger.Warn("not all categories were updated")
 				}
 			}
 		}
@@ -398,6 +401,8 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
+	router.logger.Info("Category updated successfully", "id", cat.ID(), "extended_regex", extendedRegex)
+
 	expenses, err := router.storage.SearchExpensesByDescription(expenseDescription)
 
 	if err != nil {
@@ -430,6 +435,8 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 			router.templates.Render(w, "pages/categories/uncategorized.html", data)
 			return
 		}
+
+		router.logger.Info("Category's expenses updated successfully", "id", cat.ID(), "total", updated)
 
 		if updated != int64(len(expenses)) {
 			router.logger.Warn("not all expenses updated succesfully")
@@ -548,6 +555,8 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			return
 		}
 
+		router.logger.Info("Category created", "name", name, "pattern", pattern)
+
 		updatedExpenses := make([]storage.Expense, len(toUpdated))
 
 		for i, ex := range toUpdated {
@@ -571,6 +580,8 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 			router.templates.Render(w, "partials/categories/new_result.html", data)
 			return
 		}
+
+		router.logger.Info("Category expenses updated", "total", updated)
 
 		if int(updated) != total {
 			router.logger.Warn("not all categories were updated")
