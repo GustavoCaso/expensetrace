@@ -1,4 +1,4 @@
-package category
+package matcher
 
 import (
 	"regexp"
@@ -19,7 +19,7 @@ type Matcher struct {
 	categories []storage.Category
 }
 
-func NewMatcher(categories []storage.Category) *Matcher {
+func New(categories []storage.Category) *Matcher {
 	matchers := make([]matcher, len(categories))
 
 	for i, category := range categories {

@@ -6,7 +6,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
@@ -27,7 +27,7 @@ func TestImportCSV(t *testing.T) {
 			t.Fatalf("Failed to create category: %v", err)
 		}
 	}
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	// Test CSV data
 	csvData := `Test Source,01/01/2024,Restaurant bill,-1234.56,USD
@@ -107,7 +107,7 @@ func TestImportJSON(t *testing.T) {
 		}
 	}
 
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	// Test JSON data
 	jsonData := `[
@@ -200,7 +200,7 @@ func TestImportInvalidFormat(t *testing.T) {
 		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	// Test with invalid file format
 	reader := strings.NewReader("test data")
@@ -219,7 +219,7 @@ func TestImportInvalidCSV(t *testing.T) {
 		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
 		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	// Test with invalid CSV data
 	csvData := `Test Source,invalid-date,Restaurant bill,-1234.56,USD`
@@ -243,7 +243,7 @@ func TestImportInvalidJSON(t *testing.T) {
 		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
 		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	// Test with invalid JSON data
 	jsonData := `[

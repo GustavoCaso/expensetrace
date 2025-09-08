@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
@@ -36,7 +36,7 @@ func TestImport(t *testing.T) {
 		t.Fatalf("Failed to get Categories: %v", err)
 	}
 
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	// Create test expenses
 	now := time.Now()

@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
+	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/util"
@@ -28,7 +28,7 @@ var staticFS, _ = fs.Sub(static, "templates/static")
 
 type router struct {
 	reload           bool
-	matcher          *category.Matcher
+	matcher          *matcher.Matcher
 	storage          storage.Storage
 	templates        *templates
 	reports          map[string]report.Report
@@ -38,7 +38,7 @@ type router struct {
 }
 
 //nolint:revive // We return the private router struct to allow testing some internal functions
-func New(storage storage.Storage, matcher *category.Matcher, logger *logger.Logger) (http.Handler, *router) {
+func New(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logger) (http.Handler, *router) {
 	router := &router{
 		reload:      os.Getenv("LIVERELOAD") == "true",
 		matcher:     matcher,

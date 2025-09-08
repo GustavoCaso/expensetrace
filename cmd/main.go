@@ -5,12 +5,12 @@ import (
 	"os"
 	"strings"
 
-	categoryPkg "github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	"github.com/GustavoCaso/expensetrace/internal/cli/tui"
 	"github.com/GustavoCaso/expensetrace/internal/cli/web"
 	"github.com/GustavoCaso/expensetrace/internal/config"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
+	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage/sqlite"
 )
 
@@ -80,7 +80,7 @@ func executeCommand(command cli.Command) {
 		appLogger.Fatal("Unable to get categories", "error", err.Error())
 	}
 
-	matcher := categoryPkg.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	err = command.Run(storage, matcher, appLogger)
 	if err != nil {

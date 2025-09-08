@@ -8,7 +8,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
@@ -31,7 +31,7 @@ func TestRun(t *testing.T) {
 	}
 
 	// Create category matcher
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	// Create command
 	cmd := NewCommand()

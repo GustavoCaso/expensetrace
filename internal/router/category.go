@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
@@ -159,7 +159,7 @@ func (router *router) updateCategoryHandler(
 			return
 		}
 
-		matcher := category.NewMatcher(categories)
+		matcher := matcher.New(categories)
 		router.matcher = matcher
 
 		if patternChanged {
@@ -661,7 +661,7 @@ func (router *router) updateCategoryMatcher() error {
 		return categoryErr
 	}
 
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 	router.matcher = matcher
 	return nil
 }

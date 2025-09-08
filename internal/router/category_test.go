@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
@@ -21,7 +21,7 @@ func TestCategoriesHandler(t *testing.T) {
 		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
 		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	handler, _ := New(s, matcher, logger)
 
@@ -45,7 +45,7 @@ func TestUncategorizedHandler(t *testing.T) {
 	categories := []storage.Category{
 		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
 	}
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	expenses := []storage.Expense{
 		storage.NewExpense(
@@ -87,7 +87,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 	categories := []storage.Category{
 		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
 	}
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	expenses := []storage.Expense{
 		storage.NewExpense(0, "Test Source", "cinema", "USD", -123456, time.Now(), storage.ChargeType, nil),
@@ -265,7 +265,7 @@ func TestUpdateHandler(t *testing.T) {
 				t.Fatalf("Failed to get Categories: %v", err)
 			}
 
-			matcher := category.NewMatcher(categories)
+			matcher := matcher.New(categories)
 
 			expenses := []storage.Expense{
 				storage.NewExpense(
@@ -345,7 +345,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 		t.Fatalf("Failed to get Categories: %v", err)
 	}
 
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	expenses := []storage.Expense{
 		storage.NewExpense(
@@ -450,7 +450,7 @@ func TestResetCategoryHandler(t *testing.T) {
 		t.Fatalf("Expected three categories (two + exclude) initially, got %d", len(categories))
 	}
 
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 	handler, router := New(s, matcher, logger)
 
 	oldSyncOnce := router.reportsOnce
@@ -509,7 +509,7 @@ func TestResetCategoryHandlerEmptyDatabase(t *testing.T) {
 	s := testutil.SetupTestStorage(t, logger)
 
 	categories, _ := s.GetCategories()
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 	handler, router := New(s, matcher, logger)
 
 	oldSyncOnce := router.reportsOnce
