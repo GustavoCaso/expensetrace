@@ -44,6 +44,10 @@ type templates struct {
 	logger *logger.Logger
 }
 
+// Render function writes the content of the template and data into `w`
+// even if there is an error we write the error message into `w`
+// If the writer is an http.ResponseWritter even when there is an error,
+// the response woud be 200 as writing to the response writer set the status code to 200.
 func (t *templates) Render(w io.Writer, templateName string, data interface{}) {
 	temp, ok := t.t[templateName]
 
@@ -54,12 +58,14 @@ func (t *templates) Render(w io.Writer, templateName string, data interface{}) {
 	prettyData, _ := json.MarshalIndent(data, "", " ")
 	t.logger.Debug("Rendering template", "name", templateName, "data", prettyData)
 	var err error
+
 	if strings.Contains(templateName, "partials") {
 		tName := strings.TrimSuffix(temp.Name(), ".html")
 		err = temp.ExecuteTemplate(w, tName, data)
 	} else {
 		err = temp.Execute(w, data)
 	}
+
 	if err != nil {
 		t.logger.Error("Template execution failed", "error", err)
 		errorMessage := fmt.Sprintf("Error rendering template '%s': %v", templateName, err.Error())
