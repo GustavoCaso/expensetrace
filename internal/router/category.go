@@ -2,7 +2,6 @@ package router
 
 import (
 	"fmt"
-	"io"
 	"maps"
 	"net/http"
 	"regexp"
@@ -647,7 +646,7 @@ func createEnhancedCategory(category storage.Category, expenses []storage.Expens
 	}
 }
 
-func categoryIndexError(router *router, w io.Writer, err error) {
+func categoryIndexError(router *router, w http.ResponseWriter, err error) {
 	data := struct {
 		Error error
 	}{

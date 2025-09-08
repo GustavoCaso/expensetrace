@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -83,6 +84,8 @@ func TestHomeHandler(t *testing.T) {
 			if resp.StatusCode != tt.expectedStatus {
 				t.Errorf("Expected status %v; got %v", tt.expectedStatus, resp.Status)
 			}
+
+			ensureNoErrorInTemplateResponse(t, fmt.Sprintf("reports: %s", tt.name), resp.Body)
 		})
 	}
 }

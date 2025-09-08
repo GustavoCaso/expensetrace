@@ -70,8 +70,8 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 
 	data.ImportInfo = info
 
-	router.templates.Render(w, "partials/import/result.html", data)
-
 	// Reset cache to refresh data after import
 	router.resetCache()
+
+	router.templates.Render(w, "partials/import/result.html", data)
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -103,6 +104,8 @@ func TestImport(t *testing.T) {
 		t.Errorf("Expected status %v; got %v", http.StatusOK, resp.Status)
 	}
 
+	ensureNoErrorInTemplateResponse(t, "import", resp.Body)
+
 	// Hit home again t valiadte the cache has been busted and the reports have being updated
 	req = httptest.NewRequest(http.MethodGet, "/", nil)
 	w = httptest.NewRecorder()
@@ -117,5 +120,22 @@ func TestImport(t *testing.T) {
 	// Check reports are populated
 	if len(router.sortedReportKeys) <= len(initialReportsKeys) {
 		t.Errorf("reports have not being repopulated after succesfull import")
+	}
+}
+
+func ensureNoErrorInTemplateResponse(t *testing.T, test string, body io.ReadCloser) {
+	t.Helper()
+
+	byteResponse, err := io.ReadAll(body)
+
+	if err != nil {
+		t.Fatalf("error reading the response for '%s': %s", test, err.Error())
+	}
+
+	response := string(byteResponse)
+
+	if strings.Contains(response, templateNotAvailableError) ||
+		strings.Contains(response, templateRenderingError) {
+		t.Fatalf("Error rendenring template for '%s' response: %s", test, response)
 	}
 }

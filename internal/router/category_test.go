@@ -34,6 +34,8 @@ func TestCategoriesHandler(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status OK; got %v", resp.Status)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "categories", resp.Body)
 }
 
 func TestUncategorizedHandler(t *testing.T) {
@@ -74,6 +76,8 @@ func TestUncategorizedHandler(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status OK; got %v", resp.Status)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "uncategorized", resp.Body)
 }
 
 func TestCreateCategoryHandler(t *testing.T) {
@@ -110,6 +114,8 @@ func TestCreateCategoryHandler(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status OK; got %v", resp.Status)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "create category", resp.Body)
 
 	categories, err := s.GetCategories()
 	if err != nil {
@@ -297,6 +303,8 @@ func TestUpdateHandler(t *testing.T) {
 				t.Errorf("Expected status OK; got %v", resp.Status)
 			}
 
+			ensureNoErrorInTemplateResponse(t, fmt.Sprintf("update category: %s", tt.name), resp.Body)
+
 			categoryUpdated, err := s.GetCategory(categoryID)
 
 			if err != nil {
@@ -372,6 +380,8 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status OK; got %v", resp.Status)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "uncategorized", resp.Body)
 
 	categoryUpdated, err := s.GetCategory(categoryID)
 	if err != nil {
@@ -456,6 +466,8 @@ func TestResetCategoryHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", resp.StatusCode, http.StatusOK)
 	}
 
+	ensureNoErrorInTemplateResponse(t, "reset categories", resp.Body)
+
 	categories, err = s.GetCategories()
 	if err != nil {
 		t.Errorf("Failed to get categories after reset: %v", err)
@@ -511,6 +523,8 @@ func TestResetCategoryHandlerEmptyDatabase(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", resp.StatusCode, http.StatusOK)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "reset categories (empty database)", resp.Body)
 
 	categories, err := s.GetCategories()
 	if err != nil {

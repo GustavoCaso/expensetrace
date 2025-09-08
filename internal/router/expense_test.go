@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -64,6 +65,8 @@ func TestExpensesHandler(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status OK; got %v", resp.Status)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "expenses", resp.Body)
 }
 
 func TestExpensesGroupByYearAndMonth(t *testing.T) {
@@ -171,6 +174,8 @@ func TestExpenseHandler(t *testing.T) {
 	if !strings.Contains(body, "Test expense for edit") {
 		t.Error("Response should contain expense description")
 	}
+
+	ensureNoErrorInTemplateResponse(t, "expense", resp.Body)
 }
 
 func TestExpenseHandlerNotFound(t *testing.T) {
@@ -190,6 +195,8 @@ func TestExpenseHandlerNotFound(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status Ok; got %v", resp.Status)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "expense not found", resp.Body)
 }
 
 func TestExpenseHandlerInvalidID(t *testing.T) {
@@ -209,6 +216,8 @@ func TestExpenseHandlerInvalidID(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status Ok; got %v", resp.Status)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "expense invalid ID", resp.Body)
 }
 
 func TestUpdateExpenseHandler(t *testing.T) {
@@ -253,6 +262,8 @@ func TestUpdateExpenseHandler(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status OK; got %v", resp.Status)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "update expense", resp.Body)
 
 	updatedExpense, err := s.GetExpenseByID(1)
 	if err != nil {
@@ -368,6 +379,8 @@ func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 				t.Errorf("Expected status OK for validation error handling; got %v", resp.Status)
 			}
 
+			ensureNoErrorInTemplateResponse(t, fmt.Sprintf("update expense: %s", tt.name), resp.Body)
+
 			if w.Header().Get("Hx-Redirect") != "" {
 				t.Error("Should not redirect when there are validation errors")
 			}
@@ -408,6 +421,8 @@ func TestDeleteExpenseHandler(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status OK; got %v", resp.Status)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "delete expense", resp.Body)
 
 	if w.Header().Get("Hx-Redirect") != "/expenses" {
 		t.Error("Expected Hx-Redirect header to /expenses")
@@ -450,6 +465,8 @@ func TestDeleteExpenseHandlerNotFound(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status Ok; got %v", resp.Status)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "delete expense not found", resp.Body)
 }
 
 func TestExpenseHandlersIntegration(t *testing.T) {
@@ -608,4 +625,6 @@ func TestExpenseSearchHandler(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status OK; got %v", resp.Status)
 	}
+
+	ensureNoErrorInTemplateResponse(t, "search expenses", resp.Body)
 }
