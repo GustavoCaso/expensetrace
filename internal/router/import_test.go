@@ -134,8 +134,8 @@ func ensureNoErrorInTemplateResponse(t *testing.T, test string, body io.ReadClos
 
 	response := string(byteResponse)
 
-	if strings.Contains(response, "Error rendering template") ||
-		strings.Contains(response, "template is not available") {
+	if strings.Contains(response, templateNotAvailableError) ||
+		strings.Contains(response, templateRenderingError) {
 		t.Fatalf("Error rendenring template for '%s' response: %s", test, response)
 	}
 }

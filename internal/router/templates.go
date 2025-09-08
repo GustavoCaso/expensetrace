@@ -16,6 +16,9 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
+const templateNotAvailableError = "template is not available"
+const templateRenderingError = "error rendering template"
+
 // content holds our static content.
 //
 //go:embed templates
@@ -52,7 +55,7 @@ func (t *templates) Render(w io.Writer, templateName string, data interface{}) {
 	temp, ok := t.t[templateName]
 
 	if !ok {
-		_, _ = fmt.Fprintf(w, "template '%s' is not available", templateName)
+		_, _ = fmt.Fprintf(w, "%s '%s'", templateNotAvailableError, templateName)
 		return
 	}
 	prettyData, _ := json.MarshalIndent(data, "", " ")
@@ -68,7 +71,7 @@ func (t *templates) Render(w io.Writer, templateName string, data interface{}) {
 
 	if err != nil {
 		t.logger.Error("Template execution failed", "error", err)
-		errorMessage := fmt.Sprintf("Error rendering template '%s': %v", templateName, err.Error())
+		errorMessage := fmt.Sprintf("%s '%s': %v", templateRenderingError, templateName, err.Error())
 		_, _ = fmt.Fprint(w, errorMessage)
 	}
 }
