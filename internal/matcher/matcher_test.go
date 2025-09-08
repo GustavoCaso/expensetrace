@@ -1,4 +1,4 @@
-package category
+package matcher
 
 import (
 	"testing"
@@ -6,13 +6,13 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
-func TestNewMatcher(t *testing.T) {
+func TestNew(t *testing.T) {
 	categories := []storage.Category{
 		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
 		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 
-	matcher := NewMatcher(categories)
+	matcher := New(categories)
 
 	if len(matcher.matchers) != 2 {
 		t.Errorf("Expected 2 matchers, got %d", len(matcher.matchers))
@@ -34,7 +34,7 @@ func TestMatch(t *testing.T) {
 		storage.NewCategory(entertaimentCategoryID, "Entertainment", "netflix|spotify|movie"),
 	}
 
-	matcher := NewMatcher(categories)
+	matcher := New(categories)
 
 	tests := []struct {
 		name     string
@@ -95,7 +95,7 @@ func TestCategories(t *testing.T) {
 		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
 	}
 
-	matcher := NewMatcher(categories)
+	matcher := New(categories)
 	got := matcher.Categories()
 
 	if len(got) != len(categories) {

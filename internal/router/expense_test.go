@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
@@ -32,7 +32,7 @@ func TestExpensesHandler(t *testing.T) {
 		categoryIDs[i] = id
 	}
 
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	now := time.Now()
 	expenses := []storage.Expense{
@@ -156,7 +156,7 @@ func TestExpenseHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	matcher := category.NewMatcher([]storage.Category{})
+	matcher := matcher.New([]storage.Category{})
 	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/1", nil)
@@ -182,7 +182,7 @@ func TestExpenseHandlerNotFound(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s := testutil.SetupTestStorage(t, logger)
 
-	matcher := category.NewMatcher([]storage.Category{})
+	matcher := matcher.New([]storage.Category{})
 	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/999", nil)
@@ -203,7 +203,7 @@ func TestExpenseHandlerInvalidID(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s := testutil.SetupTestStorage(t, logger)
 
-	matcher := category.NewMatcher([]storage.Category{})
+	matcher := matcher.New([]storage.Category{})
 	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/invalid", nil)
@@ -239,7 +239,7 @@ func TestUpdateExpenseHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	matcher := category.NewMatcher([]storage.Category{})
+	matcher := matcher.New([]storage.Category{})
 	handler, _ := New(s, matcher, logger)
 
 	formData := url.Values{}
@@ -304,7 +304,7 @@ func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	matcher := category.NewMatcher([]storage.Category{})
+	matcher := matcher.New([]storage.Category{})
 	handler, _ := New(s, matcher, logger)
 
 	tests := []struct {
@@ -408,7 +408,7 @@ func TestDeleteExpenseHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	matcher := category.NewMatcher([]storage.Category{})
+	matcher := matcher.New([]storage.Category{})
 	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expense/1", nil)
@@ -451,7 +451,7 @@ func TestDeleteExpenseHandlerNotFound(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s := testutil.SetupTestStorage(t, logger)
 
-	matcher := category.NewMatcher([]storage.Category{})
+	matcher := matcher.New([]storage.Category{})
 	handler, _ := New(s, matcher, logger)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expense/999", nil)
@@ -478,7 +478,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	matcher := category.NewMatcher([]storage.Category{
+	matcher := matcher.New([]storage.Category{
 		storage.NewCategory(categoryID, "Integration Category", "integration"),
 	})
 	handler, _ := New(s, matcher, logger)
@@ -587,7 +587,7 @@ func TestExpenseSearchHandler(t *testing.T) {
 		storage.NewCategory(categoryID, "Food", "restaurant|food|grocery"),
 	}
 
-	matcher := category.NewMatcher(categories)
+	matcher := matcher.New(categories)
 
 	// Create test expenses
 	expenses := []storage.Expense{

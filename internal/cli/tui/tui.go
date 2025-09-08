@@ -11,9 +11,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/term"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
 	"github.com/GustavoCaso/expensetrace/internal/cli"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
+	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/util"
@@ -305,7 +305,7 @@ func (m *model) SetWidth(width int) {
 	m.width = width
 }
 
-func (c tuiCommand) Run(storage storage.Storage, _ *category.Matcher, _ *logger.Logger) error {
+func (c tuiCommand) Run(storage storage.Storage, _ *matcher.Matcher, _ *logger.Logger) error {
 	w, h, err := term.GetSize(os.Stdout.Fd())
 	if err != nil {
 		return fmt.Errorf("failed to get terminal size: %w", err)

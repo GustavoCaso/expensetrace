@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	storageType "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
@@ -40,7 +40,7 @@ func Import(
 	filename string,
 	reader io.Reader,
 	storage storageType.Storage,
-	categoryMatcher *category.Matcher,
+	categoryMatcher *matcher.Matcher,
 ) ImportInfo {
 	info := ImportInfo{}
 	expenses := []storageType.Expense{}

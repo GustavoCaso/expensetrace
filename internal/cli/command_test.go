@@ -6,7 +6,7 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/GustavoCaso/expensetrace/internal/category"
+	"github.com/GustavoCaso/expensetrace/internal/matcher"
 )
 
 // mockCommand implements the Command interface for testing.
@@ -23,7 +23,7 @@ func (c mockCommand) Description() string {
 	return c.description
 }
 
-func (c mockCommand) Run(_ *sql.DB, _ *category.Matcher) error {
+func (c mockCommand) Run(_ *sql.DB, _ *matcher.Matcher) error {
 	return c.runError
 }
 
