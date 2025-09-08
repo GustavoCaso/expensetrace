@@ -1,3 +1,9 @@
 *.db
 expense*.yml
 reports/**/*
+convert
+.git
+.github
+Makefile
+version.txt
+images
