@@ -259,13 +259,10 @@ type uncategorizedViewData struct {
 }
 
 func (router *router) uncategorizedHandler(w http.ResponseWriter) {
+	data := uncategorizedViewData{}
 	expenses, err := router.storage.GetExpensesWithoutCategory()
 	if err != nil {
-		data := struct {
-			Error error
-		}{
-			Error: err,
-		}
+		data.Error = err.Error()
 		router.templates.Render(w, "pages/categories/uncategorized.html", data)
 		return
 	}
@@ -323,13 +320,11 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 		})
 	}
 
-	data := uncategorizedViewData{
-		Keys:             keys,
-		UncategorizeInfo: uncategorizeInfo,
-		Categories:       router.matcher.Categories(),
-		TotalExpenses:    totalExpenses,
-		TotalAmount:      totalAmount,
-	}
+	data.Keys = keys
+	data.UncategorizeInfo = uncategorizeInfo
+	data.Categories = router.matcher.Categories()
+	data.TotalExpenses = totalExpenses
+	data.TotalAmount = totalAmount
 	router.templates.Render(w, "pages/categories/uncategorized.html", data)
 }
 
@@ -648,9 +643,9 @@ func createEnhancedCategory(category storage.Category, expenses []storage.Expens
 
 func categoryIndexError(router *router, w http.ResponseWriter, err error) {
 	data := struct {
-		Error error
+		Error string
 	}{
-		Error: err,
+		Error: err.Error(),
 	}
 	router.templates.Render(w, "pages/categories/index.html", data)
 }

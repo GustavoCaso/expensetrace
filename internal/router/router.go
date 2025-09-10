@@ -134,9 +134,9 @@ func New(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logge
 			logger.Error("Failed to parse form", "error", err)
 
 			data := struct {
-				Error error
+				Error string
 			}{
-				Error: err,
+				Error: err.Error(),
 			}
 			router.templates.Render(w, "partials/categories/card.html", data)
 			return
