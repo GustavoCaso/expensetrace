@@ -132,7 +132,6 @@ type Storage interface {
 	ApplyMigrations(*logger.Logger) error
 
 	// Expenses
-	GetExpense() (Expense, error)
 	GetExpenseByID(int64) (Expense, error)
 	UpdateExpense(Expense) (int64, error)
 	DeleteExpense(int64) (int64, error)

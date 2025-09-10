@@ -53,11 +53,6 @@ type templateExpense struct {
 //go:embed templates/*
 var content embed.FS
 
-func (s *sqliteStorage) GetExpense() (storage.Expense, error) {
-	row := s.db.QueryRowContext(context.Background(), "SELECT * FROM expenses LIMIT 1")
-	return s.expenseFromRow(row.Scan)
-}
-
 func (s *sqliteStorage) GetExpenseByID(id int64) (storage.Expense, error) {
 	row := s.db.QueryRowContext(context.Background(), "SELECT * FROM expenses WHERE id = ?", id)
 	return s.expenseFromRow(row.Scan)
