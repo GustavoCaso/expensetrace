@@ -58,7 +58,7 @@ type expesesViewData struct {
 
 func (router *router) expensesHandler(w http.ResponseWriter) {
 	data := expesesViewData{}
-	expenses, err := router.storage.GetExpenses()
+	expenses, err := router.storage.GetAllExpenseTypes()
 	if err != nil {
 		data.Error = err.Error()
 		router.templates.Render(w, "pages/expenses/index.html", data)
