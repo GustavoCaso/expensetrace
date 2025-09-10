@@ -106,7 +106,8 @@ func (router *router) updateCategoryHandler(
 		return
 	}
 
-	// Get expenses for this category
+	// Get expenses for this category before update so we can return
+	// If we have any error we want to still allow to display catgeory data
 	expenses, err := router.storage.GetExpensesByCategory(categoryEntry.ID())
 
 	if err != nil {
@@ -235,7 +236,16 @@ func (router *router) updateCategoryHandler(
 		router.resetCache()
 	}
 
-	router.templates.Render(w, "partials/categories/card.html", enhancedCat)
+	updatedExpenses, err := router.storage.GetExpensesByCategory(categoryEntry.ID())
+
+	if err != nil {
+		categoryIndexError(router, w, err)
+		return
+	}
+
+	updatedEnhancedCat := createEnhancedCategory(categoryEntry, updatedExpenses)
+
+	router.templates.Render(w, "partials/categories/card.html", updatedEnhancedCat)
 }
 
 type uncategorizedInfo struct {
