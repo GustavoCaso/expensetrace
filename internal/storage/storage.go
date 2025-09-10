@@ -137,6 +137,7 @@ type Storage interface {
 	DeleteExpense(int64) (int64, error)
 	InsertExpenses([]Expense) (int64, error)
 	GetExpenses() ([]Expense, error)
+	GetAllExpenseTypes() ([]Expense, error)
 	UpdateExpenses([]Expense) (int64, error)
 	GetExpensesFromDateRange(start time.Time, end time.Time) ([]Expense, error)
 	GetExpensesWithoutCategory() ([]Expense, error)
