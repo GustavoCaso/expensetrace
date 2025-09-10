@@ -41,7 +41,7 @@ Test Source,03/01/2024,Salary,500000.00,USD`
 	}
 
 	// Verify imported expenses
-	expenses, err := s.GetExpenses()
+	expenses, err := s.GetAllExpenseTypes()
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestImportJSON(t *testing.T) {
 	}
 
 	// Verify imported expenses
-	expenses, err := s.GetExpenses()
+	expenses, err := s.GetAllExpenseTypes()
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}

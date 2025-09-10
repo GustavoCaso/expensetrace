@@ -182,7 +182,7 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 	}
 
 	// Verify the expense has a category before deletion
-	allExpenses, err := stor.GetExpenses()
+	allExpenses, err := stor.GetAllExpenseTypes()
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -209,7 +209,7 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 		t.Errorf("Expected one category (Exclude category) after deleting them, got: %d", len(categories))
 	}
 
-	expensesAfter, getExpensesErr := stor.GetExpenses()
+	expensesAfter, getExpensesErr := stor.GetAllExpenseTypes()
 	if getExpensesErr != nil {
 		t.Errorf("Failed to get expenses after delete: %v", getExpensesErr)
 	}
