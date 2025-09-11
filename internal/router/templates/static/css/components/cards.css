@@ -137,7 +137,7 @@
 
 /* Toggle content */
 .toggle-content {
-  overflow: hidden;
+  overflow: scroll;
   transition: max-height var(--transition-normal) ease-out;
   max-height: 500px;
   opacity: 1;
