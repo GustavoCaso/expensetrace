@@ -53,16 +53,6 @@
   margin: 0;
 }
 
-.toggle-icon {
-  color: var(--color-gray-500);
-  font-size: var(--font-size-xl);
-  transition: transform var(--transition-normal);
-}
-
-.year-header.collapsed .toggle-icon {
-  transform: rotate(-90deg);
-}
-
 /* Month header styling */
 .month-header {
   background-color: var(--color-gray-50);
@@ -96,6 +86,8 @@
 
 /* Expense items list */
 .expense-list {
+  display: flex;
+  flex-direction: column;
   list-style-type: none;
   padding: 0;
   margin: 0;
@@ -111,11 +103,15 @@
 /* Individual expense items */
 .expense-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: var(--spacing-3) var(--spacing-4);
   border-bottom: 1px solid var(--color-gray-100);
   transition: background-color var(--transition-fast);
+  gap: var(--spacing-2);
+}
+
+.expense-item * {
+  width: 100%;
 }
 
 .expense-item:hover {

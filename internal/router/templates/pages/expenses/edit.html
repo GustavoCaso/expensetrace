@@ -116,46 +116,22 @@
             </div>
             
             <div class="form-actions">
-              <a href="/expenses" class="btn-secondary">Cancel</a>
               <button class="btn-primary"
                       hx-put="/expense/{{.Expense.ID}}" 
                       hx-target="#page" 
                       hx-swap="outerHTML">
-                Save Changes
+                Save
+              </button>
+              
+              <button class="btn-danger"
+                      hx-delete="/expense/{{.Expense.ID}}"
+                      hx-target="#page" 
+                      hx-swap="outerHTML show:window:top"
+                      hx-confirm="Are you sure you want to delete the expense? This action cannot be undone.">
+                Delete
               </button>
             </div>
           </form>
-        </div>
-      
-        <div class="card">
-          <h3>Expense Details</h3>
-          <div class="mb-6">
-            <div class="expense-info">
-              <p><strong>Current Amount:</strong> 
-                <span class="amount {{if gt .Expense.Amount 0}}income{{else}}expense{{end}}">
-                  {{formatMoney .Expense.Amount "." ","}}€
-                </span>
-              </p>
-              <p><strong>Date:</strong> {{.Expense.Date.Format "January 2, 2006"}}</p>
-              <p><strong>Source:</strong> {{.Expense.Source}}</p>
-              {{if gt .Expense.CategoryID 0}}
-                <p><strong>Category:</strong> <span class="badge">{{.Expense.Category.Name}}</span></p>
-              {{else}}
-                <p><strong>Category:</strong> <span class="text-gray-500">Uncategorized</span></p>
-              {{end}}
-            </div>
-          </div>
-          
-          <div class="danger-zone">
-            <h4>Danger Zone</h4>
-            <p class="text-sm text-gray-600 mb-4">Permanently delete this expense. This action cannot be undone.</p>
-            
-            <a class="btn-danger btn-small" 
-                  hx-delete="/expense/{{.Expense.ID}}" 
-                  hx-confirm="Are you sure you want to delete the expense? This action cannot be undone.">
-            Delete Expense
-          </a>
-          </div>
         </div>
       {{ else }}
         {{template "error" .Error}}

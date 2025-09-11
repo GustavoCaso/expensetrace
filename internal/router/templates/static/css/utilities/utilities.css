@@ -290,6 +290,10 @@
   margin: var(--spacing-8);
 }
 
+.mt-0 {
+  margin-top: var(--spacing-0);
+}
+
 .mt-1 {
   margin-top: var(--spacing-1);
 }

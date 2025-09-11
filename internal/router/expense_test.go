@@ -424,10 +424,6 @@ func TestDeleteExpenseHandler(t *testing.T) {
 
 	ensureNoErrorInTemplateResponse(t, "delete expense", resp.Body)
 
-	if w.Header().Get("Hx-Redirect") != "/expenses" {
-		t.Error("Expected Hx-Redirect header to /expenses")
-	}
-
 	allExpenses, err := s.GetExpenses()
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
