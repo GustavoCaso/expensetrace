@@ -14,20 +14,34 @@ const (
 	maxMemory = 32 << 20 // 32MB
 )
 
+type importHandler struct {
+	*router
+}
+
+func (i *importHandler) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
+		i.templates.Render(w, "pages/import/index.html", nil)
+	})
+
+	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
+		i.importHandler(w, r)
+	})
+}
+
 type importViewData struct {
 	viewBase
 	importUtil.ImportInfo
 	Error string
 }
 
-func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
+func (i *importHandler) importHandler(w http.ResponseWriter, r *http.Request) {
 	data := importViewData{}
 	err := r.ParseMultipartForm(maxMemory)
 
 	if err != nil {
 		data.Error = fmt.Sprintf("Error parsing form: %s", err.Error())
 
-		router.templates.Render(w, "partials/import/result", data)
+		i.templates.Render(w, "partials/import/result", data)
 		return
 	}
 
@@ -42,7 +56,7 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		data.Error = fmt.Sprintf("Error parsing form: %s", errorMessage)
 
-		router.templates.Render(w, "partials/import/result", data)
+		i.templates.Render(w, "partials/import/result", data)
 		return
 	}
 	defer file.Close()
@@ -53,25 +67,25 @@ func (router *router) importHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		data.Error = fmt.Sprintf("Error copying bytes: %s", err.Error())
 
-		router.templates.Render(w, "partials/import/result", data)
+		i.templates.Render(w, "partials/import/result", data)
 		return
 	}
-	router.logger.Info("Importing started", "file_name", header.Filename, "size", fmt.Sprintf("%dKB", buf.Len()))
+	i.logger.Info("Importing started", "file_name", header.Filename, "size", fmt.Sprintf("%dKB", buf.Len()))
 
-	info := importUtil.Import(header.Filename, &buf, router.storage, router.matcher)
+	info := importUtil.Import(header.Filename, &buf, i.storage, i.matcher)
 
 	if info.Error != nil && info.TotalImports == 0 {
 		data.Error = fmt.Sprintf("Error importing expenses: %s", info.Error.Error())
 
-		router.templates.Render(w, "partials/import/result.html", data)
+		i.templates.Render(w, "partials/import/result.html", data)
 		return
 	}
-	router.logger.Info("Imported succeeded 🎉", "total", info.TotalImports)
+	i.logger.Info("Imported succeeded 🎉", "total", info.TotalImports)
 
 	data.ImportInfo = info
 
 	// Reset cache to refresh data after import
-	router.resetCache()
+	i.resetCache()
 
-	router.templates.Render(w, "partials/import/result.html", data)
+	i.templates.Render(w, "partials/import/result.html", data)
 }
