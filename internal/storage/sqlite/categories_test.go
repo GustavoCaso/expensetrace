@@ -239,6 +239,69 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 	}
 }
 
+func TestDeleteCategory(t *testing.T) {
+	stor := setupTestStorage(t)
+
+	catID, createCategoryErr := stor.CreateCategory("Food", "restaurant")
+	if createCategoryErr != nil {
+		t.Fatalf("Failed to create test category: %v", createCategoryErr)
+	}
+	testTime := time.Now()
+	expense := storage.NewExpense(0, "bank", "Restaurant dinner", "EUR", -2500, testTime, storage.ChargeType, &catID)
+
+	expenses := []storage.Expense{expense}
+	_, insertErr := stor.InsertExpenses(expenses)
+	if insertErr != nil {
+		t.Fatalf("Failed to create test expense: %v", insertErr)
+	}
+
+	// Verify the expense has a category before deletion
+	allExpenses, err := stor.GetAllExpenseTypes()
+	if err != nil {
+		t.Fatalf("Failed to get expenses: %v", err)
+	}
+	if len(allExpenses) != 1 {
+		t.Fatalf("Expected one expenses, got %d", len(allExpenses))
+	}
+	if allExpenses[0].CategoryID() == nil {
+		t.Fatalf("Expected expense to have category ID %d, got nil", catID)
+	}
+
+	rowsAffected, deleteCategoryErr := stor.DeleteCategory(catID)
+	if deleteCategoryErr != nil {
+		t.Errorf("Failed to delete category: %v", deleteCategoryErr)
+	}
+
+	if rowsAffected != 1 {
+		t.Errorf("Expected 1 category deleted, got %d", rowsAffected)
+	}
+
+	categories, getCategoriesErr := stor.GetCategories()
+
+	if getCategoriesErr != nil {
+		t.Errorf("failed to get categories after deleting them %s", getCategoriesErr.Error())
+	}
+
+	if len(categories) != 1 {
+		t.Errorf("Expected one category (Exclude category) after deleting them, got: %d", len(categories))
+	}
+
+	expensesAfter, getExpensesErr := stor.GetAllExpenseTypes()
+	if getExpensesErr != nil {
+		t.Errorf("Failed to get expenses after delete: %v", getExpensesErr)
+	}
+	if len(expensesAfter) != 1 {
+		t.Errorf("Expected one expense after delete, got %d", len(expensesAfter))
+	}
+
+	if expensesAfter[0].CategoryID() != nil {
+		t.Errorf(
+			"Expected expense to have NULL category after delete category, got %+v",
+			expensesAfter[0].CategoryID(),
+		)
+	}
+}
+
 func TestUpdateCategory(t *testing.T) {
 	stor := setupTestStorage(t)
 

@@ -4,6 +4,14 @@
 {{define "main"}}
   {{template "categories/nav" "new"}}
   
+  {{if gt (len .Banner.Icon) 0}} 
+    {{template "banner" .Banner}}
+  {{end}}
+  
+  {{ if gt (len .Error) 0 }}
+    {{template "error" .Error}}
+  {{end}}
+  
   <div id="category-content">
     <div class="card-grid gap-8">
       <div class="card">

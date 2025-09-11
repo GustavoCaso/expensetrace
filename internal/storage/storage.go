@@ -149,6 +149,7 @@ type Storage interface {
 	// Categories
 	GetCategories() ([]Category, error)
 	GetCategory(categoryID int64) (Category, error)
+	DeleteCategory(categoryID int64) (int64, error)
 	UpdateCategory(categoryID int64, name, pattern string) error
 	CreateCategory(name, pattern string) (int64, error)
 	DeleteCategories() (int64, error)

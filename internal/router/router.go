@@ -117,11 +117,11 @@ func New(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logge
 	})
 
 	mux.HandleFunc("GET /categories", func(w http.ResponseWriter, _ *http.Request) {
-		router.categoriesHandler(w)
+		router.categoriesHandler(w, nil, nil)
 	})
 
 	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
-		router.templates.Render(w, "pages/categories/new.html", nil)
+		router.templates.Render(w, "pages/categories/new.html", viewBase{})
 	})
 
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, _ *http.Request) {
@@ -147,6 +147,10 @@ func New(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logge
 		pattern := r.FormValue("pattern")
 		// Category type is no longer needed - we only handle expenses
 		router.updateCategoryHandler(categoryID, name, pattern, w)
+	})
+
+	mux.HandleFunc("DELETE /category/{id}", func(w http.ResponseWriter, r *http.Request) {
+		router.deleteCategoryHandler(w, r)
 	})
 
 	mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {

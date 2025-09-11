@@ -35,7 +35,7 @@ type categoriesViewData struct {
 	UncategorizedCount int
 }
 
-func (router *router) categoriesHandler(w http.ResponseWriter) {
+func (router *router) categoriesHandler(w http.ResponseWriter, outerErr error, banner *banner) {
 	categories, err := router.storage.GetCategories()
 
 	if err != nil {
@@ -83,6 +83,14 @@ func (router *router) categoriesHandler(w http.ResponseWriter) {
 		Categories:         enhancedCategories,
 		CategorizedCount:   totalCategorized,
 		UncategorizedCount: uncategorizedCount,
+	}
+
+	if outerErr != nil {
+		data.Error = outerErr.Error()
+	}
+
+	if banner != nil {
+		data.Banner = *banner
 	}
 
 	router.templates.Render(w, "pages/categories/index.html", data)
@@ -454,7 +462,36 @@ func (router *router) resetCategoryHandler(w http.ResponseWriter) {
 
 	router.resetCache()
 
-	router.categoriesHandler(w)
+	router.categoriesHandler(w, nil, &banner{
+		Icon:    "🔥",
+		Message: "All categories deleted",
+	})
+}
+
+func (router *router) deleteCategoryHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		router.categoriesHandler(w, fmt.Errorf("invalid ID. %s", err.Error()), nil)
+		return
+	}
+
+	_, err = router.storage.DeleteCategory(id)
+	if err != nil {
+		router.logger.Error("Failed to delete category", "error", err, "id", id)
+
+		router.categoriesHandler(w, fmt.Errorf("error deleting the category. %s", err.Error()), nil)
+		return
+	}
+
+	router.logger.Info("Category deleted successfully", "id", id)
+
+	router.resetCache()
+
+	router.categoriesHandler(w, nil, &banner{
+		Icon:    "✅",
+		Message: "Category  deleted",
+	})
 }
 
 func extendRegex(pattern, description string) (string, error) {
