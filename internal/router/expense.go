@@ -58,7 +58,7 @@ type expesesViewData struct {
 
 func (router *router) expensesHandler(w http.ResponseWriter) {
 	data := expesesViewData{}
-	expenses, err := router.storage.GetExpenses()
+	expenses, err := router.storage.GetAllExpenseTypes()
 	if err != nil {
 		data.Error = err.Error()
 		router.templates.Render(w, "pages/expenses/index.html", data)
@@ -335,7 +335,10 @@ func (router *router) updateExpenseHandler(w http.ResponseWriter, r *http.Reques
 		category: updatedCategroy,
 	}
 
-	data.Banner = "Expense Updated"
+	data.Banner = banner{
+		Icon:    "✅",
+		Message: "Expense Updated",
+	}
 	router.templates.Render(w, "pages/expenses/edit.html", data)
 }
 

@@ -132,12 +132,12 @@ type Storage interface {
 	ApplyMigrations(*logger.Logger) error
 
 	// Expenses
-	GetExpense() (Expense, error)
 	GetExpenseByID(int64) (Expense, error)
 	UpdateExpense(Expense) (int64, error)
 	DeleteExpense(int64) (int64, error)
 	InsertExpenses([]Expense) (int64, error)
 	GetExpenses() ([]Expense, error)
+	GetAllExpenseTypes() ([]Expense, error)
 	UpdateExpenses([]Expense) (int64, error)
 	GetExpensesFromDateRange(start time.Time, end time.Time) ([]Expense, error)
 	GetExpensesWithoutCategory() ([]Expense, error)
@@ -149,6 +149,7 @@ type Storage interface {
 	// Categories
 	GetCategories() ([]Category, error)
 	GetCategory(categoryID int64) (Category, error)
+	DeleteCategory(categoryID int64) (int64, error)
 	UpdateCategory(categoryID int64, name, pattern string) error
 	CreateCategory(name, pattern string) (int64, error)
 	DeleteCategories() (int64, error)

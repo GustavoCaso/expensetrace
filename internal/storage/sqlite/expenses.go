@@ -53,14 +53,9 @@ type templateExpense struct {
 //go:embed templates/*
 var content embed.FS
 
-func (s *sqliteStorage) GetExpense() (storage.Expense, error) {
-	row := s.db.QueryRowContext(context.Background(), "SELECT * FROM expenses LIMIT 1")
-	return s.expenseFromRow(row.Scan)
-}
-
 func (s *sqliteStorage) GetExpenseByID(id int64) (storage.Expense, error) {
 	row := s.db.QueryRowContext(context.Background(), "SELECT * FROM expenses WHERE id = ?", id)
-	return s.expenseFromRow(row.Scan)
+	return expenseFromRow(row.Scan)
 }
 
 func (s *sqliteStorage) UpdateExpense(expense storage.Expense) (int64, error) {
@@ -127,30 +122,21 @@ func (s *sqliteStorage) InsertExpenses(expenses []storage.Expense) (int64, error
 }
 
 func (s *sqliteStorage) GetExpenses() ([]storage.Expense, error) {
+	rows, err := s.db.QueryContext(context.Background(), "SELECT * FROM expenses WHERE expense_type = 0")
+	if err != nil {
+		return []storage.Expense{}, err
+	}
+
+	return extractExpensesFromRows(rows)
+}
+
+func (s *sqliteStorage) GetAllExpenseTypes() ([]storage.Expense, error) {
 	rows, err := s.db.QueryContext(context.Background(), "SELECT * FROM expenses")
 	if err != nil {
 		return []storage.Expense{}, err
 	}
 
-	if rows.Err() != nil {
-		return []storage.Expense{}, rows.Err()
-	}
-
-	defer rows.Close()
-
-	expenses := []storage.Expense{}
-
-	for rows.Next() {
-		ex, expenseErr := s.expenseFromRow(rows.Scan)
-
-		if expenseErr != nil {
-			return []storage.Expense{}, expenseErr
-		}
-
-		expenses = append(expenses, ex)
-	}
-
-	return expenses, nil
+	return extractExpensesFromRows(rows)
 }
 
 func (s *sqliteStorage) UpdateExpenses(expenses []storage.Expense) (int64, error) {
@@ -195,25 +181,7 @@ func (s *sqliteStorage) GetExpensesFromDateRange(start time.Time, end time.Time)
 		return []storage.Expense{}, err
 	}
 
-	if rows.Err() != nil {
-		return []storage.Expense{}, rows.Err()
-	}
-
-	defer rows.Close()
-
-	expenses := []storage.Expense{}
-
-	for rows.Next() {
-		ex, expenseErr := s.expenseFromRow(rows.Scan)
-
-		if expenseErr != nil {
-			return []storage.Expense{}, expenseErr
-		}
-
-		expenses = append(expenses, ex)
-	}
-
-	return expenses, nil
+	return extractExpensesFromRows(rows)
 }
 
 func (s *sqliteStorage) GetExpensesWithoutCategory() ([]storage.Expense, error) {
@@ -223,23 +191,7 @@ func (s *sqliteStorage) GetExpensesWithoutCategory() ([]storage.Expense, error) 
 		return []storage.Expense{}, err
 	}
 
-	if rows.Err() != nil {
-		return []storage.Expense{}, rows.Err()
-	}
-
-	defer rows.Close()
-
-	expenses := []storage.Expense{}
-
-	for rows.Next() {
-		ex, expenseErr := s.expenseFromRow(rows.Scan)
-		if expenseErr != nil {
-			return []storage.Expense{}, expenseErr
-		}
-		expenses = append(expenses, ex)
-	}
-
-	return expenses, nil
+	return extractExpensesFromRows(rows)
 }
 
 func (s *sqliteStorage) SearchExpenses(keyword string) ([]storage.Expense, error) {
@@ -250,25 +202,7 @@ func (s *sqliteStorage) SearchExpenses(keyword string) ([]storage.Expense, error
 		return []storage.Expense{}, err
 	}
 
-	if rows.Err() != nil {
-		return []storage.Expense{}, rows.Err()
-	}
-
-	defer rows.Close()
-
-	expenses := []storage.Expense{}
-
-	for rows.Next() {
-		ex, expenseErr := s.expenseFromRow(rows.Scan)
-
-		if expenseErr != nil {
-			return []storage.Expense{}, expenseErr
-		}
-
-		expenses = append(expenses, ex)
-	}
-
-	return expenses, nil
+	return extractExpensesFromRows(rows)
 }
 
 func (s *sqliteStorage) SearchExpensesByDescription(description string) ([]storage.Expense, error) {
@@ -279,28 +213,12 @@ func (s *sqliteStorage) SearchExpensesByDescription(description string) ([]stora
 		return []storage.Expense{}, err
 	}
 
-	if rows.Err() != nil {
-		return []storage.Expense{}, rows.Err()
-	}
-
-	defer rows.Close()
-
-	expenses := []storage.Expense{}
-
-	for rows.Next() {
-		ex, expenseErr := s.expenseFromRow(rows.Scan)
-		if expenseErr != nil {
-			return []storage.Expense{}, expenseErr
-		}
-		expenses = append(expenses, ex)
-	}
-
-	return expenses, nil
+	return extractExpensesFromRows(rows)
 }
 
 func (s *sqliteStorage) GetFirstExpense() (storage.Expense, error) {
 	row := s.db.QueryRowContext(context.Background(), "SELECT * FROM expenses ORDER BY date ASC LIMIT 1")
-	return s.expenseFromRow(row.Scan)
+	return expenseFromRow(row.Scan)
 }
 
 func (s *sqliteStorage) GetExpensesByCategory(categoryID int64) ([]storage.Expense, error) {
@@ -309,23 +227,7 @@ func (s *sqliteStorage) GetExpensesByCategory(categoryID int64) ([]storage.Expen
 		return []storage.Expense{}, err
 	}
 
-	if rows.Err() != nil {
-		return []storage.Expense{}, rows.Err()
-	}
-
-	defer rows.Close()
-
-	expenses := []storage.Expense{}
-
-	for rows.Next() {
-		ex, expenseErr := s.expenseFromRow(rows.Scan)
-		if expenseErr != nil {
-			return []storage.Expense{}, expenseErr
-		}
-		expenses = append(expenses, ex)
-	}
-
-	return expenses, nil
+	return extractExpensesFromRows(rows)
 }
 
 func (s *sqliteStorage) renderTemplate(out io.Writer, templateName string, value any) error {
@@ -342,7 +244,29 @@ func (s *sqliteStorage) renderTemplate(out io.Writer, templateName string, value
 	return nil
 }
 
-func (s *sqliteStorage) expenseFromRow(scan func(dest ...any) error) (storage.Expense, error) {
+func extractExpensesFromRows(rows *sql.Rows) ([]storage.Expense, error) {
+	if rows.Err() != nil {
+		return []storage.Expense{}, rows.Err()
+	}
+
+	defer rows.Close()
+
+	expenses := []storage.Expense{}
+
+	for rows.Next() {
+		ex, expenseErr := expenseFromRow(rows.Scan)
+
+		if expenseErr != nil {
+			return []storage.Expense{}, expenseErr
+		}
+
+		expenses = append(expenses, ex)
+	}
+
+	return expenses, nil
+}
+
+func expenseFromRow(scan func(dest ...any) error) (storage.Expense, error) {
 	var id int64
 	var source string
 	var amount int64

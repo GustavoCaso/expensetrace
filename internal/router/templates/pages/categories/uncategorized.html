@@ -40,11 +40,11 @@
             <div class="card" id="expense-group-{{$uncategorized.Slug}}">
               <div class="card-header">
                 <h3 class="card-title">{{$key}}</h3>
-                {{if gt $uncategorized.Total 0}}
--                 <span class="badge income">Income</span>
--               {{else}}
--                 <span class="badge expense">Expense</span>
--               {{end}}
+                  {{if gt $uncategorized.Total 0}}
+                    <span class="badge income">Income</span>
+                  {{else}}
+                    <span class="badge expense">Expense</span>
+                  {{end}}
               </div>
               
               <div class="category-meta">
@@ -113,7 +113,7 @@
                     <div class="grid">
                       <select id="category-select-{{$key}}"
                               class="category-select mb-1"
-                              name="categoryID">
+                              name="category_id">
                         <option value="">-- Select a category --</option>
                         {{ range $category := $.Categories }}
                           <option value={{$category.ID}}>{{$category.Name}}</option>

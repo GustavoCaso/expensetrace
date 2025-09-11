@@ -3,6 +3,14 @@
 
 {{define "main"}}
   {{template "categories/nav" "index"}}
+  
+  {{if gt (len .Banner.Icon) 0}} 
+    {{template "banner" .Banner}}
+  {{end}}
+  
+  {{ if gt (len .Error) 0 }}
+    {{template "error" .Error}}
+  {{end}}
 
   <div id="category-content">
     {{ if eq (len .Error) 0 }}
@@ -26,9 +34,6 @@
           {{template "categories/card" $category}}
         {{end}}
       </div>
-    {{ else }}
-      {{template "error" .Error}}
-      <button class="btn-primary" hx-get="/categories">Categories</button>
     {{ end }}
   </div>
 {{end}}

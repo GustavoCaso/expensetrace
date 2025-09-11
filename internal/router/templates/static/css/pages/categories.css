@@ -148,22 +148,6 @@
   overflow-y: auto;
 }
 
-/* Success and error messages */
-.result-success {
-  padding: var(--spacing-5);
-  background-color: var(--color-success-light);
-  border-top: 1px solid var(--color-success-light);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-4);
-  color: var(--color-success);
-}
-
-.success-icon {
-  font-size: var(--font-size-xl);
-  line-height: 1;
-}
-
 /* Help suggestions */
 .help-suggestions {
   padding: var(--spacing-4) var(--spacing-5) var(--spacing-6);

@@ -106,6 +106,38 @@ func (s *sqliteStorage) DeleteCategories() (int64, error) {
 	return result.RowsAffected()
 }
 
+func (s *sqliteStorage) DeleteCategory(id int64) (int64, error) {
+	ctx := context.Background()
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = tx.ExecContext(
+		ctx,
+		"UPDATE expenses SET category_id = NULL WHERE category_id IS ?",
+		id,
+	)
+	if err != nil {
+		_ = tx.Rollback()
+		return 0, fmt.Errorf("failed to uncategorize expenses: %w", err)
+	}
+
+	result, err := tx.ExecContext(ctx, "DELETE FROM categories WHERE id IS ?", id)
+	if err != nil {
+		_ = tx.Rollback()
+		return 0, fmt.Errorf("failed to delete categories: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return result.RowsAffected()
+}
+
 func categoryFromRow(scan func(dest ...any) error) (storage.Category, error) {
 	// Use the Category type from expenses.go
 	var id int64

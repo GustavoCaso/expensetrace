@@ -35,7 +35,7 @@ type categoriesViewData struct {
 	UncategorizedCount int
 }
 
-func (router *router) categoriesHandler(w http.ResponseWriter) {
+func (router *router) categoriesHandler(w http.ResponseWriter, outerErr error, banner *banner) {
 	categories, err := router.storage.GetCategories()
 
 	if err != nil {
@@ -85,6 +85,14 @@ func (router *router) categoriesHandler(w http.ResponseWriter) {
 		UncategorizedCount: uncategorizedCount,
 	}
 
+	if outerErr != nil {
+		data.Error = outerErr.Error()
+	}
+
+	if banner != nil {
+		data.Banner = *banner
+	}
+
 	router.templates.Render(w, "pages/categories/index.html", data)
 }
 
@@ -106,7 +114,8 @@ func (router *router) updateCategoryHandler(
 		return
 	}
 
-	// Get expenses for this category
+	// Get expenses for this category before update so we can return
+	// If we have any error we want to still allow to display catgeory data
 	expenses, err := router.storage.GetExpensesByCategory(categoryEntry.ID())
 
 	if err != nil {
@@ -235,18 +244,23 @@ func (router *router) updateCategoryHandler(
 		router.resetCache()
 	}
 
-	router.templates.Render(w, "partials/categories/card.html", enhancedCat)
+	updatedExpenses, err := router.storage.GetExpensesByCategory(categoryEntry.ID())
+
+	if err != nil {
+		categoryIndexError(router, w, err)
+		return
+	}
+
+	updatedEnhancedCat := createEnhancedCategory(categoryEntry, updatedExpenses)
+
+	router.templates.Render(w, "partials/categories/card.html", updatedEnhancedCat)
 }
 
 type uncategorizedInfo struct {
 	Count    int
-	Expenses []struct {
-		Date   time.Time
-		Amount int64
-		Source string
-	}
-	Total int64
-	Slug  string
+	Expenses []storage.Expense
+	Total    int64
+	Slug     string
 }
 
 type uncategorizedViewData struct {
@@ -259,13 +273,10 @@ type uncategorizedViewData struct {
 }
 
 func (router *router) uncategorizedHandler(w http.ResponseWriter) {
+	data := uncategorizedViewData{}
 	expenses, err := router.storage.GetExpensesWithoutCategory()
 	if err != nil {
-		data := struct {
-			Error error
-		}{
-			Error: err,
-		}
+		data.Error = err.Error()
 		router.templates.Render(w, "pages/categories/uncategorized.html", data)
 		return
 	}
@@ -277,33 +288,15 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 	for _, ex := range expenses {
 		if r, ok := uncategorizeInfo[ex.Description()]; ok {
 			r.Count++
-			r.Expenses = append(r.Expenses, struct {
-				Date   time.Time
-				Amount int64
-				Source string
-			}{
-				Date:   ex.Date(),
-				Amount: ex.Amount(),
-				Source: ex.Source(),
-			})
+			r.Expenses = append(r.Expenses, ex)
 			r.Total += ex.Amount()
 			uncategorizeInfo[ex.Description()] = r
 		} else {
 			uncategorizeInfo[ex.Description()] = uncategorizedInfo{
-				Count: 1,
-				Total: ex.Amount(),
-				Expenses: []struct {
-					Date   time.Time
-					Amount int64
-					Source string
-				}{
-					{
-						Date:   ex.Date(),
-						Amount: ex.Amount(),
-						Source: ex.Source(),
-					},
-				},
-				Slug: slugify(ex.Description()),
+				Count:    1,
+				Total:    ex.Amount(),
+				Expenses: []storage.Expense{ex},
+				Slug:     slugify(ex.Description()),
 			}
 		}
 
@@ -319,17 +312,15 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 
 	for _, report := range uncategorizeInfo {
 		sort.SliceStable(report.Expenses, func(i, j int) bool {
-			return report.Expenses[i].Date.After(report.Expenses[j].Date)
+			return report.Expenses[i].Date().After(report.Expenses[j].Date())
 		})
 	}
 
-	data := uncategorizedViewData{
-		Keys:             keys,
-		UncategorizeInfo: uncategorizeInfo,
-		Categories:       router.matcher.Categories(),
-		TotalExpenses:    totalExpenses,
-		TotalAmount:      totalAmount,
-	}
+	data.Keys = keys
+	data.UncategorizeInfo = uncategorizeInfo
+	data.Categories = router.matcher.Categories()
+	data.TotalExpenses = totalExpenses
+	data.TotalAmount = totalAmount
 	router.templates.Render(w, "pages/categories/uncategorized.html", data)
 }
 
@@ -363,7 +354,8 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 	}
 
 	expenseDescription := r.FormValue("description")
-	categoryIDStr := r.FormValue("categoryID")
+	categoryIDStr := r.FormValue("category_id")
+
 	categoryID, err := strconv.Atoi(categoryIDStr)
 
 	if err != nil {
@@ -470,7 +462,36 @@ func (router *router) resetCategoryHandler(w http.ResponseWriter) {
 
 	router.resetCache()
 
-	router.categoriesHandler(w)
+	router.categoriesHandler(w, nil, &banner{
+		Icon:    "🔥",
+		Message: "All categories deleted",
+	})
+}
+
+func (router *router) deleteCategoryHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		router.categoriesHandler(w, fmt.Errorf("invalid ID. %s", err.Error()), nil)
+		return
+	}
+
+	_, err = router.storage.DeleteCategory(id)
+	if err != nil {
+		router.logger.Error("Failed to delete category", "error", err, "id", id)
+
+		router.categoriesHandler(w, fmt.Errorf("error deleting the category. %s", err.Error()), nil)
+		return
+	}
+
+	router.logger.Info("Category deleted successfully", "id", id)
+
+	router.resetCache()
+
+	router.categoriesHandler(w, nil, &banner{
+		Icon:    "✅",
+		Message: "Category  deleted",
+	})
 }
 
 func extendRegex(pattern, description string) (string, error) {
@@ -488,17 +509,21 @@ type createCategoryViewData struct {
 	Pattern string
 	Results []storage.Expense
 	Total   int
-	Create  bool
 }
 
 func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, r *http.Request) {
 	data := createCategoryViewData{}
+	template := "partials/categories/new_result.html"
+	if create {
+		template = "pages/categories/new.html"
+	}
+
 	err := r.ParseForm()
 	if err != nil {
 		router.logger.Error(fmt.Sprintf("error r.ParseForm() %s", err.Error()))
 
 		data.Error = err.Error()
-		router.templates.Render(w, "partials/categories/new_result.html", data)
+		router.templates.Render(w, template, data)
 		return
 	}
 
@@ -512,7 +537,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 		data.Error =
 			"category must include name and a valid regex pattern. Ensure that you populate the name and pattern input"
 
-		router.templates.Render(w, "partials/categories/new_result.html", data)
+		router.templates.Render(w, template, data)
 		return
 	}
 
@@ -521,7 +546,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	if err != nil {
 		data.Error = err.Error()
 
-		router.templates.Render(w, "partials/categories/new_result.html", data)
+		router.templates.Render(w, template, data)
 		return
 	}
 
@@ -530,7 +555,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 	if err != nil {
 		data.Error = err.Error()
 
-		router.templates.Render(w, "partials/categories/new_result.html", data)
+		router.templates.Render(w, template, data)
 		return
 	}
 
@@ -550,7 +575,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 		if createErr != nil {
 			data.Error = createErr.Error()
 
-			router.templates.Render(w, "partials/categories/new_result.html", data)
+			router.templates.Render(w, template, data)
 			return
 		}
 
@@ -576,7 +601,7 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 		if updateErr != nil {
 			data.Error = updateErr.Error()
 
-			router.templates.Render(w, "partials/categories/new_result.html", data)
+			router.templates.Render(w, template, data)
 			return
 		}
 
@@ -591,18 +616,27 @@ func (router *router) createCategoryHandler(create bool, w http.ResponseWriter, 
 		updateCategoryMatcherErr := router.updateCategoryMatcher()
 		if updateCategoryMatcherErr != nil {
 			data.Error = updateCategoryMatcherErr.Error()
-			router.templates.Render(w, "partials/categories/new_result.html", data)
+			router.templates.Render(w, template, data)
 			return
 		}
 
 		router.resetCache()
+		data.Banner = banner{
+			Icon: "✅",
+			Message: fmt.Sprintf(
+				"Category %s was created successfully and %d transactions were categorized!",
+				name,
+				total,
+			),
+		}
+		router.templates.Render(w, template, data)
+		return
 	}
 
 	data.Total = total
 	data.Results = toUpdated
-	data.Create = create
 
-	router.templates.Render(w, "partials/categories/new_result.html", data)
+	router.templates.Render(w, template, data)
 }
 
 func createEnhancedCategory(category storage.Category, expenses []storage.Expense) enhancedCategory {
@@ -648,9 +682,9 @@ func createEnhancedCategory(category storage.Category, expenses []storage.Expens
 
 func categoryIndexError(router *router, w http.ResponseWriter, err error) {
 	data := struct {
-		Error error
+		Error string
 	}{
-		Error: err,
+		Error: err.Error(),
 	}
 	router.templates.Render(w, "pages/categories/index.html", data)
 }

@@ -9,8 +9,8 @@
         <button class="btn-icon" 
           hx-delete="/category/{{.ID}}" 
           hx-confirm="Are you sure you want to delete this category? All expenses will be uncategorized."
-          hx-target="#category-{{.ID}}" 
-          hx-swap="outerHTML">
+          hx-target="#page" 
+          hx-swap="outerHTML show:window:top">
           <span class="icon">🗑️</span>
         </button>
       </div>

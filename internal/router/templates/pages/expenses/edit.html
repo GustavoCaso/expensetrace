@@ -8,7 +8,7 @@
         {{ if eq (len .Error) 0 }}
           <h2>Edit Expense</h2>
           
-          {{if gt (len .Banner) 0}} 
+          {{if gt (len .Banner.Icon) 0}} 
             {{template "banner" .Banner}}
           {{end}}
         

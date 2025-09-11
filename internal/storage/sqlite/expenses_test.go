@@ -27,12 +27,20 @@ func TestExpenseStorage(t *testing.T) {
 	}
 
 	// Test getting all expenses
-	allExpenses, err := stor.GetExpenses()
+	expenses, err := stor.GetExpenses()
+	if err != nil {
+		t.Fatalf("Failed to get expenses: %v", err)
+	}
+	if len(expenses) != 1 {
+		t.Errorf("Expected 1 expense, got %d", len(expenses))
+	}
+
+	allExpenses, err := stor.GetAllExpenseTypes()
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
 	if len(allExpenses) != 2 {
-		t.Errorf("Expected 2 expenses, got %d", len(allExpenses))
+		t.Errorf("Expected 2 expenses (1 expense + 1 income), got %d", len(allExpenses))
 	}
 
 	// Test getting expense by ID
