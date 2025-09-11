@@ -40,7 +40,7 @@ type router struct {
 //nolint:revive // We return the private router struct to allow testing some internal functions
 func New(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logger) (http.Handler, *router) {
 	router := &router{
-		reload:      os.Getenv("LIVERELOAD") == "true",
+		reload:      os.Getenv("EXPENSE_LIVERELOAD") == "true",
 		matcher:     matcher,
 		storage:     storage,
 		reportsOnce: &sync.Once{},

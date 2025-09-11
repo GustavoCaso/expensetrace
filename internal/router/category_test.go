@@ -369,7 +369,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 
 	oldSyncOnce := router.reportsOnce
 
-	body := strings.NewReader(fmt.Sprintf("description=cinema. with friends&categoryID=%d", categoryID))
+	body := strings.NewReader(fmt.Sprintf("description=cinema. with friends&category_id=%d", categoryID))
 	req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/update", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()

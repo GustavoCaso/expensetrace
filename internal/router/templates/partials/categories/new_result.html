@@ -1,29 +1,6 @@
 {{define "categories/new_result"}}
-  {{ if gt (len .Error) 0 }}
-    <!-- Error in regex pattern or server error -->
-    <div class="card error">
-      <div class="card-header">
-        <h3>Error Testing Pattern</h3>
-        {{if .Pattern}}
-        <div class="pattern-badge error">{{.Pattern}}</div>
-        {{end}}
-      </div>
-      <div class="error-message">
-        <div class="error-icon">⚠️</div>
-        <div>
-          <p class="error-title">Error</p>
-          <p>{{.Error}}</p>
-        </div>
-      </div>
-      <div class="help-suggestions">
-        <h4>Suggestions:</h4>
-        <ul>
-          <li>Check for matching parentheses, brackets, and braces</li>
-          <li>Escape special characters with a backslash \</li>
-          <li>Try one of the basic patterns from the helper section</li>
-        </ul>
-      </div>
-    </div>
+  {{if gt (len .Error) 0 }}
+    {{template "error" .Error}}
   {{else}}
     {{if eq .Total 0}}
       <!-- No matches result -->
@@ -78,19 +55,12 @@
           {{end}}
         </div>
         
-        {{if not .Create}}
-          <div class="result-actions">
-            <button hx-post="/category" 
-                    hx-include="input[name='name'],input[name='pattern']" 
-                    hx-target="#pattern-results" 
-                    class="btn-primary">Create "{{.Name}}" Category</button>
-          </div>
-        {{else}}
-          <div class="result-success">
-            <div class="success-icon">✅</div>
-            <p>Category "{{.Name}}" was created successfully and {{.Total}} transactions were categorized!</p>
-          </div>
-        {{end}}
+        <div class="result-actions">
+          <button hx-post="/category" 
+                  hx-include="input[name='name'],input[name='pattern']" 
+                  hx-target="#page" hx-swap="outerHTML"
+                  class="btn-primary">Create "{{.Name}}" Category</button>
+        </div>
       </div>
     {{end}}
   {{end}}
