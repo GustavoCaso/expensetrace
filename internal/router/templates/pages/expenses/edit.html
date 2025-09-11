@@ -6,7 +6,7 @@
     <div class="card-grid gap-8">
       <div class="card">
         {{ if eq (len .Error) 0 }}
-          <h2>Edit Expense</h2>
+          <h2 class="mb-4">Edit {{.Expense.Description}}</h2>
           
           {{if gt (len .Banner.Icon) 0}} 
             {{template "banner" .Banner}}

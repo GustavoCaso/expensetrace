@@ -216,6 +216,16 @@ func (s *sqliteStorage) SearchExpensesByDescription(description string) ([]stora
 	return extractExpensesFromRows(rows)
 }
 
+func (s *sqliteStorage) GetExpensesWithoutCategoryWithQuery(keyword string) ([]storage.Expense, error) {
+	rows, err := s.db.QueryContext(context.Background(),
+		"SELECT * FROM expenses WHERE category_id IS NULL AND expense_type = 0 AND description LIKE ?", "%"+keyword+"%")
+	if err != nil {
+		return []storage.Expense{}, err
+	}
+
+	return extractExpensesFromRows(rows)
+}
+
 func (s *sqliteStorage) GetFirstExpense() (storage.Expense, error) {
 	row := s.db.QueryRowContext(context.Background(), "SELECT * FROM expenses ORDER BY date ASC LIMIT 1")
 	return expenseFromRow(row.Scan)

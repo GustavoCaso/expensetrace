@@ -8,22 +8,6 @@
   padding: var(--spacing-4);
 }
 
-/* Search form */
-.expenses-search-form {
-  margin-bottom: var(--spacing-6);
-  display: grid;
-  grid-template-columns: 7fr 1fr;
-  gap: var(--spacing-2);
-}
-
-.expenses-search-form .form-group {
-  margin-bottom: 0;
-}
-
-.expenses-search-form input[type="search"] {
-  width: 100%;
-}
-
 /* Year sections */
 .expense-year {
   margin-bottom: var(--spacing-8);
@@ -212,15 +196,6 @@
   .month-total {
     flex-direction: column;
     gap: var(--spacing-1);
-  }
-
-  .expenses-search-form {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .expenses-search-form button {
-    width: 100%;
   }
 
   .expense-actions {

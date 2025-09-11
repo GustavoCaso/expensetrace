@@ -101,6 +101,7 @@ func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	data := homeViewData{}
+	data.CurrentPage = pageReports
 	if err != nil {
 		data.Error = err.Error()
 	} else {

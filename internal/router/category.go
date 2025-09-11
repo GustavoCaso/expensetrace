@@ -15,6 +15,8 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
+const errSearchCriteria = "You must provide a search criteria"
+
 type categoryHandler struct {
 	*router
 }
@@ -25,11 +27,11 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
-		c.templates.Render(w, "pages/categories/new.html", viewBase{})
+		c.templates.Render(w, "pages/categories/new.html", viewBase{CurrentPage: pageCategories})
 	})
 
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, _ *http.Request) {
-		c.uncategorizedHandler(w)
+		c.uncategorizedHandler(w, "")
 	})
 
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +73,27 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {
 		c.updateUncategorizedHandler(w, r)
+	})
+
+	mux.HandleFunc("POST /category/uncategorized/search", func(w http.ResponseWriter, r *http.Request) {
+		data := viewBase{}
+		err := r.ParseForm()
+
+		if err != nil {
+			data.Error = err.Error()
+			c.templates.Render(w, "pages/categories/uncategorized.html", data)
+			return
+		}
+
+		query := r.FormValue("q")
+
+		if query == "" {
+			data.Error = errSearchCriteria
+			c.templates.Render(w, "pages/categories/uncategorized.html", data)
+			return
+		}
+
+		c.uncategorizedHandler(w, query)
 	})
 }
 
@@ -143,6 +166,7 @@ func (c *categoryHandler) categoriesHandler(w http.ResponseWriter, outerErr erro
 		CategorizedCount:   totalCategorized,
 		UncategorizedCount: uncategorizedCount,
 	}
+	data.CurrentPage = pageCategories
 
 	if outerErr != nil {
 		data.Error = outerErr.Error()
@@ -331,9 +355,18 @@ type uncategorizedViewData struct {
 	TotalAmount      int64
 }
 
-func (c *categoryHandler) uncategorizedHandler(w http.ResponseWriter) {
+func (c *categoryHandler) uncategorizedHandler(w http.ResponseWriter, query string) {
 	data := uncategorizedViewData{}
-	expenses, err := c.storage.GetExpensesWithoutCategory()
+	data.CurrentPage = pageCategories
+	var expenses []storage.Expense
+	var err error
+
+	if query != "" {
+		expenses, err = c.storage.GetExpensesWithoutCategoryWithQuery(query)
+	} else {
+		expenses, err = c.storage.GetExpensesWithoutCategory()
+	}
+
 	if err != nil {
 		data.Error = err.Error()
 		c.templates.Render(w, "pages/categories/uncategorized.html", data)
@@ -502,7 +535,7 @@ func (c *categoryHandler) updateUncategorizedHandler(w http.ResponseWriter, r *h
 		c.resetCache()
 	}
 
-	c.uncategorizedHandler(w)
+	c.uncategorizedHandler(w, "")
 }
 
 func (c *categoryHandler) resetcategoryHandler(w http.ResponseWriter) {
@@ -572,6 +605,7 @@ type createCategoryViewData struct {
 
 func (c *categoryHandler) createcategoryHandler(create bool, w http.ResponseWriter, r *http.Request) {
 	data := createCategoryViewData{}
+	data.CurrentPage = pageCategories
 	template := "partials/categories/new_result.html"
 	if create {
 		template = "pages/categories/new.html"
@@ -741,9 +775,11 @@ func createEnhancedCategory(category storage.Category, expenses []storage.Expens
 
 func (c *categoryHandler) categoryIndexError(w http.ResponseWriter, err error) {
 	data := struct {
-		Error string
+		Error       string
+		CurrentPage string
 	}{
-		Error: err.Error(),
+		Error:       err.Error(),
+		CurrentPage: pageCategories,
 	}
 	c.templates.Render(w, "pages/categories/index.html", data)
 }

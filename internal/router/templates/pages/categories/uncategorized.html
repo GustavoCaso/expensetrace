@@ -4,6 +4,20 @@
 {{define "main"}}  
   {{ if eq (len .Error) 0 }}
     {{template "categories/nav" "uncategorized"}}
+    
+    <form class='search-form'>
+      <div class="form-group">
+        <input type='search' name='q' required>
+      </div>
+      <button 
+        class="btn-primary"
+        hx-post="/category/uncategorized/search" 
+        hx-target="#page" 
+        hx-swap="outerHTML"
+        type="submit">
+        Search
+      </button>
+    </form>
   
     <div id="uncategorized">
       {{ if eq (len .Keys) 0 }}

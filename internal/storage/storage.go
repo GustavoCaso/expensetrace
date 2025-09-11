@@ -141,6 +141,7 @@ type Storage interface {
 	UpdateExpenses([]Expense) (int64, error)
 	GetExpensesFromDateRange(start time.Time, end time.Time) ([]Expense, error)
 	GetExpensesWithoutCategory() ([]Expense, error)
+	GetExpensesWithoutCategoryWithQuery(keyword string) ([]Expense, error)
 	SearchExpenses(keyword string) ([]Expense, error)
 	SearchExpensesByDescription(description string) ([]Expense, error)
 	GetFirstExpense() (Expense, error)

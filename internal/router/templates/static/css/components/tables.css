@@ -35,3 +35,50 @@ table tr:last-child td,
 tr:last-child td {
   border-bottom: none;
 }
+
+/* Div-based table layout */
+.table {
+  width: 100%;
+  font-size: var(--font-size-sm);
+}
+
+.table-header {
+  display: flex;
+  background-color: var(--color-gray-50);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.table-header-cell {
+  flex: 1;
+  padding: var(--spacing-3);
+  text-align: left;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-600);
+}
+
+.table-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.table-row {
+  display: flex;
+  border-bottom: 1px solid var(--color-gray-100);
+  text-decoration: none;
+  color: inherit;
+  transition: background-color var(--transition-normal);
+}
+
+.table-row:hover {
+  background-color: var(--color-gray-100);
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-cell {
+  flex: 1;
+  padding: var(--spacing-3);
+  vertical-align: middle;
+}
