@@ -250,13 +250,9 @@ func (router *router) updateCategoryHandler(
 
 type uncategorizedInfo struct {
 	Count    int
-	Expenses []struct {
-		Date   time.Time
-		Amount int64
-		Source string
-	}
-	Total int64
-	Slug  string
+	Expenses []storage.Expense
+	Total    int64
+	Slug     string
 }
 
 type uncategorizedViewData struct {
@@ -284,33 +280,15 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 	for _, ex := range expenses {
 		if r, ok := uncategorizeInfo[ex.Description()]; ok {
 			r.Count++
-			r.Expenses = append(r.Expenses, struct {
-				Date   time.Time
-				Amount int64
-				Source string
-			}{
-				Date:   ex.Date(),
-				Amount: ex.Amount(),
-				Source: ex.Source(),
-			})
+			r.Expenses = append(r.Expenses, ex)
 			r.Total += ex.Amount()
 			uncategorizeInfo[ex.Description()] = r
 		} else {
 			uncategorizeInfo[ex.Description()] = uncategorizedInfo{
-				Count: 1,
-				Total: ex.Amount(),
-				Expenses: []struct {
-					Date   time.Time
-					Amount int64
-					Source string
-				}{
-					{
-						Date:   ex.Date(),
-						Amount: ex.Amount(),
-						Source: ex.Source(),
-					},
-				},
-				Slug: slugify(ex.Description()),
+				Count:    1,
+				Total:    ex.Amount(),
+				Expenses: []storage.Expense{ex},
+				Slug:     slugify(ex.Description()),
 			}
 		}
 
@@ -326,7 +304,7 @@ func (router *router) uncategorizedHandler(w http.ResponseWriter) {
 
 	for _, report := range uncategorizeInfo {
 		sort.SliceStable(report.Expenses, func(i, j int) bool {
-			return report.Expenses[i].Date.After(report.Expenses[j].Date)
+			return report.Expenses[i].Date().After(report.Expenses[j].Date())
 		})
 	}
 
@@ -368,7 +346,8 @@ func (router *router) updateUncategorizedHandler(w http.ResponseWriter, r *http.
 	}
 
 	expenseDescription := r.FormValue("description")
-	categoryIDStr := r.FormValue("categoryID")
+	categoryIDStr := r.FormValue("category_id")
+
 	categoryID, err := strconv.Atoi(categoryIDStr)
 
 	if err != nil {
