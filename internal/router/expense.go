@@ -347,18 +347,18 @@ func (c *expenseHandler) updateExpenseHandler(w http.ResponseWriter, r *http.Req
 	c.logger.Info("Expense updated successfully", "id", id)
 
 	c.resetCache()
-	var updatedCategroy pkgStorage.Category
+	var updatedCategory pkgStorage.Category
 	if updatedExpense.CategoryID() != nil {
 		cat, categoryErr := c.storage.GetCategory(*updatedExpense.CategoryID())
 		if categoryErr != nil {
 			c.logger.Error("Failed to get category", "error", categoryErr)
 		}
-		updatedCategroy = cat
+		updatedCategory = cat
 	}
 
 	data.Expense = &expenseView{
-		Expense:  expense,
-		category: updatedCategroy,
+		Expense:  updatedExpense,
+		category: updatedCategory,
 	}
 
 	data.Banner = banner{
