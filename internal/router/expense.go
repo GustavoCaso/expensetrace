@@ -415,14 +415,14 @@ func (c *expenseHandler) expenseSearchHandler(w http.ResponseWriter, r *http.Req
 	query := r.FormValue("q")
 
 	if query == "" {
-		data.Error = "You must provide a search criteria"
+		data.Error = errSearchCriteria
 		c.templates.Render(w, "pages/expenses/index.html", data)
 		return
 	}
 
 	expenses, err := c.storage.SearchExpenses(query)
 	if err != nil {
-		data.Error = "You must provide a search criteria"
+		data.Error = errSearchCriteria
 		c.templates.Render(w, "pages/expenses/index.html", data)
 	}
 

@@ -15,6 +15,8 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
+const errSearchCriteria = "You must provide a search criteria"
+
 type categoryHandler struct {
 	*router
 }
@@ -29,7 +31,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, _ *http.Request) {
-		c.uncategorizedHandler(w)
+		c.uncategorizedHandler(w, "")
 	})
 
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +73,27 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {
 		c.updateUncategorizedHandler(w, r)
+	})
+
+	mux.HandleFunc("POST /category/uncategorized/search", func(w http.ResponseWriter, r *http.Request) {
+		data := viewBase{}
+		err := r.ParseForm()
+
+		if err != nil {
+			data.Error = err.Error()
+			c.templates.Render(w, "pages/categories/uncategorized.html", data)
+			return
+		}
+
+		query := r.FormValue("q")
+
+		if query == "" {
+			data.Error = errSearchCriteria
+			c.templates.Render(w, "pages/categories/uncategorized.html", data)
+			return
+		}
+
+		c.uncategorizedHandler(w, query)
 	})
 }
 
@@ -331,9 +354,17 @@ type uncategorizedViewData struct {
 	TotalAmount      int64
 }
 
-func (c *categoryHandler) uncategorizedHandler(w http.ResponseWriter) {
+func (c *categoryHandler) uncategorizedHandler(w http.ResponseWriter, query string) {
 	data := uncategorizedViewData{}
-	expenses, err := c.storage.GetExpensesWithoutCategory()
+	var expenses []storage.Expense
+	var err error
+
+	if query != "" {
+		expenses, err = c.storage.GetExpensesWithoutCategoryWithQuery(query)
+	} else {
+		expenses, err = c.storage.GetExpensesWithoutCategory()
+	}
+
 	if err != nil {
 		data.Error = err.Error()
 		c.templates.Render(w, "pages/categories/uncategorized.html", data)
@@ -502,7 +533,7 @@ func (c *categoryHandler) updateUncategorizedHandler(w http.ResponseWriter, r *h
 		c.resetCache()
 	}
 
-	c.uncategorizedHandler(w)
+	c.uncategorizedHandler(w, "")
 }
 
 func (c *categoryHandler) resetcategoryHandler(w http.ResponseWriter) {

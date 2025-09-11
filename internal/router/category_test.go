@@ -80,6 +80,92 @@ func TestUncategorizedHandler(t *testing.T) {
 	ensureNoErrorInTemplateResponse(t, "uncategorized", resp.Body)
 }
 
+func TestUncategorizedSearchHandler(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
+	categories := []storage.Category{
+		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
+	}
+	matcher := matcher.New(categories)
+
+	expenses := []storage.Expense{
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"Coffee shop purchase",
+			"USD",
+			-500,
+			time.Now(),
+			storage.ChargeType,
+			nil,
+		),
+		storage.NewExpense(
+			0,
+			"Test Source",
+			"Hardware store",
+			"USD",
+			-1500,
+			time.Now(),
+			storage.ChargeType,
+			nil,
+		),
+	}
+
+	_, err := s.InsertExpenses(expenses)
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
+	}
+
+	handler, _ := New(s, matcher, logger)
+
+	body := strings.NewReader("q=Coffee")
+	req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/search", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK; got %v", resp.Status)
+	}
+
+	ensureNoErrorInTemplateResponse(t, "uncategorized search", resp.Body)
+
+	emptyBody := strings.NewReader("q=")
+	emptyReq := httptest.NewRequest(http.MethodPost, "/category/uncategorized/search", emptyBody)
+	emptyReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	emptyW := httptest.NewRecorder()
+
+	handler.ServeHTTP(emptyW, emptyReq)
+
+	emptyResp := emptyW.Result()
+	if emptyResp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK for empty query; got %v", emptyResp.Status)
+	}
+
+	responseBody := emptyW.Body.String()
+	if !strings.Contains(responseBody, errSearchCriteria) {
+		t.Error("Expected error message for empty search query")
+	}
+
+	invalidReq := httptest.NewRequest(
+		http.MethodPost,
+		"/category/uncategorized/search",
+		strings.NewReader("invalid%form"),
+	)
+	invalidReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	invalidW := httptest.NewRecorder()
+
+	handler.ServeHTTP(invalidW, invalidReq)
+
+	invalidResp := invalidW.Result()
+	if invalidResp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK for form parse error; got %v", invalidResp.Status)
+	}
+}
+
 func TestCreateCategoryHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s := testutil.SetupTestStorage(t, logger)

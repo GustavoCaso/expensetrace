@@ -193,4 +193,25 @@ func TestExpenseWithCategories(t *testing.T) {
 	if uncategorizedExpenses[0].Description() != "Random purchase" {
 		t.Errorf("Expected description 'Random purchase', got '%s'", uncategorizedExpenses[0].Description())
 	}
+
+	// Test searching expenses without category with query
+	searchUncategorized, err := stor.GetExpensesWithoutCategoryWithQuery("Random")
+	if err != nil {
+		t.Fatalf("Failed to search uncategorized expenses: %v", err)
+	}
+	if len(searchUncategorized) != 1 {
+		t.Errorf("Expected 1 search result for uncategorized, got %d", len(searchUncategorized))
+	}
+	if searchUncategorized[0].Description() != "Random purchase" {
+		t.Errorf("Expected description 'Random purchase' from search, got '%s'", searchUncategorized[0].Description())
+	}
+
+	// Test searching with no results
+	noResults, err := stor.GetExpensesWithoutCategoryWithQuery("nonexistent")
+	if err != nil {
+		t.Fatalf("Failed to search uncategorized expenses with no results: %v", err)
+	}
+	if len(noResults) != 0 {
+		t.Errorf("Expected 0 search results for nonexistent query, got %d", len(noResults))
+	}
 }
