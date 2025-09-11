@@ -32,7 +32,6 @@
           <div class="expense-year">
             <div class="year-header">
               <h2>{{$year}}</h2>
-              <span class="toggle-icon">▼</span>
             </div>
             
             <div class="expense-list {{if not $currentYear}}collapsed{{end}}">
@@ -47,9 +46,9 @@
                   <ul class="expense-list {{if not $currentMonth}}collapsed{{end}}">
                     {{range $expense := $expenses}}
                       <li class="expense-item">
-                        <span class="text-gray-500 text-sm">{{$expense.Date.Format "2006-01-02"}}</span>
+                        <div class="text-gray-500 text-sm">{{$expense.Date.Format "2006-01-02"}}</div>
                         <div class="mx-4">
-                          <div>{{$expense.Description}}</div>
+                          <p>{{$expense.Description}}</p>
                           <div class="expense-meta">
                             {{if $expense.Category}}
                               <span class="badge">{{$expense.Category.Name}}</span>
@@ -59,10 +58,18 @@
                             <span class="font-italic">via {{$expense.Source}}</span>
                           </div>
                         </div>
-                        <span class="amount {{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
+                        <p class="amount ta-center {{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
                           <b>{{formatMoney $expense.Amount "." ","}}€</b>
-                        </span>
-                        <div class="expense-actions">
+                        </p>
+                        <div class="form-actions mt-0">
+                          <a 
+                            class="btn-danger btn-small"
+                            hx-delete="/expense/{{.Expense.ID}}"
+                            hx-target="#page" 
+                            hx-swap="outerHTML show:window:top"
+                            hx-confirm="Are you sure you want to delete the expense? This action cannot be undone.">
+                            Delete
+                          </a>
                           <a 
                             class="btn-secondary btn-small" 
                             href="/expense/{{$expense.ID}}" 
