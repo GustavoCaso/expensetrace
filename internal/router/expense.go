@@ -64,7 +64,7 @@ func (c *expenseHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /expenses", func(w http.ResponseWriter, _ *http.Request) {
-		c.expensesHandler(w)
+		c.expensesHandler(w, nil)
 	})
 
 	mux.HandleFunc("POST /expense/search", func(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +82,7 @@ type expesesViewData struct {
 	CurrentMonth string
 }
 
-func (c *expenseHandler) expensesHandler(w http.ResponseWriter) {
+func (c *expenseHandler) expensesHandler(w http.ResponseWriter, banner *banner) {
 	data := expesesViewData{}
 	expenses, err := c.storage.GetAllExpenseTypes()
 	if err != nil {
@@ -104,6 +104,10 @@ func (c *expenseHandler) expensesHandler(w http.ResponseWriter) {
 	data.Months = months
 	data.CurrentYear = today.Year()
 	data.CurrentMonth = today.Month().String()
+
+	if banner != nil {
+		data.Banner = *banner
+	}
 
 	c.templates.Render(w, "pages/expenses/index.html", data)
 }
@@ -392,7 +396,10 @@ func (c *expenseHandler) deleteExpenseHandler(w http.ResponseWriter, r *http.Req
 
 	c.resetCache()
 
-	w.Header().Set("Hx-Redirect", "/expenses")
+	c.expensesHandler(w, &banner{
+		Icon:    "🔥",
+		Message: "Expense deleted",
+	})
 }
 
 func (c *expenseHandler) expenseSearchHandler(w http.ResponseWriter, r *http.Request) {
