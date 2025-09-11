@@ -20,7 +20,8 @@ type importHandler struct {
 
 func (i *importHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
-		i.templates.Render(w, "pages/import/index.html", nil)
+		data := viewBase{CurrentPage: pageImport}
+		i.templates.Render(w, "pages/import/index.html", data)
 	})
 
 	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +37,7 @@ type importViewData struct {
 
 func (i *importHandler) importHandler(w http.ResponseWriter, r *http.Request) {
 	data := importViewData{}
+	data.CurrentPage = pageImport
 	err := r.ParseMultipartForm(maxMemory)
 
 	if err != nil {

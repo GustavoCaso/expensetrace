@@ -27,7 +27,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
-		c.templates.Render(w, "pages/categories/new.html", viewBase{})
+		c.templates.Render(w, "pages/categories/new.html", viewBase{CurrentPage: pageCategories})
 	})
 
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, _ *http.Request) {
@@ -166,6 +166,7 @@ func (c *categoryHandler) categoriesHandler(w http.ResponseWriter, outerErr erro
 		CategorizedCount:   totalCategorized,
 		UncategorizedCount: uncategorizedCount,
 	}
+	data.CurrentPage = pageCategories
 
 	if outerErr != nil {
 		data.Error = outerErr.Error()
@@ -356,6 +357,7 @@ type uncategorizedViewData struct {
 
 func (c *categoryHandler) uncategorizedHandler(w http.ResponseWriter, query string) {
 	data := uncategorizedViewData{}
+	data.CurrentPage = pageCategories
 	var expenses []storage.Expense
 	var err error
 
@@ -603,6 +605,7 @@ type createCategoryViewData struct {
 
 func (c *categoryHandler) createcategoryHandler(create bool, w http.ResponseWriter, r *http.Request) {
 	data := createCategoryViewData{}
+	data.CurrentPage = pageCategories
 	template := "partials/categories/new_result.html"
 	if create {
 		template = "pages/categories/new.html"
@@ -772,9 +775,11 @@ func createEnhancedCategory(category storage.Category, expenses []storage.Expens
 
 func (c *categoryHandler) categoryIndexError(w http.ResponseWriter, err error) {
 	data := struct {
-		Error string
+		Error       string
+		CurrentPage string
 	}{
-		Error: err.Error(),
+		Error:       err.Error(),
+		CurrentPage: pageCategories,
 	}
 	c.templates.Render(w, "pages/categories/index.html", data)
 }

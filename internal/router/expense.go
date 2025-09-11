@@ -84,6 +84,7 @@ type expesesViewData struct {
 
 func (c *expenseHandler) expensesHandler(w http.ResponseWriter, banner *banner) {
 	data := expesesViewData{}
+	data.CurrentPage = pageExpenses
 	expenses, err := c.storage.GetAllExpenseTypes()
 	if err != nil {
 		data.Error = err.Error()
@@ -182,6 +183,7 @@ type expenseViewData struct {
 
 func (c *expenseHandler) expenseHandler(w http.ResponseWriter, r *http.Request) {
 	data := expenseViewData{}
+	data.CurrentPage = pageExpenses
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -225,6 +227,7 @@ func (c *expenseHandler) expenseHandler(w http.ResponseWriter, r *http.Request) 
 
 func (c *expenseHandler) updateExpenseHandler(w http.ResponseWriter, r *http.Request) {
 	data := expenseViewData{}
+	data.CurrentPage = pageExpenses
 	data.FormErrors = make(map[string]string)
 
 	idStr := r.PathValue("id")
@@ -377,6 +380,7 @@ func (c *expenseHandler) deleteExpenseHandler(w http.ResponseWriter, r *http.Req
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		data := expenseViewData{}
+		data.CurrentPage = pageExpenses
 		data.Error = fmt.Sprintf("Invalid the ID. %s", err.Error())
 		c.templates.Render(w, "pages/expenses/edit.html", data)
 		return
@@ -387,6 +391,7 @@ func (c *expenseHandler) deleteExpenseHandler(w http.ResponseWriter, r *http.Req
 		c.logger.Error("Failed to delete expense", "error", err, "id", id)
 
 		data := expenseViewData{}
+		data.CurrentPage = pageExpenses
 		data.Error = fmt.Sprintf("Error deleting the expense. %s", err.Error())
 		c.templates.Render(w, "pages/expenses/edit.html", data)
 		return
@@ -404,6 +409,7 @@ func (c *expenseHandler) deleteExpenseHandler(w http.ResponseWriter, r *http.Req
 
 func (c *expenseHandler) expenseSearchHandler(w http.ResponseWriter, r *http.Request) {
 	data := expesesViewData{}
+	data.CurrentPage = pageExpenses
 	err := r.ParseForm()
 
 	if err != nil {

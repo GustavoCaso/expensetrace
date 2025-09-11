@@ -1,10 +1,10 @@
 {{define "nav"}}
 <div id="main-navigation">
   <nav class="tabs">
-    <a class="tab-link" href='/'>Reports</a>
-    <a class="tab-link" href='/import'>Import</a>
-    <a class="tab-link" href="/expenses">Expeses</a>
-    <a class="tab-link" href="/categories">Categories</a>
+    <a class="tab-link{{if eq .CurrentPage "reports"}} active{{end}}" href='/'>Reports</a>
+    <a class="tab-link{{if eq .CurrentPage "import"}} active{{end}}" href='/import'>Import</a>
+    <a class="tab-link{{if eq .CurrentPage "expenses"}} active{{end}}" href="/expenses">Expeses</a>
+    <a class="tab-link{{if eq .CurrentPage "categories"}} active{{end}}" href="/categories">Categories</a>
   </nav>
 </div>
 {{end}}
