@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -34,7 +35,7 @@ func TestInitialModel(t *testing.T) {
 	}
 
 	for _, c := range categories {
-		_, err := s.CreateCategory(c.Name(), c.Pattern())
+		_, err := s.CreateCategory(context.Background(), c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -56,7 +57,7 @@ func TestInitialModel(t *testing.T) {
 		),
 	}
 
-	_, insertErr := s.InsertExpenses(expenses)
+	_, insertErr := s.InsertExpenses(context.Background(), expenses)
 	if insertErr != nil {
 		t.Fatalf("Failed to create expenses: %v", insertErr)
 	}
@@ -95,7 +96,7 @@ func TestGenerateReports(t *testing.T) {
 	}
 
 	for _, c := range categories {
-		_, err := s.CreateCategory(c.Name(), c.Pattern())
+		_, err := s.CreateCategory(context.Background(), c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -117,7 +118,7 @@ func TestGenerateReports(t *testing.T) {
 		),
 	}
 
-	_, insertErr := s.InsertExpenses(expenses)
+	_, insertErr := s.InsertExpenses(context.Background(), expenses)
 	if insertErr != nil {
 		t.Fatalf("Failed to create expenses: %v", insertErr)
 	}

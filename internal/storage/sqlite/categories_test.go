@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -18,7 +19,7 @@ func TestCreateCategoriesTable(t *testing.T) {
 	stor := setupTestStorage(t)
 
 	// Verify we can create a category (which means table exists)
-	_, err := stor.CreateCategory("Test", "test.*")
+	_, err := stor.CreateCategory(context.Background(), "Test", "test.*")
 	if err != nil {
 		t.Errorf("Failed to create test category: %v", err)
 	}
@@ -37,13 +38,13 @@ func TestGetCategories(t *testing.T) {
 	}
 
 	for _, cat := range testCategories {
-		_, err := stor.CreateCategory(cat.name, cat.pattern)
+		_, err := stor.CreateCategory(context.Background(), cat.name, cat.pattern)
 		if err != nil {
 			t.Fatalf("Failed to create test category: %v", err)
 		}
 	}
 
-	categories, err := stor.GetCategories()
+	categories, err := stor.GetCategories(context.Background())
 	if err != nil {
 		t.Errorf("Failed to get categories: %v", err)
 	}
@@ -66,13 +67,13 @@ func TestGetCategory(t *testing.T) {
 	stor := setupTestStorage(t)
 
 	// Create test category
-	id, err := stor.CreateCategory("Test", "test.*")
+	id, err := stor.CreateCategory(context.Background(), "Test", "test.*")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
 	// Test getting existing category
-	category, err := stor.GetCategory(id)
+	category, err := stor.GetCategory(context.Background(), id)
 	if err != nil {
 		t.Errorf("Failed to get category: %v", err)
 	}
@@ -85,7 +86,7 @@ func TestGetCategory(t *testing.T) {
 	}
 
 	// Test getting non-existent category
-	_, err = stor.GetCategory(999)
+	_, err = stor.GetCategory(context.Background(), 999)
 	if err == nil {
 		t.Error("Expected error when getting non-existent category, got nil")
 	}
@@ -98,12 +99,12 @@ func TestGetCategory(t *testing.T) {
 func TestCreateCategory(t *testing.T) {
 	stor := setupTestStorage(t)
 
-	id, err := stor.CreateCategory("Test", "test.*")
+	id, err := stor.CreateCategory(context.Background(), "Test", "test.*")
 	if err != nil {
 		t.Errorf("Failed to create category: %v", err)
 	}
 
-	category, err := stor.GetCategory(id)
+	category, err := stor.GetCategory(context.Background(), id)
 	if err != nil {
 		t.Errorf("Failed to get created category: %v", err)
 	}
@@ -120,18 +121,18 @@ func TestDeleteCategories(t *testing.T) {
 	stor := setupTestStorage(t)
 
 	// Create test categories
-	_, err := stor.CreateCategory("Food", "restaurant|food")
+	_, err := stor.CreateCategory(context.Background(), "Food", "restaurant|food")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	_, err = stor.CreateCategory("Transport", "uber|taxi")
+	_, err = stor.CreateCategory(context.Background(), "Transport", "uber|taxi")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
 	// Drop all categories
-	rowsAffected, err := stor.DeleteCategories()
+	rowsAffected, err := stor.DeleteCategories(context.Background())
 	if err != nil {
 		t.Errorf("Failed to drop categories: %v", err)
 	}
@@ -141,7 +142,7 @@ func TestDeleteCategories(t *testing.T) {
 	}
 
 	// Verify categories are deleted
-	categories, err := stor.GetCategories()
+	categories, err := stor.GetCategories(context.Background())
 	if err != nil {
 		t.Errorf("Failed to get categories after drop: %v", err)
 	}
@@ -153,11 +154,11 @@ func TestDeleteCategories(t *testing.T) {
 func TestDeleteCategoriesWithExpenses(t *testing.T) {
 	stor := setupTestStorage(t)
 
-	catID, createCategoryErr := stor.CreateCategory("Food", "restaurant")
+	catID, createCategoryErr := stor.CreateCategory(context.Background(), "Food", "restaurant")
 	if createCategoryErr != nil {
 		t.Fatalf("Failed to create test category: %v", createCategoryErr)
 	}
-	excludeCategory, excludeErr := stor.GetExcludeCategory()
+	excludeCategory, excludeErr := stor.GetExcludeCategory(context.Background())
 	if excludeErr != nil {
 		t.Fatalf("Failed to get exclude category: %v", excludeErr)
 	}
@@ -176,13 +177,13 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 	)
 
 	expenses := []storage.Expense{expense, excludeExpense}
-	_, insertErr := stor.InsertExpenses(expenses)
+	_, insertErr := stor.InsertExpenses(context.Background(), expenses)
 	if insertErr != nil {
 		t.Fatalf("Failed to create test expense: %v", insertErr)
 	}
 
 	// Verify the expense has a category before deletion
-	allExpenses, err := stor.GetAllExpenseTypes()
+	allExpenses, err := stor.GetAllExpenseTypes(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -190,7 +191,7 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 		t.Fatalf("Expected two expenses, got %d", len(allExpenses))
 	}
 
-	rowsAffected, deleteCategoryErr := stor.DeleteCategories()
+	rowsAffected, deleteCategoryErr := stor.DeleteCategories(context.Background())
 	if deleteCategoryErr != nil {
 		t.Errorf("Failed to drop categories: %v", deleteCategoryErr)
 	}
@@ -199,7 +200,7 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 		t.Errorf("Expected 1 category deleted, got %d", rowsAffected)
 	}
 
-	categories, getCategoriesErr := stor.GetCategories()
+	categories, getCategoriesErr := stor.GetCategories(context.Background())
 
 	if getCategoriesErr != nil {
 		t.Errorf("failed to get categories after deleting them %s", getCategoriesErr.Error())
@@ -209,7 +210,7 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 		t.Errorf("Expected one category (Exclude category) after deleting them, got: %d", len(categories))
 	}
 
-	expensesAfter, getExpensesErr := stor.GetAllExpenseTypes()
+	expensesAfter, getExpensesErr := stor.GetAllExpenseTypes(context.Background())
 	if getExpensesErr != nil {
 		t.Errorf("Failed to get expenses after delete: %v", getExpensesErr)
 	}
@@ -242,7 +243,7 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 func TestDeleteCategory(t *testing.T) {
 	stor := setupTestStorage(t)
 
-	catID, createCategoryErr := stor.CreateCategory("Food", "restaurant")
+	catID, createCategoryErr := stor.CreateCategory(context.Background(), "Food", "restaurant")
 	if createCategoryErr != nil {
 		t.Fatalf("Failed to create test category: %v", createCategoryErr)
 	}
@@ -250,13 +251,13 @@ func TestDeleteCategory(t *testing.T) {
 	expense := storage.NewExpense(0, "bank", "Restaurant dinner", "EUR", -2500, testTime, storage.ChargeType, &catID)
 
 	expenses := []storage.Expense{expense}
-	_, insertErr := stor.InsertExpenses(expenses)
+	_, insertErr := stor.InsertExpenses(context.Background(), expenses)
 	if insertErr != nil {
 		t.Fatalf("Failed to create test expense: %v", insertErr)
 	}
 
 	// Verify the expense has a category before deletion
-	allExpenses, err := stor.GetAllExpenseTypes()
+	allExpenses, err := stor.GetAllExpenseTypes(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -267,7 +268,7 @@ func TestDeleteCategory(t *testing.T) {
 		t.Fatalf("Expected expense to have category ID %d, got nil", catID)
 	}
 
-	rowsAffected, deleteCategoryErr := stor.DeleteCategory(catID)
+	rowsAffected, deleteCategoryErr := stor.DeleteCategory(context.Background(), catID)
 	if deleteCategoryErr != nil {
 		t.Errorf("Failed to delete category: %v", deleteCategoryErr)
 	}
@@ -276,7 +277,7 @@ func TestDeleteCategory(t *testing.T) {
 		t.Errorf("Expected 1 category deleted, got %d", rowsAffected)
 	}
 
-	categories, getCategoriesErr := stor.GetCategories()
+	categories, getCategoriesErr := stor.GetCategories(context.Background())
 
 	if getCategoriesErr != nil {
 		t.Errorf("failed to get categories after deleting them %s", getCategoriesErr.Error())
@@ -286,7 +287,7 @@ func TestDeleteCategory(t *testing.T) {
 		t.Errorf("Expected one category (Exclude category) after deleting them, got: %d", len(categories))
 	}
 
-	expensesAfter, getExpensesErr := stor.GetAllExpenseTypes()
+	expensesAfter, getExpensesErr := stor.GetAllExpenseTypes(context.Background())
 	if getExpensesErr != nil {
 		t.Errorf("Failed to get expenses after delete: %v", getExpensesErr)
 	}
@@ -305,17 +306,17 @@ func TestDeleteCategory(t *testing.T) {
 func TestUpdateCategory(t *testing.T) {
 	stor := setupTestStorage(t)
 
-	catID, err := stor.CreateCategory("Food", "restaurant")
+	catID, err := stor.CreateCategory(context.Background(), "Food", "restaurant")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	err = stor.UpdateCategory(catID, "Dining", "restaurant|dining|food")
+	err = stor.UpdateCategory(context.Background(), catID, "Dining", "restaurant|dining|food")
 	if err != nil {
 		t.Errorf("Failed to update category: %v", err)
 	}
 
-	category, err := stor.GetCategory(catID)
+	category, err := stor.GetCategory(context.Background(), catID)
 	if err != nil {
 		t.Errorf("Failed to get updated category: %v", err)
 	}
@@ -339,7 +340,7 @@ func setupTestStorage(t *testing.T) storage.Storage {
 	}
 
 	logger := logger.New(logger.Config{})
-	err = stor.ApplyMigrations(logger)
+	err = stor.ApplyMigrations(context.Background(), logger)
 	if err != nil {
 		t.Fatalf("Failed to apply migrations: %v", err)
 	}

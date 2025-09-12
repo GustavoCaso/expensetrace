@@ -1,6 +1,8 @@
 package router
 
 import (
+	"context"
+
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -60,7 +62,7 @@ func TestUncategorizedHandler(t *testing.T) {
 		),
 	}
 
-	_, err := s.InsertExpenses(expenses)
+	_, err := s.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
@@ -112,7 +114,7 @@ func TestUncategorizedSearchHandler(t *testing.T) {
 		),
 	}
 
-	_, err := s.InsertExpenses(expenses)
+	_, err := s.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
@@ -179,7 +181,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 		storage.NewExpense(0, "Test Source", "cinema", "USD", -123456, time.Now(), storage.ChargeType, nil),
 	}
 
-	_, expenseError := s.InsertExpenses(expenses)
+	_, expenseError := s.InsertExpenses(context.Background(), expenses)
 	if expenseError != nil {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
@@ -203,7 +205,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 
 	ensureNoErrorInTemplateResponse(t, "create category", resp.Body)
 
-	categories, err := s.GetCategories()
+	categories, err := s.GetCategories(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get categories: %v", err)
 	}
@@ -222,7 +224,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 		t.Error("Category was not created")
 	}
 
-	expensesUpdated, err := s.SearchExpensesByDescription("cinema")
+	expensesUpdated, err := s.SearchExpensesByDescription(context.Background(), "cinema")
 
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
@@ -338,7 +340,7 @@ func TestUpdateHandler(t *testing.T) {
 			logger := testutil.TestLogger(t)
 			s := testutil.SetupTestStorage(t, logger)
 
-			categoryID, err := s.CreateCategory(
+			categoryID, err := s.CreateCategory(context.Background(),
 				"Entertainment",
 				"restaurant|bars|cinema",
 			)
@@ -346,7 +348,7 @@ func TestUpdateHandler(t *testing.T) {
 				t.Fatalf("Failed to create Category: %v", err)
 			}
 
-			categories, err := s.GetCategories()
+			categories, err := s.GetCategories(context.Background())
 			if err != nil {
 				t.Fatalf("Failed to get Categories: %v", err)
 			}
@@ -367,7 +369,7 @@ func TestUpdateHandler(t *testing.T) {
 				storage.NewExpense(0, "Test Source", "gym", "USD", -123, time.Now(), storage.ChargeType, nil),
 			}
 
-			_, expenseError := s.InsertExpenses(expenses)
+			_, expenseError := s.InsertExpenses(context.Background(), expenses)
 			if expenseError != nil {
 				t.Fatalf("Failed to insert test expenses: %v", expenseError)
 			}
@@ -391,12 +393,12 @@ func TestUpdateHandler(t *testing.T) {
 
 			ensureNoErrorInTemplateResponse(t, fmt.Sprintf("update category: %s", tt.name), resp.Body)
 
-			categoryUpdated, err := s.GetCategory(categoryID)
+			categoryUpdated, err := s.GetCategory(context.Background(), categoryID)
 
 			if err != nil {
 				t.Fatalf("Failed to get category: %v", err)
 			}
-			updatedExpenses, err := s.GetExpenses()
+			updatedExpenses, err := s.GetExpenses(context.Background())
 
 			if err != nil {
 				t.Fatalf("Failed to get expenses: %v", err)
@@ -421,12 +423,12 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory("Entertainment", "restaurant|bars")
+	categoryID, err := s.CreateCategory(context.Background(), "Entertainment", "restaurant|bars")
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	categories, err := s.GetCategories()
+	categories, err := s.GetCategories(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get Categories: %v", err)
 	}
@@ -446,7 +448,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 		),
 	}
 
-	_, expenseError := s.InsertExpenses(expenses)
+	_, expenseError := s.InsertExpenses(context.Background(), expenses)
 	if expenseError != nil {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
@@ -469,7 +471,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 
 	ensureNoErrorInTemplateResponse(t, "uncategorized", resp.Body)
 
-	categoryUpdated, err := s.GetCategory(categoryID)
+	categoryUpdated, err := s.GetCategory(context.Background(), categoryID)
 	if err != nil {
 		t.Fatalf("Failed to get category: %v", err)
 	}
@@ -481,7 +483,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 		)
 	}
 
-	expensesUpdated, err := s.SearchExpensesByDescription("cinema. with friends")
+	expensesUpdated, err := s.SearchExpensesByDescription(context.Background(), "cinema. with friends")
 
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
@@ -508,12 +510,12 @@ func TestResetCategoryHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s := testutil.SetupTestStorage(t, logger)
 
-	cat1ID, err := s.CreateCategory("Food", "restaurant")
+	cat1ID, err := s.CreateCategory(context.Background(), "Food", "restaurant")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	cat2ID, err := s.CreateCategory("Transport", "uber|taxi")
+	cat2ID, err := s.CreateCategory(context.Background(), "Transport", "uber|taxi")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -523,12 +525,12 @@ func TestResetCategoryHandler(t *testing.T) {
 		storage.NewExpense(0, "bank", "Uber ride", "EUR", -1500, time.Now(), storage.ChargeType, &cat2ID),
 	}
 
-	_, err = s.InsertExpenses(expenses)
+	_, err = s.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to create test expenses: %v", err)
 	}
 
-	categories, err := s.GetCategories()
+	categories, err := s.GetCategories(context.Background())
 	if err != nil {
 		t.Errorf("Failed to get categories: %v", err)
 	}
@@ -554,7 +556,7 @@ func TestResetCategoryHandler(t *testing.T) {
 
 	ensureNoErrorInTemplateResponse(t, "reset categories", resp.Body)
 
-	categories, err = s.GetCategories()
+	categories, err = s.GetCategories(context.Background())
 	if err != nil {
 		t.Errorf("Failed to get categories after reset: %v", err)
 	}
@@ -562,7 +564,7 @@ func TestResetCategoryHandler(t *testing.T) {
 		t.Errorf("Expected one category (exclude) after reset, got %d", len(categories))
 	}
 
-	expenses, getExpensesErr := s.GetExpenses()
+	expenses, getExpensesErr := s.GetExpenses(context.Background())
 	if getExpensesErr != nil {
 		t.Errorf("Failed to get expenses after delete: %v", getExpensesErr)
 	}
@@ -594,7 +596,7 @@ func TestResetCategoryHandlerEmptyDatabase(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s := testutil.SetupTestStorage(t, logger)
 
-	categories, _ := s.GetCategories()
+	categories, _ := s.GetCategories(context.Background())
 	matcher := matcher.New(categories)
 	handler, router := New(s, matcher, logger)
 
@@ -612,7 +614,7 @@ func TestResetCategoryHandlerEmptyDatabase(t *testing.T) {
 
 	ensureNoErrorInTemplateResponse(t, "reset categories (empty database)", resp.Body)
 
-	categories, err := s.GetCategories()
+	categories, err := s.GetCategories(context.Background())
 	if err != nil {
 		t.Errorf("Failed to get categories after reset: %v", err)
 	}

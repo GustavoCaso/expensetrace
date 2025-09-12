@@ -1,6 +1,8 @@
 package router
 
 import (
+	"context"
+
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -23,7 +25,7 @@ func TestHomeHandler(t *testing.T) {
 	}
 
 	for _, c := range categories {
-		_, err := s.CreateCategory(c.Name(), c.Pattern())
+		_, err := s.CreateCategory(context.Background(), c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -38,7 +40,7 @@ func TestHomeHandler(t *testing.T) {
 		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, nil),
 	}
 
-	_, err := s.InsertExpenses(expenses)
+	_, err := s.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}

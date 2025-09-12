@@ -9,8 +9,8 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
-func (s *sqliteStorage) GetCategories() ([]storage.Category, error) {
-	rows, err := s.db.QueryContext(context.Background(), "SELECT * FROM categories")
+func (s *sqliteStorage) GetCategories(ctx context.Context) ([]storage.Category, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT * FROM categories")
 	if err != nil {
 		return []storage.Category{}, err
 	}
@@ -36,18 +36,18 @@ func (s *sqliteStorage) GetCategories() ([]storage.Category, error) {
 	return categories, nil
 }
 
-func (s *sqliteStorage) GetCategory(categoryID int64) (storage.Category, error) {
-	row := s.db.QueryRowContext(context.Background(), "SELECT * FROM categories WHERE id=?", categoryID)
+func (s *sqliteStorage) GetCategory(ctx context.Context, categoryID int64) (storage.Category, error) {
+	row := s.db.QueryRowContext(ctx, "SELECT * FROM categories WHERE id=?", categoryID)
 	return categoryFromRow(row.Scan)
 }
 
-func (s *sqliteStorage) GetExcludeCategory() (storage.Category, error) {
-	row := s.db.QueryRowContext(context.Background(), "SELECT * FROM categories WHERE name=?", storage.ExcludeCategory)
+func (s *sqliteStorage) GetExcludeCategory(ctx context.Context) (storage.Category, error) {
+	row := s.db.QueryRowContext(ctx, "SELECT * FROM categories WHERE name=?", storage.ExcludeCategory)
 	return categoryFromRow(row.Scan)
 }
 
-func (s *sqliteStorage) UpdateCategory(categoryID int64, name, pattern string) error {
-	_, err := s.db.ExecContext(context.Background(),
+func (s *sqliteStorage) UpdateCategory(ctx context.Context, categoryID int64, name, pattern string) error {
+	_, err := s.db.ExecContext(ctx,
 		"UPDATE categories SET name = ?, pattern = ? WHERE id = ?;",
 		name,
 		pattern,
@@ -56,8 +56,8 @@ func (s *sqliteStorage) UpdateCategory(categoryID int64, name, pattern string) e
 	return err
 }
 
-func (s *sqliteStorage) CreateCategory(name, pattern string) (int64, error) {
-	result, err := s.db.ExecContext(context.Background(),
+func (s *sqliteStorage) CreateCategory(ctx context.Context, name, pattern string) (int64, error) {
+	result, err := s.db.ExecContext(ctx,
 		"INSERT INTO categories(name, pattern) values(?, ?)", name, pattern)
 
 	if err != nil {
@@ -67,9 +67,7 @@ func (s *sqliteStorage) CreateCategory(name, pattern string) (int64, error) {
 	return result.LastInsertId()
 }
 
-func (s *sqliteStorage) DeleteCategories() (int64, error) {
-	ctx := context.Background()
-
+func (s *sqliteStorage) DeleteCategories(ctx context.Context) (int64, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
@@ -106,9 +104,7 @@ func (s *sqliteStorage) DeleteCategories() (int64, error) {
 	return result.RowsAffected()
 }
 
-func (s *sqliteStorage) DeleteCategory(id int64) (int64, error) {
-	ctx := context.Background()
-
+func (s *sqliteStorage) DeleteCategory(ctx context.Context, id int64) (int64, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err

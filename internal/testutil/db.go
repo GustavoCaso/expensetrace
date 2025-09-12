@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -21,7 +22,7 @@ func SetupTestStorage(t *testing.T, logger *logger.Logger) storage.Storage {
 		t.Fatalf("Failed to create test storage: %v", err)
 	}
 
-	err = stor.ApplyMigrations(logger)
+	err = stor.ApplyMigrations(context.Background(), logger)
 	if err != nil {
 		t.Fatalf("Failed to apply migrations: %v", err)
 	}

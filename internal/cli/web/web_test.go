@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -24,7 +25,7 @@ func TestRun(t *testing.T) {
 	}
 
 	for _, c := range categories {
-		_, err := s.CreateCategory(c.Name(), c.Pattern())
+		_, err := s.CreateCategory(context.Background(), c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}

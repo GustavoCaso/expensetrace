@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/logger"
@@ -129,32 +130,32 @@ const ExcludeCategory = "🚫 Exclude"
 
 type Storage interface {
 	// Migrations
-	ApplyMigrations(*logger.Logger) error
+	ApplyMigrations(ctx context.Context, logger *logger.Logger) error
 
 	// Expenses
-	GetExpenseByID(int64) (Expense, error)
-	UpdateExpense(Expense) (int64, error)
-	DeleteExpense(int64) (int64, error)
-	InsertExpenses([]Expense) (int64, error)
-	GetExpenses() ([]Expense, error)
-	GetAllExpenseTypes() ([]Expense, error)
-	UpdateExpenses([]Expense) (int64, error)
-	GetExpensesFromDateRange(start time.Time, end time.Time) ([]Expense, error)
-	GetExpensesWithoutCategory() ([]Expense, error)
-	GetExpensesWithoutCategoryWithQuery(keyword string) ([]Expense, error)
-	SearchExpenses(keyword string) ([]Expense, error)
-	SearchExpensesByDescription(description string) ([]Expense, error)
-	GetFirstExpense() (Expense, error)
-	GetExpensesByCategory(categoryID int64) ([]Expense, error)
+	GetExpenseByID(ctx context.Context, id int64) (Expense, error)
+	UpdateExpense(ctx context.Context, expense Expense) (int64, error)
+	DeleteExpense(ctx context.Context, id int64) (int64, error)
+	InsertExpenses(ctx context.Context, expenses []Expense) (int64, error)
+	GetExpenses(ctx context.Context) ([]Expense, error)
+	GetAllExpenseTypes(ctx context.Context) ([]Expense, error)
+	UpdateExpenses(ctx context.Context, expenses []Expense) (int64, error)
+	GetExpensesFromDateRange(ctx context.Context, start time.Time, end time.Time) ([]Expense, error)
+	GetExpensesWithoutCategory(ctx context.Context) ([]Expense, error)
+	GetExpensesWithoutCategoryWithQuery(ctx context.Context, keyword string) ([]Expense, error)
+	SearchExpenses(ctx context.Context, keyword string) ([]Expense, error)
+	SearchExpensesByDescription(ctx context.Context, description string) ([]Expense, error)
+	GetFirstExpense(ctx context.Context) (Expense, error)
+	GetExpensesByCategory(ctx context.Context, categoryID int64) ([]Expense, error)
 
 	// Categories
-	GetCategories() ([]Category, error)
-	GetCategory(categoryID int64) (Category, error)
-	DeleteCategory(categoryID int64) (int64, error)
-	UpdateCategory(categoryID int64, name, pattern string) error
-	CreateCategory(name, pattern string) (int64, error)
-	DeleteCategories() (int64, error)
-	GetExcludeCategory() (Category, error)
+	GetCategories(ctx context.Context) ([]Category, error)
+	GetCategory(ctx context.Context, categoryID int64) (Category, error)
+	DeleteCategory(ctx context.Context, categoryID int64) (int64, error)
+	UpdateCategory(ctx context.Context, categoryID int64, name, pattern string) error
+	CreateCategory(ctx context.Context, name, pattern string) (int64, error)
+	DeleteCategories(ctx context.Context) (int64, error)
+	GetExcludeCategory(ctx context.Context) (Category, error)
 
 	// Resource managment
 	Close() error

@@ -2,6 +2,7 @@ package router
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -25,7 +26,7 @@ func (i *importHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
-		i.importHandler(w, r)
+		i.importHandler(r.Context(), w, r)
 	})
 }
 
@@ -35,7 +36,7 @@ type importViewData struct {
 	Error string
 }
 
-func (i *importHandler) importHandler(w http.ResponseWriter, r *http.Request) {
+func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	data := importViewData{}
 	data.CurrentPage = pageImport
 	err := r.ParseMultipartForm(maxMemory)
@@ -74,7 +75,7 @@ func (i *importHandler) importHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	i.logger.Info("Importing started", "file_name", header.Filename, "size", fmt.Sprintf("%dKB", buf.Len()))
 
-	info := importUtil.Import(header.Filename, &buf, i.storage, i.matcher)
+	info := importUtil.Import(ctx, header.Filename, &buf, i.storage, i.matcher)
 
 	if info.Error != nil && info.TotalImports == 0 {
 		data.Error = fmt.Sprintf("Error importing expenses: %s", info.Error.Error())
