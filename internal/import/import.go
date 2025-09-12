@@ -1,6 +1,7 @@
 package importutil
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -37,6 +38,7 @@ type ImportInfo struct {
 }
 
 func Import(
+	ctx context.Context,
 	filename string,
 	reader io.Reader,
 	storage storageType.Storage,
@@ -169,7 +171,7 @@ func Import(
 		return info
 	}
 
-	inserted, err := storage.InsertExpenses(expenses)
+	inserted, err := storage.InsertExpenses(ctx, expenses)
 
 	info.TotalImports = int(inserted)
 	if err != nil {

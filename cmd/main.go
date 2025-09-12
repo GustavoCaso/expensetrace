@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -70,12 +71,12 @@ func executeCommand(command cli.Command) {
 		appLogger.Fatal("Unable to get DB", "error", err.Error())
 	}
 
-	err = storage.ApplyMigrations(appLogger)
+	err = storage.ApplyMigrations(context.Background(), appLogger)
 	if err != nil {
 		appLogger.Fatal("Unable to create schema", "error", err.Error())
 	}
 
-	categories, err := storage.GetCategories()
+	categories, err := storage.GetCategories(context.Background())
 	if err != nil {
 		appLogger.Fatal("Unable to get categories", "error", err.Error())
 	}

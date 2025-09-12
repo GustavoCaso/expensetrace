@@ -70,13 +70,11 @@ func DropTables(db *sql.DB) error {
 	return nil
 }
 
-func (s *sqliteStorage) ApplyMigrations(logger *logger.Logger) error {
+func (s *sqliteStorage) ApplyMigrations(ctx context.Context, logger *logger.Logger) error {
 	// Create migrations table if it doesn't exist
 	if err := createMigrationsTable(s.db); err != nil {
 		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
-
-	ctx := context.Background()
 
 	// Get current schema version
 	currentVersion := 0

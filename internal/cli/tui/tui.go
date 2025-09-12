@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -184,7 +185,7 @@ func generateReports(storage storage.Storage, month time.Month, year int) ([]wra
 	reports := []wrapper{}
 	skipYear := false
 	timeMonth := month
-	ex, err := storage.GetFirstExpense()
+	ex, err := storage.GetFirstExpense(context.Background())
 	if err != nil {
 		return reports, err
 	}
@@ -199,13 +200,13 @@ func generateReports(storage storage.Storage, month time.Month, year int) ([]wra
 
 		firstDay, lastDay := util.GetMonthDates(int(timeMonth), year)
 
-		expenses, expensesErr := storage.GetExpensesFromDateRange(firstDay, lastDay)
+		expenses, expensesErr := storage.GetExpensesFromDateRange(context.Background(), firstDay, lastDay)
 
 		if expensesErr != nil {
 			return reports, expensesErr
 		}
 
-		report, reportError := report.Generate(firstDay, lastDay, storage, expenses, "monthly")
+		report, reportError := report.Generate(context.Background(), firstDay, lastDay, storage, expenses, "monthly")
 
 		if reportError != nil {
 			return reports, reportError

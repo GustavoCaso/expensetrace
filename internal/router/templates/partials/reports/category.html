@@ -1,0 +1,39 @@
+{{define "reports/category"}} 
+  {{ $cssClass := "expense" }}
+  {{ if gt .Amount 0 }}
+    {{ $cssClass ="income" }}
+  {{ end }}
+  <li class="category-item">
+    <div class="category-header">
+      <span class="category-name">{{.Name}}</span>
+      <span class="category-amount {{$cssClass}}">{{formatMoney .Amount "." ","}}€</span>
+    </div>
+    <div class="category-bar">
+      <div class="category-progress {{$cssClass}}" style="width: {{.PercentageOfTotal}}%"></div>
+    </div>
+      
+    <button class="btn-small toggle-details" data-target="{{$cssClass}}-details-{{.Name}}">
+      <span class="toggle-text">Show Details</span>
+    </button>
+    <div id="{{$cssClass}}-details-{{.Name}}" class="toggle-content mt-4 collapsed">
+      <div class="table">
+        <div class="table-header">
+          <div class="table-header-cell">Date</div>
+          <div class="table-header-cell">Description</div>
+          <div class="table-header-cell">Source</div>
+          <div class="table-header-cell">Amount</div>
+        </div>
+        <div class="table-body">
+          {{range $expense := .Expenses}}
+            <a href="/expense/{{$expense.ID}}" class="table-row">
+              <div class="table-cell">{{$expense.Date.Format "2006-01-02"}}</div>
+              <div class="table-cell">{{$expense.Description}}</div>
+              <div class="table-cell source-column">{{$expense.Source}}</div>
+              <div class="table-cell {{$cssClass}}">{{formatMoney $expense.Amount "." ","}}€</div>
+            </a>
+          {{end}}
+        </div>
+      </div>
+    </div>
+  </li>
+{{end}}

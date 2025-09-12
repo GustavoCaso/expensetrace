@@ -1,6 +1,8 @@
 package report
 
 import (
+	"context"
+
 	"testing"
 	"time"
 
@@ -40,7 +42,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Test monthly report
-	report, err := Generate(startDate, endDate, s, expenses, "monthly")
+	report, err := Generate(context.Background(), startDate, endDate, s, expenses, "monthly")
 
 	if err != nil {
 		t.Fatalf("Got error generating report: %s", err.Error())
@@ -80,7 +82,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Test yearly report
-	yearlyReport, err := Generate(startDate, endDate, s, expenses, "yearly")
+	yearlyReport, err := Generate(context.Background(), startDate, endDate, s, expenses, "yearly")
 	if err != nil {
 		t.Fatalf("Got error generating report: %s", err.Error())
 	}
@@ -96,7 +98,7 @@ func TestCategories(t *testing.T) {
 
 	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	catID, catErr := s.CreateCategory("Food", "restaurant|food|grocery")
+	catID, catErr := s.CreateCategory(context.Background(), "Food", "restaurant|food|grocery")
 	if catErr != nil {
 		t.Fatalf("Error creating category: %s", catErr.Error())
 	}
@@ -136,7 +138,7 @@ func TestCategories(t *testing.T) {
 		),
 	}
 
-	categories, duplicates, income, spending, err := Categories(s, expenses)
+	categories, duplicates, income, spending, err := Categories(context.Background(), s, expenses)
 
 	if err != nil {
 		t.Fatalf("Got error generating categories: %s", err.Error())

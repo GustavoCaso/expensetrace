@@ -1,6 +1,8 @@
 package router
 
 import (
+	"context"
+
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -25,7 +27,7 @@ func TestExpensesHandler(t *testing.T) {
 	}
 	categoryIDs := make([]int64, 2)
 	for i, c := range categories {
-		id, err := s.CreateCategory(c.Name(), c.Pattern())
+		id, err := s.CreateCategory(context.Background(), c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -49,7 +51,7 @@ func TestExpensesHandler(t *testing.T) {
 		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, &categoryIDs[1]),
 	}
 
-	_, err := s.InsertExpenses(expenses)
+	_, err := s.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
@@ -82,7 +84,7 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, &cat2),
 	}
 
-	groupedExpenses, years, err := expensesGroupByYearAndMonth(expenses, s)
+	groupedExpenses, years, err := expensesGroupByYearAndMonth(context.Background(), expenses, s)
 
 	if err != nil {
 		t.Fatalf("Got error grouping expenses: %s", err.Error())
@@ -132,7 +134,7 @@ func TestExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory("Test Category", "test")
+	categoryID, err := s.CreateCategory(context.Background(), "Test Category", "test")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -151,7 +153,7 @@ func TestExpenseHandler(t *testing.T) {
 		),
 	}
 
-	_, err = s.InsertExpenses(expenses)
+	_, err = s.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
@@ -224,7 +226,7 @@ func TestUpdateExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory("Updated Category", "updated")
+	categoryID, err := s.CreateCategory(context.Background(), "Updated Category", "updated")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -234,7 +236,7 @@ func TestUpdateExpenseHandler(t *testing.T) {
 		storage.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, storage.ChargeType, nil),
 	}
 
-	_, err = s.InsertExpenses(expenses)
+	_, err = s.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
@@ -265,7 +267,7 @@ func TestUpdateExpenseHandler(t *testing.T) {
 
 	ensureNoErrorInTemplateResponse(t, "update expense", resp.Body)
 
-	updatedExpense, err := s.GetExpenseByID(1)
+	updatedExpense, err := s.GetExpenseByID(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("Failed to retrieve updated expense: %v", err)
 	}
@@ -299,7 +301,7 @@ func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 		storage.NewExpense(0, "Test Source", "Test expense", "USD", -100000, now, storage.ChargeType, nil),
 	}
 
-	_, err := s.InsertExpenses(expenses)
+	_, err := s.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
@@ -403,7 +405,7 @@ func TestDeleteExpenseHandler(t *testing.T) {
 		storage.NewExpense(0, "Test Source 2", "Test expense 2", "USD", -200000, now, storage.ChargeType, nil),
 	}
 
-	_, err := s.InsertExpenses(expenses)
+	_, err := s.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
@@ -424,7 +426,7 @@ func TestDeleteExpenseHandler(t *testing.T) {
 
 	ensureNoErrorInTemplateResponse(t, "delete expense", resp.Body)
 
-	allExpenses, err := s.GetExpenses()
+	allExpenses, err := s.GetExpenses(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -437,7 +439,7 @@ func TestDeleteExpenseHandler(t *testing.T) {
 		t.Errorf("Expected remaining expense 'Test expense 2', got '%s'", allExpenses[0].Description())
 	}
 
-	_, err = s.GetExpenseByID(1)
+	_, err = s.GetExpenseByID(context.Background(), 1)
 	if err == nil {
 		t.Error("Expected error when getting deleted expense")
 	}
@@ -469,7 +471,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory("Integration Category", "integration")
+	categoryID, err := s.CreateCategory(context.Background(), "Integration Category", "integration")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -493,7 +495,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		),
 	}
 
-	_, err = s.InsertExpenses(expenses)
+	_, err = s.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
@@ -526,7 +528,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		t.Errorf("PUT /expense/1 failed with status %v", w.Result().Status)
 	}
 
-	updatedExpense, err := s.GetExpenseByID(1)
+	updatedExpense, err := s.GetExpenseByID(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("Failed to get updated expense: %v", err)
 	}
@@ -559,7 +561,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		t.Errorf("DELETE /expense/1 failed with status %v", w.Result().Status)
 	}
 
-	allExpenses, err := s.GetExpenses()
+	allExpenses, err := s.GetExpenses(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get expenses after deletion: %v", err)
 	}
@@ -574,7 +576,7 @@ func TestExpenseSearchHandler(t *testing.T) {
 	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categoryID, err := s.CreateCategory("Food", "restaurant|food|grocery")
+	categoryID, err := s.CreateCategory(context.Background(), "Food", "restaurant|food|grocery")
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -599,7 +601,7 @@ func TestExpenseSearchHandler(t *testing.T) {
 		),
 	}
 
-	_, err = s.InsertExpenses(expenses)
+	_, err = s.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}

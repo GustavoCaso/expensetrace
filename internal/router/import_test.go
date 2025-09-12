@@ -2,6 +2,7 @@ package router
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -21,17 +22,17 @@ func TestImport(t *testing.T) {
 	s := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	_, err := s.CreateCategory("Food", "restaurant|food|grocery")
+	_, err := s.CreateCategory(context.Background(), "Food", "restaurant|food|grocery")
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	_, err = s.CreateCategory("Transport", "uber|taxi|transit")
+	_, err = s.CreateCategory(context.Background(), "Transport", "uber|taxi|transit")
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	categories, err := s.GetCategories()
+	categories, err := s.GetCategories(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get Categories: %v", err)
 	}
@@ -45,7 +46,7 @@ func TestImport(t *testing.T) {
 		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, nil),
 	}
 
-	_, expenseError := s.InsertExpenses(expenses)
+	_, expenseError := s.InsertExpenses(context.Background(), expenses)
 	if expenseError != nil {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}

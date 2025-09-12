@@ -54,39 +54,7 @@
           <ul id="categories-list">
             {{range $category := .Categories}}
               {{if lt $category.Amount 0}}
-                <li class="category-item">
-                  <div class="category-header">
-                    <span class="category-name">{{$category.Name}}</span>
-                    <span class="category-amount expense">{{formatMoney $category.Amount "." ","}}€</span>
-                  </div>
-                  <div class="category-bar">
-                    <div class="category-progress expense" style="width: {{$category.PercentageOfTotal}}%"></div>
-                  </div>
-                  
-                  <button class="btn-small toggle-details" data-target="expense-details-{{$category.Name}}">
-                    <span class="toggle-text">Show Details</span>
-                  </button>
-                  <div id="expense-details-{{$category.Name}}" class="toggle-content mt-4 collapsed">
-                    <div class="table">
-                      <div class="table-header">
-                        <div class="table-header-cell">Date</div>
-                        <div class="table-header-cell">Description</div>
-                        <div class="table-header-cell">Source</div>
-                        <div class="table-header-cell">Amount</div>
-                      </div>
-                      <div class="table-body">
-                        {{range $expense := $category.Expenses}}
-                          <a href="/expense{{$expense.ID}}" class="table-row">
-                            <div class="table-cell">{{$expense.Date.Format "2006-01-02"}}</div>
-                            <div class="table-cell">{{$expense.Description}}</div>
-                            <div class="table-cell source-column">{{$expense.Source}}</div>
-                            <div class="table-cell expense">{{formatMoney $expense.Amount "." ","}}€</div>
-                          </a>
-                        {{end}}
-                      </div>
-                    </div>
-                  </div>
-                </li>
+                {{template "reports/category" $category}}
               {{end}}
             {{end}}
           </ul>
@@ -96,39 +64,7 @@
           <ul id="income-categories-list">
             {{range $category := .Categories}}
               {{if gt $category.Amount 0}}
-                <li class="category-item">
-                  <div class="category-header">
-                    <span class="category-name">{{$category.Name}}</span>
-                    <span class="category-amount income">{{formatMoney $category.Amount "." ","}}€</span>
-                  </div>
-                  <div class="category-bar">
-                    <div class="category-progress income" style="width: {{$category.PercentageOfTotal}}%"></div>
-                  </div>
-                  <button class="btn-small toggle-details" data-target="income-details-{{$category.Name}}">
-                    <span class="toggle-text">Show Details</span>
-                  </button>
-                  
-                  <div id="income-details-{{$category.Name}}" class="toggle-content mt-4 collapsed">
-                    <div class="table">
-                      <div class="table-header">
-                        <div class="table-header-cell">Date</div>
-                        <div class="table-header-cell">Description</div>
-                        <div class="table-header-cell">Source</div>
-                        <div class="table-header-cell">Amount</div>
-                      </div>
-                      <div class="table-body">
-                        {{range $expense := $category.Expenses}}
-                          <a href="/expense/{{$expense.ID}}" class="table-row">
-                            <div class="table-cell">{{$expense.Date.Format "2006-01-02"}}</div>
-                            <div class="table-cell">{{$expense.Description}}</div>
-                            <div class="table-cell source-column">{{$expense.Source}}</div>
-                            <div class="table-cell income">{{formatMoney $expense.Amount "." ","}}€</div>
-                          </a>
-                        {{end}}
-                      </div>
-                    </div>
-                  </div>
-                </li>
+                {{template "reports/category" $category}}
               {{end}}
             {{end}}
           </ul>

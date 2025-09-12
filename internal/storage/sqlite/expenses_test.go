@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -18,7 +19,7 @@ func TestExpenseStorage(t *testing.T) {
 		storage.NewExpense(0, "Test Bank", "Salary deposit", "USD", 500000, now, storage.IncomeType, nil),
 	}
 
-	insertedCount, err := stor.InsertExpenses(testExpenses)
+	insertedCount, err := stor.InsertExpenses(context.Background(), testExpenses)
 	if err != nil {
 		t.Fatalf("Failed to insert expenses: %v", err)
 	}
@@ -27,7 +28,7 @@ func TestExpenseStorage(t *testing.T) {
 	}
 
 	// Test getting all expenses
-	expenses, err := stor.GetExpenses()
+	expenses, err := stor.GetExpenses(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -35,7 +36,7 @@ func TestExpenseStorage(t *testing.T) {
 		t.Errorf("Expected 1 expense, got %d", len(expenses))
 	}
 
-	allExpenses, err := stor.GetAllExpenseTypes()
+	allExpenses, err := stor.GetAllExpenseTypes(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -44,7 +45,7 @@ func TestExpenseStorage(t *testing.T) {
 	}
 
 	// Test getting expense by ID
-	expense, err := stor.GetExpenseByID(1)
+	expense, err := stor.GetExpenseByID(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("Failed to get expense by ID: %v", err)
 	}
@@ -53,7 +54,7 @@ func TestExpenseStorage(t *testing.T) {
 	}
 
 	// Test getting first expense
-	firstExpense, err := stor.GetFirstExpense()
+	firstExpense, err := stor.GetFirstExpense(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get first expense: %v", err)
 	}
@@ -64,7 +65,7 @@ func TestExpenseStorage(t *testing.T) {
 	// Test date range query
 	yesterday := now.AddDate(0, 0, -1)
 	tomorrow := now.AddDate(0, 0, 1)
-	rangeExpenses, err := stor.GetExpensesFromDateRange(yesterday, tomorrow)
+	rangeExpenses, err := stor.GetExpensesFromDateRange(context.Background(), yesterday, tomorrow)
 	if err != nil {
 		t.Fatalf("Failed to get expenses from date range: %v", err)
 	}
@@ -73,7 +74,7 @@ func TestExpenseStorage(t *testing.T) {
 	}
 
 	// Test search
-	searchResults, err := stor.SearchExpenses("coffee")
+	searchResults, err := stor.SearchExpenses(context.Background(), "coffee")
 	if err != nil {
 		t.Fatalf("Failed to search expenses: %v", err)
 	}
@@ -83,7 +84,7 @@ func TestExpenseStorage(t *testing.T) {
 
 	// Test update expense
 	updatedExpense := storage.NewExpense(1, "Updated Bank", "Updated coffee", "EUR", -600, now, storage.ChargeType, nil)
-	updateCount, err := stor.UpdateExpense(updatedExpense)
+	updateCount, err := stor.UpdateExpense(context.Background(), updatedExpense)
 	if err != nil {
 		t.Fatalf("Failed to update expense: %v", err)
 	}
@@ -92,7 +93,7 @@ func TestExpenseStorage(t *testing.T) {
 	}
 
 	// Verify update
-	updated, err := stor.GetExpenseByID(1)
+	updated, err := stor.GetExpenseByID(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("Failed to get updated expense: %v", err)
 	}
@@ -104,7 +105,7 @@ func TestExpenseStorage(t *testing.T) {
 	}
 
 	// Test delete expense
-	deleteCount, err := stor.DeleteExpense(2)
+	deleteCount, err := stor.DeleteExpense(context.Background(), 2)
 	if err != nil {
 		t.Fatalf("Failed to delete expense: %v", err)
 	}
@@ -113,7 +114,7 @@ func TestExpenseStorage(t *testing.T) {
 	}
 
 	// Verify deletion
-	remainingExpenses, err := stor.GetExpenses()
+	remainingExpenses, err := stor.GetExpenses(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get remaining expenses: %v", err)
 	}
@@ -122,7 +123,7 @@ func TestExpenseStorage(t *testing.T) {
 	}
 
 	// Verify we get an error when fething a non existing expense
-	_, err = stor.GetExpenseByID(2)
+	_, err = stor.GetExpenseByID(context.Background(), 2)
 	if err == nil {
 		t.Fatal("Expected error when fetching a non existng expense")
 	}
@@ -136,7 +137,7 @@ func TestExpenseWithCategories(t *testing.T) {
 	stor := setupTestStorage(t)
 
 	// Create a category first
-	categoryID, err := stor.CreateCategory("Food", "restaurant|coffee")
+	categoryID, err := stor.CreateCategory(context.Background(), "Food", "restaurant|coffee")
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -165,13 +166,13 @@ func TestExpenseWithCategories(t *testing.T) {
 	)
 
 	expenses := []storage.Expense{expenseWithCategory, expenseWithoutCategory}
-	_, err = stor.InsertExpenses(expenses)
+	_, err = stor.InsertExpenses(context.Background(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert expenses: %v", err)
 	}
 
 	// Test getting expenses by category
-	categoryExpenses, err := stor.GetExpensesByCategory(categoryID)
+	categoryExpenses, err := stor.GetExpensesByCategory(context.Background(), categoryID)
 	if err != nil {
 		t.Fatalf("Failed to get expenses by category: %v", err)
 	}
@@ -183,7 +184,7 @@ func TestExpenseWithCategories(t *testing.T) {
 	}
 
 	// Test getting expenses without category
-	uncategorizedExpenses, err := stor.GetExpensesWithoutCategory()
+	uncategorizedExpenses, err := stor.GetExpensesWithoutCategory(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get uncategorized expenses: %v", err)
 	}
@@ -195,7 +196,7 @@ func TestExpenseWithCategories(t *testing.T) {
 	}
 
 	// Test searching expenses without category with query
-	searchUncategorized, err := stor.GetExpensesWithoutCategoryWithQuery("Random")
+	searchUncategorized, err := stor.GetExpensesWithoutCategoryWithQuery(context.Background(), "Random")
 	if err != nil {
 		t.Fatalf("Failed to search uncategorized expenses: %v", err)
 	}
@@ -207,7 +208,7 @@ func TestExpenseWithCategories(t *testing.T) {
 	}
 
 	// Test searching with no results
-	noResults, err := stor.GetExpensesWithoutCategoryWithQuery("nonexistent")
+	noResults, err := stor.GetExpensesWithoutCategoryWithQuery(context.Background(), "nonexistent")
 	if err != nil {
 		t.Fatalf("Failed to search uncategorized expenses with no results: %v", err)
 	}

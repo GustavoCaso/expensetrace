@@ -1,6 +1,7 @@
 package importutil
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestImportCSV(t *testing.T) {
 	}
 
 	for _, c := range categories {
-		_, err := s.CreateCategory(c.Name(), c.Pattern())
+		_, err := s.CreateCategory(context.Background(), c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -35,13 +36,13 @@ Test Source,02/01/2024,Uber ride,-5000.00,USD
 Test Source,03/01/2024,Salary,500000.00,USD`
 
 	reader := strings.NewReader(csvData)
-	info := Import("test.csv", reader, s, matcher)
+	info := Import(context.Background(), "test.csv", reader, s, matcher)
 	if info.Error != nil {
 		t.Errorf("Import failed with error: %v", info.Error)
 	}
 
 	// Verify imported expenses
-	expenses, err := s.GetAllExpenseTypes()
+	expenses, err := s.GetAllExpenseTypes(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -101,7 +102,7 @@ func TestImportJSON(t *testing.T) {
 	}
 
 	for _, c := range categories {
-		_, err := s.CreateCategory(c.Name(), c.Pattern())
+		_, err := s.CreateCategory(context.Background(), c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -135,13 +136,13 @@ func TestImportJSON(t *testing.T) {
 	]`
 
 	reader := strings.NewReader(jsonData)
-	info := Import("test.json", reader, s, matcher)
+	info := Import(context.Background(), "test.json", reader, s, matcher)
 	if info.Error != nil {
 		t.Errorf("Import failed with error: %v", info.Error)
 	}
 
 	// Verify imported expenses
-	expenses, err := s.GetAllExpenseTypes()
+	expenses, err := s.GetAllExpenseTypes(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -204,7 +205,7 @@ func TestImportInvalidFormat(t *testing.T) {
 
 	// Test with invalid file format
 	reader := strings.NewReader("test data")
-	info := Import("test.txt", reader, s, matcher)
+	info := Import(context.Background(), "test.txt", reader, s, matcher)
 	if info.Error == nil || info.Error.Error() != "unsupported file format: .txt" {
 		t.Errorf("Expected error for unsupported file format")
 	}
@@ -225,7 +226,7 @@ func TestImportInvalidCSV(t *testing.T) {
 	csvData := `Test Source,invalid-date,Restaurant bill,-1234.56,USD`
 
 	reader := strings.NewReader(csvData)
-	info := Import("test.csv", reader, s, matcher)
+	info := Import(context.Background(), "test.csv", reader, s, matcher)
 	if info.Error == nil {
 		t.Errorf("Expected 1 error")
 	}
@@ -257,7 +258,7 @@ func TestImportInvalidJSON(t *testing.T) {
 	]`
 
 	reader := strings.NewReader(jsonData)
-	info := Import("test.json", reader, s, matcher)
+	info := Import(context.Background(), "test.json", reader, s, matcher)
 	if info.Error == nil {
 		t.Errorf("Expected 1 error")
 	}

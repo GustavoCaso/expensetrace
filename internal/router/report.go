@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"net/http"
@@ -36,7 +37,7 @@ type reportHandler struct {
 func (rh *reportHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		rh.reportsOnce.Do(func() {
-			rh.generateReports()
+			rh.generateReports(r.Context())
 		})
 		rh.reportsHandler(w, r)
 	})
@@ -123,12 +124,12 @@ func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (rh *reportHandler) generateReports() {
+func (rh *reportHandler) generateReports(ctx context.Context) {
 	now := time.Now()
 	month := now.Month()
 	year := now.Year()
 	skipYear := false
-	ex, err := rh.storage.GetFirstExpense()
+	ex, err := rh.storage.GetFirstExpense(ctx)
 	if err != nil {
 		rh.logger.Warn("Failed to generate reports", "error", err)
 		return
@@ -146,14 +147,14 @@ func (rh *reportHandler) generateReports() {
 
 		firstDay, lastDay := util.GetMonthDates(int(month), year)
 
-		expenses, expenseErr := rh.storage.GetExpensesFromDateRange(firstDay, lastDay)
+		expenses, expenseErr := rh.storage.GetExpensesFromDateRange(ctx, firstDay, lastDay)
 
 		if expenseErr != nil {
 			rh.logger.Warn("Failed to generate reports", "error", expenseErr)
 			return
 		}
 
-		result, reportErr := report.Generate(firstDay, lastDay, rh.storage, expenses, "monthly")
+		result, reportErr := report.Generate(ctx, firstDay, lastDay, rh.storage, expenses, "monthly")
 
 		if reportErr != nil {
 			rh.logger.Warn("Failed to generate reports", "error", reportErr)

@@ -1,6 +1,7 @@
 package report
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"math"
@@ -41,6 +42,7 @@ const (
 )
 
 func Generate(
+	ctx context.Context,
 	startDate, endDate time.Time,
 	storage pkgStorage.Storage,
 	expenses []pkgStorage.Expense,
@@ -48,7 +50,7 @@ func Generate(
 ) (Report, error) {
 	var report Report
 
-	categories, duplicates, income, spending, err := Categories(storage, expenses)
+	categories, duplicates, income, spending, err := Categories(ctx, storage, expenses)
 
 	if err != nil {
 		return report, err
@@ -89,6 +91,7 @@ func Generate(
 }
 
 func Categories(
+	ctx context.Context,
 	storage pkgStorage.Storage,
 	expenses []pkgStorage.Expense,
 ) (map[string]Category, []string, int64, int64, error) {
@@ -101,7 +104,7 @@ func Categories(
 	for _, ex := range expenses {
 		categoryName := ""
 		if ex.CategoryID() != nil {
-			category, categoryError := storage.GetCategory(*ex.CategoryID())
+			category, categoryError := storage.GetCategory(ctx, *ex.CategoryID())
 
 			if categoryError != nil {
 				return categories, duplicates, income, spending, categoryError
