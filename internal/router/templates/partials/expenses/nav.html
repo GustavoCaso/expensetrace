@@ -1,0 +1,8 @@
+{{define "expenses/nav"}}
+  <div class="expense-nav">
+    <nav class="tabs">
+        <a href="/expenses" hx-get="/expenses" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "index"}}active{{end}}' hx-replace-url="true">All Expenses</a>
+        <a href="/expense/new" hx-get="/expense/new" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "new"}}active{{end}}' hx-replace-url="true">New Expense</a>
+    </nav>
+  </div>
+{{end}}
