@@ -52,7 +52,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 		categoryID := r.PathValue("id")
 		name := r.FormValue("name")
 		pattern := r.FormValue("pattern")
-		// Category type is no longer needed - we only handle expenses
+
 		c.updatecategoryHandler(r.Context(), categoryID, name, pattern, w)
 	})
 
@@ -185,6 +185,7 @@ func (c *categoryHandler) categoriesHandler(
 	c.templates.Render(w, "pages/categories/index.html", data)
 }
 
+//nolint:gocyclo,cyclop // Function handles multiple update scenarios, complexity is acceptable
 func (c *categoryHandler) updatecategoryHandler(
 	ctx context.Context,
 	id, name, pattern string,
@@ -197,7 +198,9 @@ func (c *categoryHandler) updatecategoryHandler(
 		return
 	}
 
-	categoryEntry, err := c.storage.GetCategory(ctx, int64(categoryID))
+	categoryIDInt64 := int64(categoryID)
+
+	categoryEntry, err := c.storage.GetCategory(ctx, categoryIDInt64)
 
 	if err != nil {
 		c.categoryIndexError(w, err)
@@ -262,44 +265,44 @@ func (c *categoryHandler) updatecategoryHandler(
 		c.matcher = matcher
 
 		if patternChanged {
-			allExpenses, expensesErr := c.storage.GetExpenses(ctx)
-
-			if expensesErr != nil {
-				c.categoryIndexError(w, expensesErr)
+			// Get expenses that currently belong to this specific category
+			currentCategoryExpenses, categoryExpensesErr := c.storage.GetExpensesByCategory(ctx, categoryIDInt64)
+			if categoryExpensesErr != nil {
+				c.categoryIndexError(w, categoryExpensesErr)
 				return
 			}
 
+			// Also get uncategorized expenses to potentially categorize them
+			uncategorizedExpenses, uncatErr := c.storage.GetExpensesWithoutCategory(ctx)
+			if uncatErr != nil {
+				c.categoryIndexError(w, uncatErr)
+				return
+			}
+
+			// Combine both sets of expenses to process
+			expensesToProcess := make([]storage.Expense, 0, len(currentCategoryExpenses)+len(uncategorizedExpenses))
+			expensesToProcess = append(expensesToProcess, currentCategoryExpenses...)
+			expensesToProcess = append(expensesToProcess, uncategorizedExpenses...)
 			toUpdated := []storage.Expense{}
 
-			for _, ex := range allExpenses {
+			for _, ex := range expensesToProcess {
 				id, _ := matcher.Match(ex.Description())
-				if id != nil {
-					if ex.CategoryID() != nil {
-						// Update existing expense with a new category
-						if *id != *ex.CategoryID() {
-							expense := storage.NewExpense(
-								ex.ID(),
-								ex.Source(),
-								ex.Description(),
-								ex.Currency(),
-								ex.Amount(),
-								ex.Date(),
-								ex.Type(),
-								id,
-							)
-							toUpdated = append(toUpdated, expense)
-						}
-					} else {
-						// Update existing expense without category with category
-						expense := storage.NewExpense(ex.ID(), ex.Source(), ex.Description(), ex.Currency(), ex.Amount(), ex.Date(), ex.Type(), id)
-						toUpdated = append(toUpdated, expense)
-					}
-				} else {
-					if ex.CategoryID() != nil {
-						// Changing a category pattern could render existing expenses to have category NULL
-						expense := storage.NewExpense(ex.ID(), ex.Source(), ex.Description(), ex.Currency(), ex.Amount(), ex.Date(), ex.Type(), nil)
-						toUpdated = append(toUpdated, expense)
-					}
+
+				// 1. match && expense does not have a category OR the existing category is different
+				// 2. no match &&  expense is part of the category we are updating
+				if (id != nil && (ex.CategoryID() == nil || *ex.CategoryID() != *id)) ||
+					(id == nil && expenseBelongsToCategoryWeAreUpdating(ex, categoryIDInt64)) {
+					expense := storage.NewExpense(
+						ex.ID(),
+						ex.Source(),
+						ex.Description(),
+						ex.Currency(),
+						ex.Amount(),
+						ex.Date(),
+						ex.Type(),
+						id,
+					)
+					toUpdated = append(toUpdated, expense)
 				}
 			}
 
@@ -344,6 +347,10 @@ func (c *categoryHandler) updatecategoryHandler(
 	updatedEnhancedCat := createEnhancedCategory(categoryEntry, updatedExpenses)
 
 	c.templates.Render(w, "partials/categories/card.html", updatedEnhancedCat)
+}
+
+func expenseBelongsToCategoryWeAreUpdating(ex storage.Expense, categoryID int64) bool {
+	return ex.CategoryID() != nil && *ex.CategoryID() == categoryID
 }
 
 type uncategorizedInfo struct {
