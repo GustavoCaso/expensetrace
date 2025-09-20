@@ -1,9 +1,9 @@
-{{define "title"}}Edit Expense{{end}}
+{{define "title"}}New Expense{{end}}
 {{define "css"}}/static/css/expenses.css{{end}}
 
 {{define "main"}}
-  {{ template "expenses/nav" }}
-  
+  {{ template "expenses/nav" "new"}}
+
   {{if gt (len .Banner.Icon) 0}} 
     {{template "banner" .Banner}}
   {{end}}
@@ -14,10 +14,8 @@
 
   <div class="expense-view">
     <div class="card-grid gap-8">
-      <div class="card">
-        <h2 class="mb-4">Edit {{.Expense.Description}}</h2>
-        
-         {{template "expenses/form" .}}
+      <div class="card">        
+        {{template "expenses/form" .}}
       </div>
     </div>
   </div>
