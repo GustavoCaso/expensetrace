@@ -64,14 +64,6 @@
                         </p>
                         <div class="form-actions mt-0">
                           <a 
-                            class="btn-warning btn-small"
-                            hx-delete="/expense/{{.Expense.ID}}"
-                            hx-target="#page" 
-                            hx-swap="outerHTML show:window:top"
-                            hx-confirm="Are you sure you want to delete the expense? This action cannot be undone.">
-                            Exclude
-                          </a>
-                          <a 
                             class="btn-danger btn-small"
                             hx-delete="/expense/{{.Expense.ID}}"
                             hx-target="#page" 

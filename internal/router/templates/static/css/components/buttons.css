@@ -74,22 +74,6 @@ button[hx-get]:not(.btn-secondary):not(.btn-danger):not(.btn-small):not(.btn-ico
   cursor: not-allowed;
 }
 
-/* Warning button */
-.btn-warning {
-  background-color: var(--color-warning);
-  color: white;
-  border: none;
-}
-
-.btn-warning:hover {
-  background-color: var(--color-warning-light);
-}
-
-.btn-warning:disabled {
-  background-color: var(--color-warning-light);
-  cursor: not-allowed;
-}
-
 /* Button sizes */
 .btn-small {
   font-size: var(--font-size-sm);
