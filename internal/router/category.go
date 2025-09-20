@@ -52,7 +52,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 		categoryID := r.PathValue("id")
 		name := r.FormValue("name")
 		pattern := r.FormValue("pattern")
-		// Category type is no longer needed - we only handle expenses
+
 		c.updatecategoryHandler(r.Context(), categoryID, name, pattern, w)
 	})
 
@@ -197,153 +197,143 @@ func (c *categoryHandler) updatecategoryHandler(
 		return
 	}
 
-	categoryEntry, err := c.storage.GetCategory(ctx, int64(categoryID))
+	categoryIDInt64 := int64(categoryID)
+
+	categoryEntry, err := c.storage.GetCategory(ctx, categoryIDInt64)
 
 	if err != nil {
 		c.categoryIndexError(w, err)
 		return
 	}
 
-	// Get expenses for this category before update so we can return
-	// If we have any error we want to still allow to display catgeory data
-	expenses, err := c.storage.GetExpensesByCategory(ctx, categoryEntry.ID())
-
-	if err != nil {
-		c.categoryIndexError(w, err)
+	// Get expenses that currently belong to this specific category
+	currentCategoryExpenses, categoryExpensesErr := c.storage.GetExpensesByCategory(ctx, categoryIDInt64)
+	if categoryExpensesErr != nil {
+		c.categoryIndexError(w, categoryExpensesErr)
 		return
 	}
 
-	enhancedCat := createEnhancedCategory(categoryEntry, expenses)
+	existingEnhancedCategory := createEnhancedCategory(categoryEntry, currentCategoryExpenses)
 
-	updated := false
-	patternChanged := false
-	if (pattern != "" && categoryEntry.Pattern() != pattern) ||
-		(name != "" && categoryEntry.Name() != name) {
-		if pattern != "" && categoryEntry.Pattern() != pattern {
-			_, err = regexp.Compile(pattern)
+	nameChanged := name != "" && categoryEntry.Name() != name
+	patternChanged := pattern != "" && categoryEntry.Pattern() != pattern
 
-			if err != nil {
-				enhancedCat.Errors = true
-				enhancedCat.ErrorStrings = map[string]string{
-					"pattern": fmt.Sprintf("invalid pattern %v", err),
-				}
-
-				c.templates.Render(w, "partials/categories/card.html", enhancedCat)
-				return
-			}
-			patternChanged = true
-		}
-
-		err = c.storage.UpdateCategory(ctx, int64(categoryID), name, pattern)
-
-		if err != nil {
-			enhancedCat.Errors = true
-			enhancedCat.ErrorStrings = map[string]string{
-				"name": fmt.Sprintf("failed to updated category %v", err),
-			}
-
-			c.templates.Render(w, "partials/categories/card.html", enhancedCat)
-			return
-		}
-
-		updated = true
-		c.logger.Info("Category updated successfully", "id", categoryID)
+	if !nameChanged && !patternChanged {
+		c.templates.Render(w, "partials/categories/card.html", existingEnhancedCategory)
+		return
 	}
-
-	//nolint:nestif // No need to extract this code to a function for now as is clear
-	if updated {
-		categories, categoryErr := c.storage.GetCategories(ctx)
-		if err != nil {
-			c.categoryIndexError(w, categoryErr)
-			return
-		}
-
-		matcher := matcher.New(categories)
-		c.matcher = matcher
-
-		if patternChanged {
-			allExpenses, expensesErr := c.storage.GetExpenses(ctx)
-
-			if expensesErr != nil {
-				c.categoryIndexError(w, expensesErr)
-				return
-			}
-
-			toUpdated := []storage.Expense{}
-
-			for _, ex := range allExpenses {
-				id, _ := matcher.Match(ex.Description())
-				if id != nil {
-					if ex.CategoryID() != nil {
-						// Update existing expense with a new category
-						if *id != *ex.CategoryID() {
-							expense := storage.NewExpense(
-								ex.ID(),
-								ex.Source(),
-								ex.Description(),
-								ex.Currency(),
-								ex.Amount(),
-								ex.Date(),
-								ex.Type(),
-								id,
-							)
-							toUpdated = append(toUpdated, expense)
-						}
-					} else {
-						// Update existing expense without category with category
-						expense := storage.NewExpense(ex.ID(), ex.Source(), ex.Description(), ex.Currency(), ex.Amount(), ex.Date(), ex.Type(), id)
-						toUpdated = append(toUpdated, expense)
-					}
-				} else {
-					if ex.CategoryID() != nil {
-						// Changing a category pattern could render existing expenses to have category NULL
-						expense := storage.NewExpense(ex.ID(), ex.Source(), ex.Description(), ex.Currency(), ex.Amount(), ex.Date(), ex.Type(), nil)
-						toUpdated = append(toUpdated, expense)
-					}
-				}
-			}
-
-			if len(toUpdated) > 0 {
-				updated, updateErr := c.storage.UpdateExpenses(ctx, toUpdated)
-				if updateErr != nil {
-					c.categoryIndexError(w, updateErr)
-					return
-				}
-
-				c.logger.Info("Category's expenses updated successfully", "id", categoryID, "total", updated)
-
-				if int(updated) != len(toUpdated) {
-					c.logger.Warn("not all categories were updated")
-				}
-			}
-		}
-	}
-
-	// Note: We need to refresh the category from storage since interfaces are immutable
-	// The template will use the updated values from the storage
 
 	if patternChanged {
-		updateCategoryMatcherErr := c.updateCategoryMatcher()
-		if updateCategoryMatcherErr != nil {
-			c.categoryIndexError(w, updateCategoryMatcherErr)
+		_, err = regexp.Compile(pattern)
+
+		if err != nil {
+			existingEnhancedCategory.Errors = true
+			existingEnhancedCategory.ErrorStrings = map[string]string{
+				"pattern": fmt.Sprintf("invalid pattern %v", err),
+			}
+
+			c.templates.Render(w, "partials/categories/card.html", existingEnhancedCategory)
 			return
 		}
 	}
 
-	if updated {
-		c.resetCache()
-	}
-
-	updatedExpenses, err := c.storage.GetExpensesByCategory(ctx, categoryEntry.ID())
+	err = c.storage.UpdateCategory(ctx, categoryIDInt64, name, pattern)
 
 	if err != nil {
-		c.categoryIndexError(w, err)
+		existingEnhancedCategory.Errors = true
+		existingEnhancedCategory.ErrorStrings = map[string]string{
+			"name": fmt.Sprintf("failed to updated category %v", err),
+		}
+
+		c.templates.Render(w, "partials/categories/card.html", existingEnhancedCategory)
 		return
 	}
 
-	updatedEnhancedCat := createEnhancedCategory(categoryEntry, updatedExpenses)
+	c.logger.Info("Category updated successfully", "id", categoryID)
 
+	updatedCategory := storage.NewCategory(categoryIDInt64, name, pattern)
+
+	if !patternChanged {
+		c.resetCache()
+		updatedEnhancedCat := createEnhancedCategory(updatedCategory, currentCategoryExpenses)
+
+		c.templates.Render(w, "partials/categories/card.html", updatedEnhancedCat)
+		return
+	}
+
+	updateCategoryMatcherErr := c.updateCategoryMatcher()
+	if updateCategoryMatcherErr != nil {
+		c.categoryIndexError(w, updateCategoryMatcherErr)
+		return
+	}
+
+	// Get uncategorized expenses to potentially categorize them
+	uncategorizedExpenses, uncatErr := c.storage.GetExpensesWithoutCategory(ctx)
+	if uncatErr != nil {
+		c.categoryIndexError(w, uncatErr)
+		return
+	}
+
+	// Combine both sets of expenses to process
+	expensesToProcess := make([]storage.Expense, 0, len(currentCategoryExpenses)+len(uncategorizedExpenses))
+	expensesToProcess = append(expensesToProcess, currentCategoryExpenses...)
+	expensesToProcess = append(expensesToProcess, uncategorizedExpenses...)
+	toUpdated := []storage.Expense{}
+
+	for _, ex := range expensesToProcess {
+		id, _ := c.matcher.Match(ex.Description())
+
+		// 1. match && expense does not have a category OR the existing category is different
+		// 2. no match && expense is part of the category we are updating
+		if (id != nil && (ex.CategoryID() == nil || *ex.CategoryID() != *id)) ||
+			(id == nil && expenseBelongsToCategoryWeAreUpdating(ex, categoryIDInt64)) {
+			expense := storage.NewExpense(
+				ex.ID(),
+				ex.Source(),
+				ex.Description(),
+				ex.Currency(),
+				ex.Amount(),
+				ex.Date(),
+				ex.Type(),
+				id,
+			)
+			toUpdated = append(toUpdated, expense)
+		}
+	}
+
+	if len(toUpdated) > 0 {
+		updated, updateErr := c.storage.UpdateExpenses(ctx, toUpdated)
+		if updateErr != nil {
+			c.categoryIndexError(w, updateErr)
+			return
+		}
+
+		c.logger.Info("Category's expenses updated successfully", "id", categoryID, "total", updated)
+
+		if int(updated) != len(toUpdated) {
+			c.logger.Warn("not all categories were updated")
+		}
+
+		c.resetCache()
+
+		updatedExpenses, updatedExpensesErr := c.storage.GetExpensesByCategory(ctx, categoryIDInt64)
+		if updatedExpensesErr != nil {
+			c.categoryIndexError(w, updatedExpensesErr)
+			return
+		}
+
+		updatedEnhancedCat := createEnhancedCategory(categoryEntry, updatedExpenses)
+
+		c.templates.Render(w, "partials/categories/card.html", updatedEnhancedCat)
+		return
+	}
+
+	updatedEnhancedCat := createEnhancedCategory(updatedCategory, currentCategoryExpenses)
 	c.templates.Render(w, "partials/categories/card.html", updatedEnhancedCat)
+}
+
+func expenseBelongsToCategoryWeAreUpdating(ex storage.Expense, categoryID int64) bool {
+	return ex.CategoryID() != nil && *ex.CategoryID() == categoryID
 }
 
 type uncategorizedInfo struct {

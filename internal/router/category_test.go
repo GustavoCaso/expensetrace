@@ -293,7 +293,7 @@ func TestUpdateHandler(t *testing.T) {
 				for _, ex := range updatedExpenses {
 					if ex.CategoryID() != nil && *ex.CategoryID() != updatedCategory.ID() {
 						t.Fatalf(
-							"Expense %s was incoreectly updated. Category ID must be %d. Got %d",
+							"Expense %s was incorrectly updated. Category ID must be %d. Got %d",
 							ex.Description(),
 							updatedCategory.ID(),
 							*ex.CategoryID(),
@@ -317,7 +317,7 @@ func TestUpdateHandler(t *testing.T) {
 					if ex.Description() == "cinema" {
 						if ex.CategoryID() == nil && *ex.CategoryID() != updatedCategory.ID() {
 							t.Fatalf(
-								"Expense %s was incoreectly updated. Category ID must be %d. Got %d",
+								"Expense %s was incorrectly updated. Category ID must be %d. Got %d",
 								ex.Description(),
 								updatedCategory.ID(),
 								*ex.CategoryID(),
@@ -416,6 +416,183 @@ func TestUpdateHandler(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestUpdateCategoryPatternDoesNotAffectExcludeCategory(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
+	entertainmentCategoryID, err := s.CreateCategory(context.Background(), "Entertainment", "cinema|movie")
+	if err != nil {
+		t.Fatalf("Failed to create Entertainment category: %v", err)
+	}
+
+	categories, err := s.GetCategories(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get categories: %v", err)
+	}
+
+	var excludeCategoryID int64
+	for _, cat := range categories {
+		if cat.Name() == storage.ExcludeCategory {
+			excludeCategoryID = cat.ID()
+			break
+		}
+	}
+	if excludeCategoryID == 0 {
+		t.Fatal("Exclude category not found")
+	}
+
+	expenses := []storage.Expense{
+		storage.NewExpense(
+			0,
+			"bank",
+			"cinema ticket",
+			"USD",
+			-1500,
+			time.Now(),
+			storage.ChargeType,
+			&entertainmentCategoryID,
+		),
+		// Expense that matches the new pattern, but is not updated as it already has a category (exclude)
+		storage.NewExpense(
+			0,
+			"bank",
+			"theater hat",
+			"USD",
+			-5000,
+			time.Now(),
+			storage.ChargeType,
+			&excludeCategoryID,
+		),
+		// Internal transfer excluded
+		storage.NewExpense(
+			0,
+			"bank",
+			"internal transfer",
+			"USD",
+			-5000,
+			time.Now(),
+			storage.ChargeType,
+			&excludeCategoryID,
+		),
+		// Income in exclude category
+		storage.NewExpense(0, "bank", "salary refund", "USD", 3000, time.Now(), storage.IncomeType, &excludeCategoryID),
+		// Income with no category that should match the pattern, but won't get updated
+		storage.NewExpense(0, "bank", "cinema refund", "USD", 3000, time.Now(), storage.IncomeType, nil),
+		// Uncategorized expense that should match new pattern
+		storage.NewExpense(0, "bank", "theater show", "USD", -2000, time.Now(), storage.ChargeType, nil),
+		// Uncategorized expense that should not match
+		storage.NewExpense(0, "bank", "grocery shopping", "USD", -4000, time.Now(), storage.ChargeType, nil),
+	}
+
+	_, err = s.InsertExpenses(context.Background(), expenses)
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
+	}
+
+	matcher := matcher.New(categories)
+
+	handler, _ := New(s, matcher, logger)
+
+	// Update the entertainment category pattern to include "theater"
+	body := strings.NewReader("pattern=cinema|movie|theater")
+	req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/category/%d", entertainmentCategoryID), body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK; got %v", resp.Status)
+	}
+
+	// Verify the response doesn't contain errors
+	ensureNoErrorInTemplateResponse(t, "update category pattern", resp.Body)
+
+	// Check that all expenses are still correctly categorized
+	allExpenses, err := s.GetAllExpenseTypes(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get expenses after update: %v", err)
+	}
+
+	// Track what we find
+	var cinemaExpense, transferExpense, salaryIncome, cinemaRefund, theaterExpense, excludeTheaterExpense, groceryExpense storage.Expense
+	for i, exp := range allExpenses {
+		switch exp.Description() {
+		case "cinema ticket":
+			cinemaExpense = allExpenses[i]
+		case "internal transfer":
+			transferExpense = allExpenses[i]
+		case "salary refund":
+			salaryIncome = allExpenses[i]
+		case "cinema refund":
+			cinemaRefund = allExpenses[i]
+		case "theater show":
+			theaterExpense = allExpenses[i]
+		case "theater hat":
+			excludeTheaterExpense = allExpenses[i]
+		case "grocery shopping":
+			groceryExpense = allExpenses[i]
+		}
+	}
+
+	// Verify cinema expense is still in entertainment category
+	if cinemaExpense == nil {
+		t.Fatal("Cinema expense not found")
+	}
+	if cinemaExpense.CategoryID() == nil || *cinemaExpense.CategoryID() != entertainmentCategoryID {
+		t.Errorf("Cinema expense should be in entertainment category, got: %v", cinemaExpense.CategoryID())
+	}
+
+	// Verify theater expense was moved to entertainment category
+	if theaterExpense == nil {
+		t.Fatal("Theater expense not found")
+	}
+	if theaterExpense.CategoryID() == nil || *theaterExpense.CategoryID() != entertainmentCategoryID {
+		t.Errorf("Theater expense should be in entertainment category, got: %v", theaterExpense.CategoryID())
+	}
+
+	// Verify excluded theater expense remains excluded
+	if excludeTheaterExpense == nil {
+		t.Fatal("Theater expense not found")
+	}
+	if excludeTheaterExpense.CategoryID() == nil || *excludeTheaterExpense.CategoryID() != excludeCategoryID {
+		t.Errorf("Excluded theater expense should be in excluded category, got: %v", excludeTheaterExpense.CategoryID())
+	}
+
+	// Verify exclude category expenses are NOT affected
+	if transferExpense == nil {
+		t.Fatal("Transfer expense not found")
+	}
+	if transferExpense.CategoryID() == nil || *transferExpense.CategoryID() != excludeCategoryID {
+		t.Errorf("Transfer expense should remain in exclude category, got: %v", transferExpense.CategoryID())
+	}
+
+	// Verify uncategorized income is NOT affected
+	if cinemaRefund == nil {
+		t.Fatal("cinema income not found")
+	}
+	if cinemaRefund.CategoryID() != nil {
+		t.Errorf("Cinema income should remain uncategorized, got: %v", cinemaRefund.CategoryID())
+	}
+
+	// Verify exclude category income is NOT affected
+	if salaryIncome == nil {
+		t.Fatal("Salary income not found")
+	}
+	if salaryIncome.CategoryID() == nil || *salaryIncome.CategoryID() != excludeCategoryID {
+		t.Errorf("Salary income should remain in exclude category, got: %v", salaryIncome.CategoryID())
+	}
+
+	// Verify grocery expense remains uncategorized
+	if groceryExpense == nil {
+		t.Fatal("Grocery expense not found")
+	}
+	if groceryExpense.CategoryID() != nil {
+		t.Errorf("Grocery expense should remain uncategorized, got: %v", *groceryExpense.CategoryID())
 	}
 }
 
