@@ -69,6 +69,9 @@ func (rh *reportHandler) generateChartData() []chartDataPoint {
 }
 
 func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) {
+	data := homeViewData{}
+	data.CurrentPage = pageReports
+
 	now := time.Now()
 	var month int
 	var year int
@@ -101,8 +104,6 @@ func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) 
 		chartData = rh.generateChartData()
 	}
 
-	data := homeViewData{}
-	data.CurrentPage = pageReports
 	if err != nil {
 		data.Error = err.Error()
 	} else {
@@ -117,11 +118,18 @@ func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	var template string
+	var renderData interface{}
+
 	if useReportTemplate {
-		rh.templates.Render(w, "partials/reports/card.html", data.Report)
+		template = "partials/reports/card.html"
+		renderData = data.Report
 	} else {
-		rh.templates.Render(w, "pages/reports/index.html", data)
+		template = "pages/reports/index.html"
+		renderData = data
 	}
+
+	rh.templates.Render(w, template, renderData)
 }
 
 func (rh *reportHandler) generateReports(ctx context.Context) {

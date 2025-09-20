@@ -86,17 +86,21 @@ type expesesViewData struct {
 func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWriter, banner *banner) {
 	data := expesesViewData{}
 	data.CurrentPage = pageExpenses
+
+	defer func() {
+		c.templates.Render(w, "pages/expenses/index.html", data)
+	}()
+
 	expenses, err := c.storage.GetAllExpenseTypes(ctx)
 	if err != nil {
 		data.Error = err.Error()
-		c.templates.Render(w, "pages/expenses/index.html", data)
 		return
 	}
 
 	groupedExpenses, years, err := expensesGroupByYearAndMonth(ctx, expenses, c.storage)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error grouping expenses: %s", err.Error())
-		c.templates.Render(w, "pages/expenses/index.html", data)
+		return
 	}
 
 	today := time.Now()
@@ -110,8 +114,6 @@ func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWri
 	if banner != nil {
 		data.Banner = *banner
 	}
-
-	c.templates.Render(w, "pages/expenses/index.html", data)
 }
 
 func expensesGroupByYearAndMonth(
@@ -186,18 +188,21 @@ type expenseViewData struct {
 func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	data := expenseViewData{}
 	data.CurrentPage = pageExpenses
+
+	defer func() {
+		c.templates.Render(w, "pages/expenses/edit.html", data)
+	}()
+
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		data.Error = err.Error()
-		c.templates.Render(w, "pages/expenses/edit.html", data)
 		return
 	}
 
 	expense, err := c.storage.GetExpenseByID(ctx, id)
 	if err != nil {
 		data.Error = err.Error()
-		c.templates.Render(w, "pages/expenses/edit.html", data)
 		return
 	}
 
@@ -223,8 +228,6 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 
 	data.Expense = expenseview
 	data.Categories = categories
-
-	c.templates.Render(w, "pages/expenses/edit.html", data)
 }
 
 func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -232,12 +235,15 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	data.CurrentPage = pageExpenses
 	data.FormErrors = make(map[string]string)
 
+	defer func() {
+		c.templates.Render(w, "pages/expenses/edit.html", data)
+	}()
+
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 
 	if err != nil {
 		data.Error = err.Error()
-		c.templates.Render(w, "pages/expenses/edit.html", data)
 		return
 	}
 
@@ -245,7 +251,6 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	if err != nil {
 		c.logger.Error("Failed to parse form", "error", err)
 		data.Error = err.Error()
-		c.templates.Render(w, "pages/expenses/edit.html", data)
 		return
 	}
 
@@ -332,7 +337,6 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	data.Categories = categories
 
 	if len(data.FormErrors) > 0 {
-		c.templates.Render(w, "pages/expenses/edit.html", data)
 		return
 	}
 
@@ -342,14 +346,12 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	if err != nil {
 		c.logger.Error("Failed to update expense", "error", err, "id", id)
 		data.FormErrors["failed to update expense"] = err.Error()
-		c.templates.Render(w, "pages/expenses/edit.html", data)
 		return
 	}
 
 	if updated != 1 {
 		c.logger.Error("Failed to update expense", "id", id)
 		data.FormErrors["failed to update expense"] = "No record updated"
-		c.templates.Render(w, "pages/expenses/edit.html", data)
 		return
 	}
 
@@ -374,17 +376,23 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		Icon:    "✅",
 		Message: "Expense Updated",
 	}
-	c.templates.Render(w, "pages/expenses/edit.html", data)
 }
 
 func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	var errorData *expenseViewData
+
+	defer func() {
+		if errorData != nil {
+			c.templates.Render(w, "pages/expenses/edit.html", *errorData)
+		}
+	}()
+
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		data := expenseViewData{}
-		data.CurrentPage = pageExpenses
-		data.Error = fmt.Sprintf("Invalid the ID. %s", err.Error())
-		c.templates.Render(w, "pages/expenses/edit.html", data)
+		errorData = &expenseViewData{}
+		errorData.CurrentPage = pageExpenses
+		errorData.Error = fmt.Sprintf("Invalid the ID. %s", err.Error())
 		return
 	}
 
@@ -392,10 +400,9 @@ func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.Respon
 	if err != nil {
 		c.logger.Error("Failed to delete expense", "error", err, "id", id)
 
-		data := expenseViewData{}
-		data.CurrentPage = pageExpenses
-		data.Error = fmt.Sprintf("Error deleting the expense. %s", err.Error())
-		c.templates.Render(w, "pages/expenses/edit.html", data)
+		errorData = &expenseViewData{}
+		errorData.CurrentPage = pageExpenses
+		errorData.Error = fmt.Sprintf("Error deleting the expense. %s", err.Error())
 		return
 	}
 
@@ -412,33 +419,35 @@ func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.Respon
 func (c *expenseHandler) expenseSearchHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	data := expesesViewData{}
 	data.CurrentPage = pageExpenses
-	err := r.ParseForm()
 
+	defer func() {
+		c.templates.Render(w, "pages/expenses/index.html", data)
+	}()
+
+	err := r.ParseForm()
 	if err != nil {
 		data.Error = err.Error()
-		c.templates.Render(w, "pages/expenses/index.html", data)
 		return
 	}
 
 	query := r.FormValue("q")
-
 	if query == "" {
 		data.Error = errSearchCriteria
-		c.templates.Render(w, "pages/expenses/index.html", data)
 		return
 	}
 
 	expenses, err := c.storage.SearchExpenses(ctx, query)
 	if err != nil {
 		data.Error = errSearchCriteria
-		c.templates.Render(w, "pages/expenses/index.html", data)
+		return
 	}
 
 	groupedExpenses, years, err := expensesGroupByYearAndMonth(ctx, expenses, c.storage)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error grouping expenses: %s", err.Error())
-		c.templates.Render(w, "pages/expenses/index.html", data)
+		return
 	}
+
 	today := time.Now()
 
 	data.Expenses = groupedExpenses
@@ -447,6 +456,4 @@ func (c *expenseHandler) expenseSearchHandler(ctx context.Context, w http.Respon
 	data.CurrentYear = today.Year()
 	data.CurrentMonth = today.Month().String()
 	data.Query = query
-
-	c.templates.Render(w, "pages/expenses/index.html", data)
 }
