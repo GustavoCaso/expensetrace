@@ -1,0 +1,117 @@
+{{define "expenses/form"}}
+<form class="expense-form">  
+  <div class="form-group">
+    <label for="expense-source">Source</label>
+    {{if index .FormErrors "source"}}
+      <input type="text" class="error-input" id="expense-source" 
+        name="source" value="{{.Expense.Source}}" required>
+      <span class="form-group-error">{{ index .FormErrors "source"}}</span>
+    {{else}}
+      <input type="text" id="expense-source" 
+        name="source" value="{{.Expense.Source}}" required>
+    {{end}}
+  </div>
+  
+  <div class="form-group">
+    <label for="expense-description">Description</label>
+    {{if index .FormErrors "description"}}
+      <input type="text" class="error-input" id="expense-description" 
+        name="description" value="{{.Expense.Description}}" required>
+      <span class="form-group-error">{{ index .FormErrors "description"}}</span>
+    {{else}}
+      <input type="text" id="expense-description" 
+        name="description" value="{{.Expense.Description}}" required>
+    {{end}}
+  </div>
+  
+  <div class="form-row">
+    <div class="form-group">
+      <label for="expense-amount">Amount</label>
+      {{if index .FormErrors "amount"}}
+        <input type="number" class="error-input" id="expense-amount" 
+          name="amount" value="{{printf "%.2f" (divideFloat .Expense.Amount 100)}}" step="0.01" required>
+        <span class="form-group-error">{{ index .FormErrors "amount"}}</span>
+      {{else}}
+        <input type="number" id="expense-amount" 
+          name="amount" value="{{printf "%.2f" (divideFloat .Expense.Amount 100)}}" step="0.01" required>
+      {{end}}
+    </div>
+    
+    <div class="form-group">
+      <label for="expense-currency">Currency</label>
+      {{if index .FormErrors "currency"}}
+        <select class="error-input" id="expense-currency" name="currency" required>
+          <option value="EUR" {{if eq .Expense.Currency "EUR"}}selected{{end}}>EUR (€)</option>
+          <option value="USD" {{if eq .Expense.Currency "USD"}}selected{{end}}>USD ($)</option>
+          <option value="GBP" {{if eq .Expense.Currency "GBP"}}selected{{end}}>GBP (£)</option>
+        </select>
+        <span class="form-group-error">{{ index .FormErrors "currency"}}</span>
+      {{else}}
+        <select id="expense-currency" name="currency" required>
+          <option value="EUR" {{if eq .Expense.Currency "EUR"}}selected{{end}}>EUR (€)</option>
+          <option value="USD" {{if eq .Expense.Currency "USD"}}selected{{end}}>USD ($)</option>
+          <option value="GBP" {{if eq .Expense.Currency "GBP"}}selected{{end}}>GBP (£)</option>
+        </select>
+      {{end}}
+    </div>
+  </div>
+  
+  <div class="form-group">
+    <label for="expense-date">Date</label>
+    {{if index .FormErrors "date"}}
+      <input type="date" class="error-input" id="expense-date" 
+        name="date" value="{{.Expense.Date.Format "2006-01-02"}}" required>
+      <span class="form-group-error">{{ index .FormErrors "date"}}</span>
+    {{else}}
+      <input type="date" id="expense-date" 
+        name="date" value="{{.Expense.Date.Format "2006-01-02"}}" required>
+    {{end}}
+  </div>
+  
+  <div class="form-group">
+    <label for="expense-type">Type</label>
+    <div class="radio-group">
+      <label class="radio-label">
+        <input type="radio" name="type" value="0" {{if eq .Expense.Type 0}}checked{{end}}>
+        <span class="radio-text">Expense</span>
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="type" value="1" {{if eq .Expense.Type 1}}checked{{end}}>
+        <span class="radio-text">Income</span>
+      </label>
+    </div>
+  </div>
+  
+  <div class="form-group">
+    <label for="expense-category">Category</label>
+    <select id="expense-category" name="category_id">
+      <option value="">None</option>
+      {{range .Categories}}
+        <option value="{{.ID}}" {{if eq $.Expense.CategoryID .ID}}selected{{end}}>
+          {{.Name}}
+        </option>
+      {{end}}
+    </select>
+  </div>
+  
+  {{if eq .Action "edit"}} 
+    <div class="form-actions">
+      <button class="btn-primary"
+              hx-put="/expense/{{.Expense.ID}}" 
+              hx-target="#page" 
+              hx-swap="outerHTML">
+        Update
+      </button>
+    </div>
+  {{else}}
+    <div class="form-actions">
+      <button class="btn-primary"
+              hx-post="/expense" 
+              hx-target="#page" 
+              hx-swap="outerHTML">
+        Create
+      </button>
+    </div>        
+  {{end}}
+</form>
+{{end}}

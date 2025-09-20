@@ -426,7 +426,7 @@ func TestDeleteExpenseHandler(t *testing.T) {
 
 	ensureNoErrorInTemplateResponse(t, "delete expense", resp.Body)
 
-	allExpenses, err := s.GetExpenses(context.Background())
+	allExpenses, err := s.GetAllExpenseTypes(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -561,7 +561,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		t.Errorf("DELETE /expense/1 failed with status %v", w.Result().Status)
 	}
 
-	allExpenses, err := s.GetExpenses(context.Background())
+	allExpenses, err := s.GetAllExpenseTypes(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get expenses after deletion: %v", err)
 	}
@@ -625,4 +625,370 @@ func TestExpenseSearchHandler(t *testing.T) {
 	}
 
 	ensureNoErrorInTemplateResponse(t, "search expenses", resp.Body)
+}
+
+func TestCreateExpenseHandler(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
+	categoryID, err := s.CreateCategory(context.Background(), "Test Category", "test")
+	if err != nil {
+		t.Fatalf("Failed to create test category: %v", err)
+	}
+
+	matcher := matcher.New([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
+
+	now := time.Now()
+	formData := url.Values{}
+	formData.Set("source", "Test Source")
+	formData.Set("description", "Test expense creation")
+	formData.Set("amount", "25.50")
+	formData.Set("currency", "USD")
+	formData.Set("date", now.Format("2006-01-02"))
+	formData.Set("type", "0")
+	formData.Set("category_id", strconv.FormatInt(categoryID, 10))
+
+	req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK; got %v", resp.Status)
+	}
+
+	ensureNoErrorInTemplateResponse(t, "create expense", resp.Body)
+
+	body := w.Body.String()
+	if !strings.Contains(body, "Expense Created") {
+		t.Error("Response should contain success banner")
+	}
+
+	allExpenses, err := s.GetAllExpenseTypes(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get expenses: %v", err)
+	}
+
+	if len(allExpenses) != 1 {
+		t.Errorf("Expected 1 expense after creation, got %d", len(allExpenses))
+	}
+
+	expense := allExpenses[0]
+	if expense.Source() != "Test Source" {
+		t.Errorf("Expected source 'Test Source', got '%s'", expense.Source())
+	}
+	if expense.Description() != "Test expense creation" {
+		t.Errorf("Expected description 'Test expense creation', got '%s'", expense.Description())
+	}
+	if expense.Amount() != -2550 {
+		t.Errorf("Expected amount -2550 (cents), got %d", expense.Amount())
+	}
+	if expense.Currency() != "USD" {
+		t.Errorf("Expected currency 'USD', got '%s'", expense.Currency())
+	}
+	if expense.Type() != storage.ChargeType {
+		t.Errorf("Expected type ChargeType, got %v", expense.Type())
+	}
+	if *expense.CategoryID() != categoryID {
+		t.Errorf("Expected category ID %d, got %d", categoryID, *expense.CategoryID())
+	}
+}
+
+func TestCreateExpenseHandlerNilCategory(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
+	matcher := matcher.New([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
+
+	now := time.Now()
+	formData := url.Values{}
+	formData.Set("source", "Test Source")
+	formData.Set("description", "Test expense without category")
+	formData.Set("amount", "10.00")
+	formData.Set("currency", "EUR")
+	formData.Set("date", now.Format("2006-01-02"))
+	formData.Set("type", "1")
+	formData.Set("category_id", "")
+
+	req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK; got %v", resp.Status)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "Expense Created") {
+		t.Errorf("Expected success banner, got: %s", body)
+	}
+
+	allExpenses, err := s.GetAllExpenseTypes(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get expenses: %v", err)
+	}
+
+	if len(allExpenses) != 1 {
+		t.Errorf("Expected 1 expense after creation, got %d", len(allExpenses))
+		return
+	}
+
+	expense := allExpenses[0]
+	if expense.CategoryID() != nil {
+		t.Errorf("Expected nil category ID, got %v", expense.CategoryID())
+	}
+	if expense.Type() != storage.IncomeType {
+		t.Errorf("Expected type IncomeType, got %v", expense.Type())
+	}
+}
+
+func TestCreateExpenseHandlerAmountSigning(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
+	matcher := matcher.New([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
+
+	now := time.Now()
+
+	tests := []struct {
+		name           string
+		amount         string
+		expenseType    string
+		expectedAmount int64
+		description    string
+	}{
+		{
+			name:           "positive amount expense becomes negative",
+			amount:         "10.50",
+			expenseType:    "0", // ChargeType
+			expectedAmount: -1050,
+			description:    "Positive expense amount",
+		},
+		{
+			name:           "negative amount expense stays negative",
+			amount:         "-10.50",
+			expenseType:    "0", // ChargeType
+			expectedAmount: -1050,
+			description:    "Negative expense amount",
+		},
+		{
+			name:           "positive amount income stays positive",
+			amount:         "15.75",
+			expenseType:    "1", // IncomeType
+			expectedAmount: 1575,
+			description:    "Positive income amount",
+		},
+		{
+			name:           "negative amount income becomes positive",
+			amount:         "-15.75",
+			expenseType:    "1", // IncomeType
+			expectedAmount: 1575,
+			description:    "Negative income amount",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			formData := url.Values{}
+			formData.Set("source", "Test Source")
+			formData.Set("description", tt.description)
+			formData.Set("amount", tt.amount)
+			formData.Set("currency", "USD")
+			formData.Set("date", now.Format("2006-01-02"))
+			formData.Set("type", tt.expenseType)
+			formData.Set("category_id", "")
+
+			req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader(formData.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			resp := w.Result()
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("Expected status OK; got %v", resp.Status)
+			}
+
+			body := w.Body.String()
+			if !strings.Contains(body, "Expense Created") {
+				t.Errorf("Expected success banner, got: %s", body)
+			}
+
+			allExpenses, err := s.GetAllExpenseTypes(context.Background())
+			if err != nil {
+				t.Fatalf("Failed to get expenses: %v", err)
+			}
+
+			if len(allExpenses) == 0 {
+				t.Fatal("Expected expense to be created")
+			}
+
+			expense := allExpenses[len(allExpenses)-1] // Get the last created expense
+			if expense.Amount() != tt.expectedAmount {
+				t.Errorf("Expected amount %d, got %d", tt.expectedAmount, expense.Amount())
+			}
+		})
+	}
+}
+
+func TestCreateExpenseHandlerValidationErrors(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
+	matcher := matcher.New([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
+
+	now := time.Now()
+
+	tests := []struct {
+		name          string
+		formData      map[string]string
+		expectedError string
+	}{
+		{
+			name: "missing source",
+			formData: map[string]string{
+				"description": "Test",
+				"amount":      "10.00",
+				"currency":    "USD",
+				"date":        now.Format("2006-01-02"),
+				"type":        "0",
+			},
+			expectedError: "Source is required",
+		},
+		{
+			name: "missing description",
+			formData: map[string]string{
+				"source":   "Test Source",
+				"amount":   "10.00",
+				"currency": "USD",
+				"date":     now.Format("2006-01-02"),
+				"type":     "0",
+			},
+			expectedError: "Description is required",
+		},
+		{
+			name: "missing currency",
+			formData: map[string]string{
+				"source":      "Test Source",
+				"description": "Test",
+				"amount":      "10.00",
+				"date":        now.Format("2006-01-02"),
+				"type":        "0",
+			},
+			expectedError: "Currency is required",
+		},
+		{
+			name: "missing amount",
+			formData: map[string]string{
+				"source":      "Test Source",
+				"description": "Test",
+				"currency":    "USD",
+				"date":        now.Format("2006-01-02"),
+				"type":        "0",
+			},
+			expectedError: "Amount is required",
+		},
+		{
+			name: "invalid amount",
+			formData: map[string]string{
+				"source":      "Test Source",
+				"description": "Test",
+				"amount":      "invalid",
+				"currency":    "USD",
+				"date":        now.Format("2006-01-02"),
+				"type":        "0",
+			},
+			expectedError: "Invalid amount format",
+		},
+		{
+			name: "missing date",
+			formData: map[string]string{
+				"source":      "Test Source",
+				"description": "Test",
+				"amount":      "10.00",
+				"currency":    "USD",
+				"type":        "0",
+			},
+			expectedError: "Date is required",
+		},
+		{
+			name: "invalid date",
+			formData: map[string]string{
+				"source":      "Test Source",
+				"description": "Test",
+				"amount":      "10.00",
+				"currency":    "USD",
+				"date":        "invalid-date",
+				"type":        "0",
+			},
+			expectedError: "Invalid date format",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			formData := url.Values{}
+			for key, value := range tt.formData {
+				formData.Set(key, value)
+			}
+
+			req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader(formData.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			resp := w.Result()
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("Expected status OK for validation error handling; got %v", resp.Status)
+			}
+
+			body := w.Body.String()
+			if !strings.Contains(body, tt.expectedError) {
+				t.Errorf("Expected error message '%s' not found in response", tt.expectedError)
+			}
+
+			if strings.Contains(body, "Expense Created") {
+				t.Error("Should not show success banner when there are validation errors")
+			}
+
+			allExpenses, err := s.GetAllExpenseTypes(context.Background())
+			if err != nil {
+				t.Fatalf("Failed to get expenses: %v", err)
+			}
+
+			if len(allExpenses) != 0 {
+				t.Errorf("Expected 0 expenses after validation error, got %d", len(allExpenses))
+			}
+		})
+	}
+}
+func TestCreateExpenseHandlerFormParseError(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
+	matcher := matcher.New([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
+
+	req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader("%zzzzz"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK; got %v", resp.Status)
+	}
+
+	ensureNoErrorInTemplateResponse(t, "create expense form parse error", resp.Body)
 }

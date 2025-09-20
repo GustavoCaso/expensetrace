@@ -56,6 +56,14 @@ func (c *expenseHandler) RegisterRoutes(mux *http.ServeMux) {
 		c.expenseHandler(r.Context(), w, r)
 	})
 
+	mux.HandleFunc("GET /expense/new", func(w http.ResponseWriter, r *http.Request) {
+		c.newExpenseHandler(r.Context(), w)
+	})
+
+	mux.HandleFunc("POST /expense", func(w http.ResponseWriter, r *http.Request) {
+		c.createExpenseHandler(r.Context(), w, r)
+	})
+
 	mux.HandleFunc("PUT /expense/{id}", func(w http.ResponseWriter, r *http.Request) {
 		c.updateExpenseHandler(r.Context(), w, r)
 	})
@@ -183,11 +191,97 @@ type expenseViewData struct {
 	Expense    *expenseView
 	Categories []pkgStorage.Category
 	FormErrors map[string]string
+	Action     string
+}
+
+func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseWriter) {
+	data := expenseViewData{}
+	data.CurrentPage = pageExpenses
+	data.Action = "new"
+
+	defer func() {
+		c.templates.Render(w, "pages/expenses/new.html", data)
+	}()
+
+	categories, err := c.storage.GetCategories(ctx)
+	if err != nil {
+		c.logger.Error("Failed to get categories", "error", err)
+		data.Error = fmt.Sprintf("Failed to get categories: %s", err.Error())
+		return
+	}
+
+	data.Categories = categories
+	data.Expense = &expenseView{
+		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
+		category: pkgStorage.NewCategory(0, "", ""),
+	}
+}
+
+func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	data := expenseViewData{}
+	data.CurrentPage = pageExpenses
+	data.Action = "new"
+	data.FormErrors = make(map[string]string)
+	data.Expense = &expenseView{
+		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
+		category: pkgStorage.NewCategory(0, "", ""),
+	}
+
+	defer func() {
+		c.templates.Render(w, "pages/expenses/new.html", data)
+	}()
+
+	categories, categoriesErr := c.storage.GetCategories(ctx)
+	if categoriesErr != nil {
+		c.logger.Error("Failed to fetch categories", "error", categoriesErr)
+		data.Error = categoriesErr.Error()
+		return
+	}
+
+	data.Categories = categories
+	newExpense, err := parseExpenseForm(r, 0, data.FormErrors)
+
+	if err != nil {
+		c.logger.Error("Failed to parse form", "error", err)
+		data.Error = err.Error()
+		return
+	}
+
+	if len(data.FormErrors) > 0 {
+		return
+	}
+
+	created, err := c.storage.InsertExpenses(ctx, []pkgStorage.Expense{newExpense})
+	if err != nil {
+		c.logger.Error("Failed to create expense", "error", err)
+		data.Error = err.Error()
+		return
+	}
+
+	if created != 1 {
+		c.logger.Error("Failed to create expense")
+		data.Error = "Expense not created :("
+		return
+	}
+
+	c.logger.Info("Expense created successfully")
+
+	c.resetCache()
+
+	data.Banner = banner{
+		Icon:    "✅",
+		Message: "Expense Created",
+	}
 }
 
 func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	data := expenseViewData{}
 	data.CurrentPage = pageExpenses
+	data.Action = "edit"
+	data.Expense = &expenseView{
+		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
+		category: pkgStorage.NewCategory(0, "", ""),
+	}
 
 	defer func() {
 		c.templates.Render(w, "pages/expenses/edit.html", data)
@@ -234,6 +328,11 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	data := expenseViewData{}
 	data.CurrentPage = pageExpenses
 	data.FormErrors = make(map[string]string)
+	data.Action = "edit"
+	data.Expense = &expenseView{
+		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
+		category: pkgStorage.NewCategory(0, "", ""),
+	}
 
 	defer func() {
 		c.templates.Render(w, "pages/expenses/edit.html", data)
@@ -247,80 +346,19 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		return
 	}
 
-	err = r.ParseForm()
-	if err != nil {
-		c.logger.Error("Failed to parse form", "error", err)
-		data.Error = err.Error()
+	categories, categoriesErr := c.storage.GetCategories(ctx)
+	if categoriesErr != nil {
+		data.Error = categoriesErr.Error()
+		return
+	}
+	data.Categories = categories
+
+	expense, expenseErr := c.storage.GetExpenseByID(ctx, id)
+	if expenseErr != nil {
+		data.Error = expenseErr.Error()
 		return
 	}
 
-	source := r.FormValue("source")
-	description := r.FormValue("description")
-	amountStr := r.FormValue("amount")
-	currency := r.FormValue("currency")
-	dateStr := r.FormValue("date")
-	typeStr := r.FormValue("type")
-	categoryIDStr := r.FormValue("category_id")
-
-	if source == "" {
-		data.FormErrors["source"] = "Source is required"
-	}
-	if description == "" {
-		data.FormErrors["description"] = "Description is required"
-	}
-	if currency == "" {
-		data.FormErrors["currency"] = "Currency is required"
-	}
-
-	var amount int64
-	if amountStr == "" {
-		data.FormErrors["amount"] = "Amount is required"
-	} else {
-		amountFloat, parseErr := strconv.ParseFloat(amountStr, 64)
-		if parseErr != nil {
-			data.FormErrors["amount"] = "Invalid amount format"
-		} else {
-			amount = int64(amountFloat * centsMultiplier)
-		}
-	}
-
-	var date time.Time
-	if dateStr == "" {
-		data.FormErrors["date"] = "Date is required"
-	} else {
-		date, err = time.Parse("2006-01-02", dateStr)
-		if err != nil {
-			data.FormErrors["date"] = "Invalid date format"
-		}
-	}
-
-	var expenseType pkgStorage.ExpenseType
-	if typeStr == "" {
-		data.FormErrors["type"] = "Type is required"
-	} else {
-		typeInt, parseErr := strconv.Atoi(typeStr)
-		if parseErr != nil {
-			data.FormErrors["type"] = "Invalid type"
-		} else {
-			expenseType = pkgStorage.ExpenseType(typeInt)
-		}
-	}
-
-	var categoryID *int64
-	if categoryIDStr != "" {
-		catID, parseErr := strconv.ParseInt(categoryIDStr, 10, 64)
-		if parseErr != nil {
-			data.FormErrors["category_id"] = "Invalid category"
-			categoryID = nil
-		} else {
-			categoryID = &catID
-		}
-	} else {
-		categoryID = nil
-	}
-
-	categories, _ := c.storage.GetCategories(ctx)
-	expense, _ := c.storage.GetExpenseByID(ctx, id)
 	var category pkgStorage.Category
 	if expense.CategoryID() != nil {
 		cat, categoryErr := c.storage.GetCategory(ctx, *expense.CategoryID())
@@ -334,13 +372,18 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		Expense:  expense,
 		category: category,
 	}
-	data.Categories = categories
+
+	updatedExpense, err := parseExpenseForm(r, id, data.FormErrors)
+
+	if err != nil {
+		c.logger.Error("Failed to parse form", "error", err)
+		data.Error = err.Error()
+		return
+	}
 
 	if len(data.FormErrors) > 0 {
 		return
 	}
-
-	updatedExpense := pkgStorage.NewExpense(id, source, description, currency, amount, date, expenseType, categoryID)
 
 	updated, err := c.storage.UpdateExpense(ctx, updatedExpense)
 	if err != nil {
@@ -376,6 +419,89 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		Icon:    "✅",
 		Message: "Expense Updated",
 	}
+}
+
+func parseExpenseForm(r *http.Request, id int64, formErrors map[string]string) (pkgStorage.Expense, error) {
+	err := r.ParseForm()
+	if err != nil {
+		return nil, err
+	}
+
+	source := r.FormValue("source")
+	description := r.FormValue("description")
+	amountStr := r.FormValue("amount")
+	currency := r.FormValue("currency")
+	dateStr := r.FormValue("date")
+	typeStr := r.FormValue("type")
+	categoryIDStr := r.FormValue("category_id")
+
+	if source == "" {
+		formErrors["source"] = "Source is required"
+	}
+	if description == "" {
+		formErrors["description"] = "Description is required"
+	}
+	if currency == "" {
+		formErrors["currency"] = "Currency is required"
+	}
+
+	var amount int64
+	var expenseType pkgStorage.ExpenseType
+
+	if amountStr == "" {
+		formErrors["amount"] = "Amount is required"
+	} else {
+		amountFloat, parseErr := strconv.ParseFloat(amountStr, 64)
+		if parseErr != nil {
+			formErrors["amount"] = "Invalid amount format"
+		} else {
+			amount = int64(amountFloat * centsMultiplier)
+		}
+	}
+
+	var date time.Time
+	if dateStr == "" {
+		formErrors["date"] = "Date is required"
+	} else {
+		date, err = time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			formErrors["date"] = "Invalid date format"
+		}
+	}
+
+	if typeStr == "" {
+		formErrors["type"] = "Type is required"
+	} else {
+		typeInt, parseErr := strconv.Atoi(typeStr)
+		if parseErr != nil {
+			formErrors["type"] = "Invalid type"
+		} else {
+			expenseType = pkgStorage.ExpenseType(typeInt)
+		}
+	}
+
+	if amount != 0 {
+		if expenseType == pkgStorage.ChargeType && amount > 0 {
+			amount = -amount
+		} else if expenseType == pkgStorage.IncomeType && amount < 0 {
+			amount = -amount
+		}
+	}
+
+	var categoryID *int64
+	if categoryIDStr != "" {
+		catID, parseErr := strconv.ParseInt(categoryIDStr, 10, 64)
+		if parseErr != nil {
+			formErrors["category_id"] = "Invalid category"
+			categoryID = nil
+		} else {
+			categoryID = &catID
+		}
+	} else {
+		categoryID = nil
+	}
+
+	return pkgStorage.NewExpense(id, source, description, currency, amount, date, expenseType, categoryID), nil
 }
 
 func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {

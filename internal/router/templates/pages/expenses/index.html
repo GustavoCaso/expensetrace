@@ -2,6 +2,7 @@
 {{define "css"}}/static/css/expenses.css{{end}}
 
 {{define "main"}}
+  {{ template "expenses/nav" "index" }}
   
   {{if gt (len .Banner.Icon) 0}} 
     {{template "banner" .Banner}}
