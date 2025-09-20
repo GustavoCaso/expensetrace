@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
 	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
@@ -209,7 +208,7 @@ func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseW
 
 	data.Categories = categories
 	data.Expense = &expenseView{
-		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), storage.ChargeType, nil),
+		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
 		category: pkgStorage.NewCategory(0, "", ""),
 	}
 	c.templates.Render(w, template, data)
@@ -222,7 +221,7 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 	data.Action = "new"
 	data.FormErrors = make(map[string]string)
 	data.Expense = &expenseView{
-		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), storage.ChargeType, nil),
+		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
 		category: pkgStorage.NewCategory(0, "", ""),
 	}
 
@@ -280,7 +279,7 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 	data.CurrentPage = pageExpenses
 	data.Action = "edit"
 	data.Expense = &expenseView{
-		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), storage.ChargeType, nil),
+		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
 		category: pkgStorage.NewCategory(0, "", ""),
 	}
 
@@ -331,7 +330,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	data.FormErrors = make(map[string]string)
 	data.Action = "edit"
 	data.Expense = &expenseView{
-		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), storage.ChargeType, nil),
+		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
 		category: pkgStorage.NewCategory(0, "", ""),
 	}
 
@@ -486,9 +485,9 @@ func parseExpenseForm(r *http.Request, id int64, formErrors map[string]string) (
 	}
 
 	if amount != 0 {
-		if expenseType == storage.ChargeType && amount > 0 {
+		if expenseType == pkgStorage.ChargeType && amount > 0 {
 			amount = -amount
-		} else if expenseType == storage.IncomeType && amount < 0 {
+		} else if expenseType == pkgStorage.IncomeType && amount < 0 {
 			amount = -amount
 		}
 	}
