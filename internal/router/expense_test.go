@@ -683,8 +683,8 @@ func TestCreateExpenseHandler(t *testing.T) {
 	if expense.Description() != "Test expense creation" {
 		t.Errorf("Expected description 'Test expense creation', got '%s'", expense.Description())
 	}
-	if expense.Amount() != 2550 {
-		t.Errorf("Expected amount 2550 (cents), got %d", expense.Amount())
+	if expense.Amount() != -2550 {
+		t.Errorf("Expected amount -2550 (cents), got %d", expense.Amount())
 	}
 	if expense.Currency() != "USD" {
 		t.Errorf("Expected currency 'USD', got '%s'", expense.Currency())
@@ -746,6 +746,96 @@ func TestCreateExpenseHandlerNilCategory(t *testing.T) {
 	}
 	if expense.Type() != storage.IncomeType {
 		t.Errorf("Expected type IncomeType, got %v", expense.Type())
+	}
+}
+
+func TestCreateExpenseHandlerAmountSigning(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
+	matcher := matcher.New([]storage.Category{})
+	handler, _ := New(s, matcher, logger)
+
+	now := time.Now()
+
+	tests := []struct {
+		name           string
+		amount         string
+		expenseType    string
+		expectedAmount int64
+		description    string
+	}{
+		{
+			name:           "positive amount expense becomes negative",
+			amount:         "10.50",
+			expenseType:    "0", // ChargeType
+			expectedAmount: -1050,
+			description:    "Positive expense amount",
+		},
+		{
+			name:           "negative amount expense stays negative",
+			amount:         "-10.50",
+			expenseType:    "0", // ChargeType
+			expectedAmount: -1050,
+			description:    "Negative expense amount",
+		},
+		{
+			name:           "positive amount income stays positive",
+			amount:         "15.75",
+			expenseType:    "1", // IncomeType
+			expectedAmount: 1575,
+			description:    "Positive income amount",
+		},
+		{
+			name:           "negative amount income becomes positive",
+			amount:         "-15.75",
+			expenseType:    "1", // IncomeType
+			expectedAmount: 1575,
+			description:    "Negative income amount",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			formData := url.Values{}
+			formData.Set("source", "Test Source")
+			formData.Set("description", tt.description)
+			formData.Set("amount", tt.amount)
+			formData.Set("currency", "USD")
+			formData.Set("date", now.Format("2006-01-02"))
+			formData.Set("type", tt.expenseType)
+			formData.Set("category_id", "")
+
+			req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader(formData.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			resp := w.Result()
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("Expected status OK; got %v", resp.Status)
+			}
+
+			body := w.Body.String()
+			if !strings.Contains(body, "Expense Created") {
+				t.Errorf("Expected success banner, got: %s", body)
+			}
+
+			allExpenses, err := s.GetAllExpenseTypes(context.Background())
+			if err != nil {
+				t.Fatalf("Failed to get expenses: %v", err)
+			}
+
+			if len(allExpenses) == 0 {
+				t.Fatal("Expected expense to be created")
+			}
+
+			expense := allExpenses[len(allExpenses)-1] // Get the last created expense
+			if expense.Amount() != tt.expectedAmount {
+				t.Errorf("Expected amount %d, got %d", tt.expectedAmount, expense.Amount())
+			}
+		})
 	}
 }
 
