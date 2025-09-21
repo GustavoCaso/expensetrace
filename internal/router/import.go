@@ -39,17 +39,18 @@ type importViewData struct {
 func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	data := importViewData{}
 	data.CurrentPage = pageImport
-	err := r.ParseMultipartForm(maxMemory)
 
+	defer func() {
+		i.templates.Render(w, "partials/import/result.html", data)
+	}()
+
+	err := r.ParseMultipartForm(maxMemory)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error parsing form: %s", err.Error())
-
-		i.templates.Render(w, "partials/import/result", data)
 		return
 	}
 
 	file, header, err := r.FormFile("file")
-
 	if err != nil {
 		var errorMessage string
 		if errors.Is(err, http.ErrMissingFile) {
@@ -58,8 +59,6 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 			errorMessage = "Error retrieving the file"
 		}
 		data.Error = fmt.Sprintf("Error parsing form: %s", errorMessage)
-
-		i.templates.Render(w, "partials/import/result", data)
 		return
 	}
 	defer file.Close()
@@ -69,8 +68,6 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 	_, err = io.Copy(&buf, file)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error copying bytes: %s", err.Error())
-
-		i.templates.Render(w, "partials/import/result", data)
 		return
 	}
 	i.logger.Info("Importing started", "file_name", header.Filename, "size", fmt.Sprintf("%dKB", buf.Len()))
@@ -79,8 +76,6 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 
 	if info.Error != nil && info.TotalImports == 0 {
 		data.Error = fmt.Sprintf("Error importing expenses: %s", info.Error.Error())
-
-		i.templates.Render(w, "partials/import/result.html", data)
 		return
 	}
 	i.logger.Info("Imported succeeded 🎉", "total", info.TotalImports)
@@ -89,6 +84,4 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 
 	// Reset cache to refresh data after import
 	i.resetCache()
-
-	i.templates.Render(w, "partials/import/result.html", data)
 }
