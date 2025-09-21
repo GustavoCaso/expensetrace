@@ -32,7 +32,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, r *http.Request) {
-		c.uncategorizedHandler(r.Context(), w, "")
+		c.uncategorizedHandler(r.Context(), w, "", nil)
 	})
 
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +94,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 			return
 		}
 
-		c.uncategorizedHandler(r.Context(), w, query)
+		c.uncategorizedHandler(r.Context(), w, query, nil)
 	})
 }
 
@@ -373,6 +373,7 @@ func (c *categoryHandler) uncategorizedHandler(
 	ctx context.Context,
 	w http.ResponseWriter,
 	query string,
+	banner *banner,
 ) {
 	data := uncategorizedViewData{}
 	data.CurrentPage = pageCategories
@@ -435,6 +436,10 @@ func (c *categoryHandler) uncategorizedHandler(
 	data.Categories = c.matcher.Categories()
 	data.TotalExpenses = totalExpenses
 	data.TotalAmount = totalAmount
+
+	if banner != nil {
+		data.Banner = *banner
+	}
 }
 
 var specialCharactersRegex = regexp.MustCompile(`[^a-z0-9\-]`)
@@ -519,8 +524,9 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 		return
 	}
 
+	updatedExpenses := make([]storage.Expense, len(expenses))
+
 	if len(expenses) > 0 {
-		updatedExpenses := make([]storage.Expense, len(expenses))
 		categoryID := int64(categoryID)
 		for i, ex := range expenses {
 			expense := storage.NewExpense(
@@ -556,7 +562,10 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 		c.resetCache()
 	}
 
-	c.uncategorizedHandler(ctx, w, "")
+	c.uncategorizedHandler(ctx, w, "", &banner{
+		Icon:    "✅",
+		Message: fmt.Sprintf("%d expenses categorized to %s", len(updatedExpenses), cat.Name()),
+	})
 }
 
 func (c *categoryHandler) resetcategoryHandler(ctx context.Context, w http.ResponseWriter) {
@@ -632,7 +641,7 @@ func (c *categoryHandler) createcategoryHandler(
 ) {
 	data := createCategoryViewData{}
 	data.CurrentPage = pageCategories
-	template := "partials/categories/new_result.html"
+	template := "partials/categories/test_category.html"
 	if create {
 		template = "pages/categories/new.html"
 	}

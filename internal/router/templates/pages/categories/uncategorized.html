@@ -5,6 +5,10 @@
   {{ if eq (len .Error) 0 }}
     {{template "categories/nav" "uncategorized"}}
     
+    {{if gt (len .Banner.Icon) 0}} 
+      {{template "banner" .Banner}}
+    {{end}}
+    
     <form class='search-form'>
       <div class="form-group">
         <input type='search' name='q' required>
@@ -147,6 +151,5 @@
     </div>
   {{ else }}
     {{template "error" .Error}}
-    <button class="btn-primary" hx-get="/categories" hx-target="#page" hx-swap="outerHTML">Retry</button>
   {{ end }}
 {{end}}

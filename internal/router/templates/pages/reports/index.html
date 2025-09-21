@@ -16,7 +16,5 @@
     </div>
   {{ else }}
     {{template "error" .Error}}
-   
-    <button class="btn-primary" hx-get="/" hx-swap="outerHTML">Retry</button>
   {{ end }}
 {{end}}
