@@ -1,23 +1,68 @@
-{{define "title"}}Import Expeses{{end}}
+{{define "title"}}Import Expenses{{end}}
 {{define "css"}}/static/css/import.css{{end}}
 
 {{define "main"}}
-<form class="form-with-bg">
-  <div class="form-group">
-    <label for="file-upload">Select file to import</label>
-    <input id="file-upload" type="file" name="file" required>
+<div class="card">
+  <div class="card-header">
+    <h2>Import Expenses</h2>
+    <p>Upload a CSV or JSON file to import your expenses</p>
   </div>
-  <div class="form-actions">
-    <button 
-      class="btn-primary" 
-      hx-post="/import" 
-      hx-encoding="multipart/form-data" 
-      hx-target="#form-results" 
-      type="submit">
-      Import
-    </button>
+  
+  {{if gt (len .Banner.Icon) 0}} 
+    {{template "banner" .Banner}}
+  {{end}}
+  
+  {{ if gt (len .Error) 0 }}
+    {{template "error" .Error}}
+  {{end}}
+  
+  <div id="import-body">
+    <div class="card-body">
+      <div class="import-options">
+        <div class="import-option">
+          <h3>Interactive Import (Recommended)</h3>
+          <p>Upload your file and map columns to expense fields. Works with any CSV/JSON format.</p>
+          <form id="interactive-import-form">
+            <div class="form-group">
+              <label for="file-upload-interactive">Select file to import</label>
+              <input id="file-upload-interactive" type="file" name="file" accept=".csv,.json" required>
+            </div>
+            <div class="form-actions">
+              <button
+                class="btn-primary"
+                hx-post="/import/preview"
+                hx-encoding="multipart/form-data"
+                hx-target="#import-body"
+                hx-swap="innerHTML"
+                type="submit">
+                Start Import
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="import-option">
+          <h3>Quick Import (Legacy)</h3>
+          <p>For files matching the exact format: <code>source,date,description,amount,currency</code></p>
+          <form id="quick-import-form">
+            <div class="form-group">
+              <label for="file-upload-quick">Select file to import</label>
+              <input id="file-upload-quick" type="file" name="file" accept=".csv,.json" required>
+            </div>
+            <div class="form-actions">
+              <button
+                class="btn-secondary"
+                hx-post="/import"
+                hx-encoding="multipart/form-data"
+                hx-target="#page" hx-swap="outerHTML"
+                type="submit">
+                Quick Import
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
-</form>
-<div id='form-results'>
 </div>
 {{end}}

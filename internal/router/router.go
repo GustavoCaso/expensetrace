@@ -61,7 +61,8 @@ func New(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logge
 	}
 
 	importHanlder := &importHandler{
-		router,
+		router:       router,
+		sessionStore: nil, // Will be initialized in RegisterRoutes
 	}
 
 	reports.RegisterRoutes(mux)
