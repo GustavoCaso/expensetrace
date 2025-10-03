@@ -1,8 +1,6 @@
 package importutil
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -30,56 +28,32 @@ var revolutTransformers = []transformer{
 		return nil
 	},
 	func(v string, entry *entry) error { // Amount
-		matches := re.FindStringSubmatch(v)
-		if len(matches) == 0 {
-			return fmt.Errorf("amount regex did not find any matches")
-		}
+		amount, err := parseAmount(v)
 
-		amount := matches[amountIndex]
-		decimal := matches[decimalIndex]
-
-		parsedAmount, err := strconv.ParseInt(fmt.Sprintf("%s%s", amount, decimal), 10, 64)
 		if err != nil {
 			return err
 		}
 
-		if strings.HasPrefix(v, "-") || strings.HasPrefix(v, "−") {
-			parsedAmount = parsedAmount * -1
-		}
-
-		if parsedAmount != 0 {
-			entry.amount = parsedAmount
-		}
+		entry.amount = amount
 
 		return nil
 	},
 	func(v string, entry *entry) error { // Fee
-		matches := re.FindStringSubmatch(v)
-		if len(matches) == 0 {
-			return fmt.Errorf("amount regex did not find any matches")
-		}
+		feeAmount, err := parseAmount(v)
 
-		amount := matches[amountIndex]
-		decimal := matches[decimalIndex]
-
-		parsedAmount, err := strconv.ParseInt(fmt.Sprintf("%s%s", amount, decimal), 10, 64)
 		if err != nil {
 			return err
 		}
 
-		if strings.HasPrefix(v, "-") || strings.HasPrefix(v, "−") {
-			parsedAmount = parsedAmount * -1
-		}
-
-		if parsedAmount != 0 {
+		if feeAmount != 0 {
 			if entry.amount != 0 {
-				entry.amount -= parsedAmount
+				entry.amount -= feeAmount
 			} else {
-				entry.amount = parsedAmount
+				entry.amount = feeAmount
 			}
 		}
 		if entry.charge {
-			entry.amount = entry.amount * -1
+			entry.amount *= -1
 		}
 		return nil
 	},

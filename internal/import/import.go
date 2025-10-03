@@ -9,6 +9,7 @@ import (
 	"io"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -45,6 +46,27 @@ type entry struct {
 }
 
 type transformer func(v string, entry *entry) error
+
+func parseAmount(v string) (int64, error) {
+	matches := re.FindStringSubmatch(v)
+	if len(matches) == 0 {
+		return 0, errors.New("amount regex did not find any matches")
+	}
+
+	amount := matches[amountIndex]
+	decimal := matches[decimalIndex]
+
+	parsedAmount, err := strconv.ParseInt(fmt.Sprintf("%s%s", amount, decimal), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	if strings.HasPrefix(v, "-") || strings.HasPrefix(v, "−") {
+		parsedAmount *= -1
+	}
+
+	return parsedAmount, nil
+}
 
 var defaultSourceTransformers = map[string][]transformer{
 	"evo":       evoTransformers,
@@ -103,9 +125,9 @@ func Import(
 
 				value := record[idxcol]
 				if value != "" {
-					err := f(value, ex)
-					if err != nil {
-						info.Error = err
+					tranformerErr := f(value, ex)
+					if tranformerErr != nil {
+						info.Error = tranformerErr
 						return info
 					}
 				}

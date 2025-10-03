@@ -1,8 +1,6 @@
 package importutil
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -26,24 +24,13 @@ var bankinterTransformers = []transformer{
 		v = strings.ReplaceAll(v, "\"", "")
 		v = strings.ReplaceAll(v, ",", "")
 
-		matches := re.FindStringSubmatch(v)
-		if len(matches) == 0 {
-			return fmt.Errorf("amount regex did not find any matches")
-		}
+		amount, err := parseAmount(v)
 
-		amount := matches[amountIndex]
-		decimal := matches[decimalIndex]
-
-		parsedAmount, err := strconv.ParseInt(fmt.Sprintf("%s%s", amount, decimal), 10, 64)
 		if err != nil {
 			return err
 		}
 
-		if strings.HasPrefix(v, "-") || strings.HasPrefix(v, "−") {
-			parsedAmount = parsedAmount * -1
-		}
-
-		entry.amount = parsedAmount
+		entry.amount = amount
 		return nil
 	},
 	func(_ string, entry *entry) error { // Saldo but we add the currency
