@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"path"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -18,7 +20,6 @@ import (
 )
 
 var re = regexp.MustCompile(`(?P<charge>-)?(?P<amount>\d+)\.?(?P<decimal>\d*)`)
-var chargeIndex = re.SubexpIndex("charge")
 var amountIndex = re.SubexpIndex("amount")
 var decimalIndex = re.SubexpIndex("decimal")
 
@@ -37,6 +38,46 @@ type ImportInfo struct {
 	Error                 error
 }
 
+type entry struct {
+	charge      bool
+	source      string
+	date        time.Time
+	description string
+	amount      int64
+	currency    string
+}
+
+type transformer func(v string, entry *entry) error
+
+func parseAmount(v string) (int64, error) {
+	matches := re.FindStringSubmatch(v)
+	if len(matches) == 0 {
+		return 0, errors.New("amount regex did not find any matches")
+	}
+
+	amount := matches[amountIndex]
+	decimal := matches[decimalIndex]
+
+	parsedAmount, err := strconv.ParseInt(fmt.Sprintf("%s%s", amount, decimal), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	if strings.HasPrefix(v, "-") || strings.HasPrefix(v, "−") {
+		parsedAmount *= -1
+	}
+
+	return parsedAmount, nil
+}
+
+var defaultSourceTransformers = map[string][]transformer{
+	"evo":       evoTransformers,
+	"revolut":   revolutTransformers,
+	"bankinter": bankinterTransformers,
+}
+
+var availableSources = slices.Sorted(maps.Keys(defaultSourceTransformers))
+
 func Import(
 	ctx context.Context,
 	filename string,
@@ -51,57 +92,59 @@ func Import(
 
 	switch fileFormat {
 	case ".csv":
-		// CSV format
-		// source,date,description,amount,currency
-		// source: string
-		// date: dd/mm/yyyy
-		// description: string
-		// amount: string it can include minus signs
-		// currency: string
+		source, err := extractFileSource(filename)
+
+		if err != nil {
+			info.Error = err
+			return info
+		}
+
+		transformerFuncs, ok := defaultSourceTransformers[source]
+		if !ok {
+			info.Error = fmt.Errorf(
+				"no source transformer avilable for %s. Available sources: %s",
+				source,
+				availableSources,
+			)
+			return info
+		}
+
 		r := csv.NewReader(reader)
-		for {
-			record, err := r.Read()
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			if err != nil {
-				info.Error = err
-				return info
-			}
 
-			t, err := time.Parse("02/01/2006", record[1])
-			if err != nil {
-				info.Error = err
-				return info
+		// Read all records
+		records, err := r.ReadAll()
+		if err != nil {
+			info.Error = err
+			return info
+		}
+
+		startRow := 1 // Skip header row
+
+		// Process each record
+		for i := startRow; i < len(records); i++ {
+			record := records[i]
+
+			ex := &entry{}
+			for idxcol, f := range transformerFuncs {
+				if f == nil {
+					// skip this col
+					continue
+				}
+
+				value := record[idxcol]
+				if value != "" {
+					tranformerErr := f(value, ex)
+					if tranformerErr != nil {
+						info.Error = tranformerErr
+						return info
+					}
+				}
 			}
+			ex.source = source
 
-			description := strings.ToLower(record[2])
-			categoryID, category := categoryMatcher.Match(description)
-
-			matches := re.FindStringSubmatch(record[3])
-			if len(matches) == 0 {
-				info.Error = fmt.Errorf("amount regex did not find any matches for %s", record[3])
-				return info
-			}
-
-			amount := matches[amountIndex]
-			decimal := matches[decimalIndex]
-			sign := matches[chargeIndex]
-
-			// Parse the full amount string including decimal and sign
-			// If there's no sign, it's a positive number
-			amountStr := fmt.Sprintf("%s%s", amount, decimal)
-			if sign == "-" {
-				amountStr = "-" + amountStr
-			}
-			parsedAmount, err := strconv.ParseInt(amountStr, 10, 64)
-			if err != nil {
-				info.Error = err
-				return info
-			}
-
+			categoryID, category := categoryMatcher.Match(ex.description)
 			var et storageType.ExpenseType
-			if parsedAmount < 0 {
+			if ex.amount < 0 {
 				et = storageType.ChargeType
 			} else {
 				et = storageType.IncomeType
@@ -109,11 +152,11 @@ func Import(
 
 			expense := storageType.NewExpense(
 				0,
-				record[0],
-				description,
-				record[4],
-				parsedAmount,
-				t,
+				ex.source,
+				ex.description,
+				ex.currency,
+				ex.amount,
+				ex.date,
 				et,
 				categoryID,
 			)
@@ -179,4 +222,15 @@ func Import(
 	}
 
 	return info
+}
+
+func extractFileSource(filename string) (string, error) {
+	parts := strings.Split(filename, "_")
+	if len(parts) <= 1 {
+		return "", fmt.Errorf(
+			"no able to extract source from filename. Use filename with format <source>_*.csv. Available sources: %s",
+			availableSources,
+		)
+	}
+	return parts[0], nil
 }
