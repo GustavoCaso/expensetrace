@@ -12,6 +12,11 @@ import (
 	storageType "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
+var amountRe = regexp.MustCompile(`(?P<charge>-)?(?P<amount>\d+)\.?(?P<decimal>\d*)`)
+var chargeIdx = amountRe.SubexpIndex("charge")
+var amountIdx = amountRe.SubexpIndex("amount")
+var decimalIdx = amountRe.SubexpIndex("decimal")
+
 // FieldMapping defines how file columns map to expense fields.
 type FieldMapping struct {
 	Source            string // Manual source input (e.g., "Chase Bank")
@@ -177,16 +182,11 @@ func parseAmount(amountStr string) (int64, error) {
 	cleaned = strings.TrimSpace(cleaned)
 
 	// Use the existing regex pattern from import.go
-	amountRe := regexp.MustCompile(`(?P<charge>-)?(?P<amount>\d+)\.?(?P<decimal>\d*)`)
 	matches := amountRe.FindStringSubmatch(cleaned)
 
 	if len(matches) == 0 {
 		return 0, errors.New("amount does not match expected pattern")
 	}
-
-	chargeIdx := amountRe.SubexpIndex("charge")
-	amountIdx := amountRe.SubexpIndex("amount")
-	decimalIdx := amountRe.SubexpIndex("decimal")
 
 	amount := matches[amountIdx]
 	decimal := matches[decimalIdx]

@@ -22,7 +22,6 @@ var bankinterTransformers = []transformer{
 	},
 	func(v string, entry *entry) error { // Importe
 		v = strings.ReplaceAll(v, "\"", "")
-		v = strings.ReplaceAll(v, ",", "")
 
 		amount, err := parseAmount(v)
 

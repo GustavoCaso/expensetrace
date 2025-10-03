@@ -4,24 +4,17 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"maps"
 	"path"
-	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	storageType "github.com/GustavoCaso/expensetrace/internal/storage"
 )
-
-var re = regexp.MustCompile(`(?P<charge>-)?(?P<amount>\d+)\.?(?P<decimal>\d*)`)
-var amountIndex = re.SubexpIndex("amount")
-var decimalIndex = re.SubexpIndex("decimal")
 
 type jsonExpense struct {
 	Source      string    `json:"source"`
@@ -48,27 +41,6 @@ type entry struct {
 }
 
 type transformer func(v string, entry *entry) error
-
-func parseAmount(v string) (int64, error) {
-	matches := re.FindStringSubmatch(v)
-	if len(matches) == 0 {
-		return 0, errors.New("amount regex did not find any matches")
-	}
-
-	amount := matches[amountIndex]
-	decimal := matches[decimalIndex]
-
-	parsedAmount, err := strconv.ParseInt(fmt.Sprintf("%s%s", amount, decimal), 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	if strings.HasPrefix(v, "-") || strings.HasPrefix(v, "−") {
-		parsedAmount *= -1
-	}
-
-	return parsedAmount, nil
-}
 
 var defaultSourceTransformers = map[string][]transformer{
 	"evo":       evoTransformers,
