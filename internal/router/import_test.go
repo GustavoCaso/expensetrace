@@ -202,8 +202,8 @@ Bank B,02/01/2024,Lunch,-12.00,USD`
 	if !strings.Contains(responseBody, "Coffee") {
 		t.Error("Response should contain 'Coffee' preview data")
 	}
-	if !strings.Contains(responseBody, "session_id") {
-		t.Error("Response should contain session_id hidden field")
+	if !strings.Contains(responseBody, "import_session_id") {
+		t.Error("Response should contain import_session_id hidden field")
 	}
 }
 
@@ -261,8 +261,8 @@ Bank B,02/01/2024,Lunch,-12.00,USD`
 
 	// For this test, we'll manually create a session to get the ID
 	// In a real scenario, we'd parse it from the HTML response
-	if !strings.Contains(responseBody, "session_id") {
-		t.Skip("Cannot extract session_id from response for mapping test")
+	if !strings.Contains(responseBody, "import_session_id") {
+		t.Skip("Cannot extract import_session_id from response for mapping test")
 	}
 }
 

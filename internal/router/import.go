@@ -115,11 +115,11 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 
 type previewData struct {
 	viewBase
-	SessionID   string
-	Filename    string
-	Headers     []string
-	PreviewRows [][]string
-	TotalRows   int
+	ImportSessionID string
+	Filename        string
+	Headers         []string
+	PreviewRows     [][]string
+	TotalRows       int
 }
 
 // previewHandler handles file upload and shows preview with column detection.
@@ -173,7 +173,7 @@ func (i *importHandler) previewHandler(_ context.Context, w http.ResponseWriter,
 
 	// Prepare preview data
 	const previewRowCount = 5
-	data.SessionID = sessionID
+	data.ImportSessionID = sessionID
 	data.Filename = header.Filename
 	data.Headers = parsedData.Headers
 	data.PreviewRows = parsedData.GetPreviewRows(previewRowCount)
@@ -182,7 +182,7 @@ func (i *importHandler) previewHandler(_ context.Context, w http.ResponseWriter,
 
 type mappingData struct {
 	viewBase
-	SessionID       string
+	ImportSessionID string
 	Headers         []string
 	PreviewExpenses []storage.Expense
 	TotalRows       int
@@ -198,7 +198,7 @@ func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter,
 	}()
 
 	// Get session ID from form
-	sessionID := r.FormValue("session_id")
+	sessionID := r.FormValue("import_session_id")
 	if sessionID == "" {
 		data.Error = "Session ID is required"
 		return
@@ -285,7 +285,7 @@ func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter,
 		errorMessages = append(errorMessages, errorMsg)
 	}
 
-	data.SessionID = sessionID
+	data.ImportSessionID = sessionID
 	data.Headers = session.Data.Headers
 	data.PreviewExpenses = previewExpenses
 	data.TotalRows = session.Data.GetTotalRows()
@@ -293,7 +293,7 @@ func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter,
 
 	i.logger.Info(
 		"Field mapping applied",
-		"session_id", sessionID,
+		"import_session_id", sessionID,
 		"valid_rows", len(result.Expenses),
 		"error_rows", len(result.Errors),
 	)
@@ -308,7 +308,7 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 		i.templates.Render(w, "pages/import/index.html", data)
 	}()
 	// Get session ID from form
-	sessionID := r.FormValue("session_id")
+	sessionID := r.FormValue("import_session_id")
 	if sessionID == "" {
 		data.Error = "Session ID is required"
 		return
@@ -327,7 +327,7 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 		return
 	}
 
-	i.logger.Info("Executing import", "session_id", sessionID, "filename", session.Filename)
+	i.logger.Info("Executing import", "import_session_id", sessionID, "filename", session.Filename)
 
 	// Apply mapping to all rows
 	result, err := importUtil.ApplyMapping(session.Data, session.Mapping, i.matcher)
@@ -356,7 +356,7 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 
 	i.logger.Info(
 		"Import completed successfully",
-		"session_id", sessionID,
+		"import_session_id", sessionID,
 		"imported", inserted,
 		"errors", len(result.Errors),
 	)
