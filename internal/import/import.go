@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"path"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -74,6 +76,8 @@ var defaultSourceTransformers = map[string][]transformer{
 	"bankinter": bankinterTransformers,
 }
 
+var availableSources = slices.Sorted(maps.Keys(defaultSourceTransformers))
+
 func Import(
 	ctx context.Context,
 	filename string,
@@ -97,7 +101,11 @@ func Import(
 
 		transformerFuncs, ok := defaultSourceTransformers[source]
 		if !ok {
-			info.Error = fmt.Errorf("no soource transformer avilable for %s", source)
+			info.Error = fmt.Errorf(
+				"no source transformer avilable for %s. Available sources: %s",
+				source,
+				availableSources,
+			)
 			return info
 		}
 
@@ -134,7 +142,7 @@ func Import(
 			}
 			ex.source = source
 
-			categoryID, _ := categoryMatcher.Match(ex.description)
+			categoryID, category := categoryMatcher.Match(ex.description)
 			var et storageType.ExpenseType
 			if ex.amount < 0 {
 				et = storageType.ChargeType
@@ -152,6 +160,12 @@ func Import(
 				et,
 				categoryID,
 			)
+
+			if category == "" {
+				info.ImportWithoutCategory = append(info.ImportWithoutCategory, expense)
+			} else {
+				info.ImportWithCategory = append(info.ImportWithCategory, expense)
+			}
 
 			expenses = append(expenses, expense)
 		}
@@ -213,7 +227,10 @@ func Import(
 func extractFileSource(filename string) (string, error) {
 	parts := strings.Split(filename, "_")
 	if len(parts) <= 1 {
-		return "", errors.New("no able to extract source from filename. Use filename with format <source>_*.csv")
+		return "", fmt.Errorf(
+			"no able to extract source from filename. Use filename with format <source>_*.csv. Available sources: %s",
+			availableSources,
+		)
 	}
 	return parts[0], nil
 }
