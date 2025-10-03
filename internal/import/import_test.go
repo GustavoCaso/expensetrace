@@ -30,13 +30,14 @@ func TestImportCSV(t *testing.T) {
 	}
 	matcher := matcher.New(categories)
 
-	// Test CSV data
-	csvData := `Test Source,01/01/2024,Restaurant bill,-1234.56,USD
-Test Source,02/01/2024,Uber ride,-5000.00,USD
-Test Source,03/01/2024,Salary,500000.00,USD`
+	// Test CSV data - using evo format
+	csvData := `Fecha de la operación,Fecha Valor,Concepto,Importe,Divisa,Tipo de movimiento,Saldo disponible
+01/01/2024,,Restaurant bill,-1234.56,USD,,5000.00
+02/01/2024,,Uber ride,-5000.00,USD,,0.00
+03/01/2024,,Salary,500000.00,USD,,500000.00`
 
 	reader := strings.NewReader(csvData)
-	info := Import(context.Background(), "test.csv", reader, s, matcher)
+	info := Import(context.Background(), "evo_test.csv", reader, s, matcher)
 	if info.Error != nil {
 		t.Errorf("Import failed with error: %v", info.Error)
 	}
@@ -52,8 +53,8 @@ Test Source,03/01/2024,Salary,500000.00,USD`
 	}
 
 	// Verify first expense
-	if expenses[0].Source() != "Test Source" {
-		t.Errorf("Expense[0].Source = %v, want Test Source", expenses[0].Source())
+	if expenses[0].Source() != "evo" {
+		t.Errorf("Expense[0].Source = %v, want evo", expenses[0].Source())
 	}
 	if expenses[0].Description() != "restaurant bill" {
 		t.Errorf("Expense[0].Description = %v, want restaurant bill", expenses[0].Description())
@@ -67,7 +68,7 @@ Test Source,03/01/2024,Salary,500000.00,USD`
 	if expenses[0].Currency() != "USD" {
 		t.Errorf("Expense[0].Currency = %v, want USD", expenses[0].Currency())
 	}
-	if expenses[0].CategoryID() == nil && *expenses[0].CategoryID() == 1 {
+	if expenses[0].CategoryID() == nil || *expenses[0].CategoryID() != 1 {
 		t.Errorf("Expense[0].CategoryID = %v, want 1", expenses[0].CategoryID())
 	}
 
@@ -78,7 +79,7 @@ Test Source,03/01/2024,Salary,500000.00,USD`
 	if expenses[1].Amount() != -500000 {
 		t.Errorf("Expense[1].Amount = %v, want -500000", expenses[1].Amount())
 	}
-	if expenses[1].CategoryID() == nil && *expenses[0].CategoryID() == 2 {
+	if expenses[1].CategoryID() == nil || *expenses[1].CategoryID() != 2 {
 		t.Errorf("Expense[1].CategoryID = %v, want 2", expenses[1].CategoryID())
 	}
 
@@ -222,11 +223,12 @@ func TestImportInvalidCSV(t *testing.T) {
 	}
 	matcher := matcher.New(categories)
 
-	// Test with invalid CSV data
-	csvData := `Test Source,invalid-date,Restaurant bill,-1234.56,USD`
+	// Test with invalid CSV data - using evo format with invalid date
+	csvData := `Fecha de la operación,Fecha Valor,Concepto,Importe,Divisa,Tipo de movimiento,Saldo disponible
+invalid-date,,Restaurant bill,-1234.56,USD,,5000.00`
 
 	reader := strings.NewReader(csvData)
-	info := Import(context.Background(), "test.csv", reader, s, matcher)
+	info := Import(context.Background(), "evo_test.csv", reader, s, matcher)
 	if info.Error == nil {
 		t.Errorf("Expected 1 error")
 	}
