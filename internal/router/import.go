@@ -135,7 +135,7 @@ type previewData struct {
 	TotalRows       int
 }
 
-const previewRowCount = 5
+const previewExpenseCount = 5
 
 // previewHandler handles file upload and shows preview with column detection.
 func (i *importHandler) previewHandler(
@@ -150,20 +150,18 @@ func (i *importHandler) previewHandler(
 		i.templates.Render(w, "partials/import/preview.html", data)
 	}()
 
-	// Parse the file
 	parsedData, err := importUtil.ParseFile(fileHeader.Filename, buf)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error parsing file: %s", err.Error())
 		return
 	}
 
-	// Create session
 	sessionID := i.sessionStore.Create(fileHeader.Filename, parsedData)
 
 	data.ImportSessionID = sessionID
 	data.Filename = fileHeader.Filename
 	data.Headers = parsedData.Headers
-	data.PreviewRows = parsedData.GetPreviewRows(previewRowCount)
+	data.PreviewRows = parsedData.GetPreviewRows(previewExpenseCount)
 	data.TotalRows = parsedData.GetTotalRows()
 }
 
@@ -184,21 +182,18 @@ func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter,
 		i.templates.Render(w, "partials/import/mapping-preview.html", data)
 	}()
 
-	// Get session ID from form
 	sessionID := r.FormValue("import_session_id")
 	if sessionID == "" {
 		data.Error = "Session ID is required"
 		return
 	}
 
-	// Retrieve session
 	session, exists := i.sessionStore.Get(sessionID)
 	if !exists {
 		data.Error = "Session expired or not found. Please upload the file again."
 		return
 	}
 
-	// Parse field mapping from form
 	source := r.FormValue("source")
 	if source == "" {
 		data.Error = "Source is required"
@@ -229,7 +224,6 @@ func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter,
 		return
 	}
 
-	// Create mapping
 	mapping := &importUtil.FieldMapping{
 		Source:            source,
 		DateColumn:        dateCol,
@@ -238,32 +232,21 @@ func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter,
 		CurrencyColumn:    currencyCol,
 	}
 
-	// Validate mapping
-	if validationErr := mapping.Validate(len(session.Data.Headers)); validationErr != nil {
-		data.Error = fmt.Sprintf("Invalid mapping: %s", validationErr.Error())
-		return
-	}
-
-	// Apply mapping to first few rows for preview
 	result, err := importUtil.ApplyMapping(session.Data, mapping, i.matcher)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error applying mapping: %s", err.Error())
 		return
 	}
 
-	// Store mapping in session
 	i.sessionStore.Update(sessionID, mapping)
 
-	// Prepare preview data (first 5 successfully mapped expenses)
-	const maxPreviewExpenses = 5
-	previewCount := min(maxPreviewExpenses, len(result.Expenses))
+	previewCount := min(previewExpenseCount, len(result.Expenses))
 
 	previewExpenses := make([]storage.Expense, previewCount)
 	for i := range previewCount {
 		previewExpenses[i] = result.Expenses[i]
 	}
 
-	// Collect error messages
 	const headerRowOffset = 1
 	errorMessages := make([]string, 0, len(result.Errors))
 	for _, mappingErr := range result.Errors {
@@ -294,21 +277,19 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 	defer func() {
 		i.templates.Render(w, "partials/import/form.html", data)
 	}()
-	// Get session ID from form
+
 	sessionID := r.FormValue("import_session_id")
 	if sessionID == "" {
 		data.Error = "Session ID is required"
 		return
 	}
 
-	// Retrieve session
 	session, exists := i.sessionStore.Get(sessionID)
 	if !exists {
 		data.Error = "Session expired or not found. Please upload the file again."
 		return
 	}
 
-	// Check if mapping exists
 	if session.Mapping == nil {
 		data.Error = "No field mapping found. Please complete the mapping step first."
 		return
@@ -316,23 +297,19 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 
 	i.logger.Info("Executing import", "import_session_id", sessionID, "filename", session.Filename)
 
-	// Apply mapping to all rows
 	result, err := importUtil.ApplyMapping(session.Data, session.Mapping, i.matcher)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error applying mapping: %s", err.Error())
 		return
 	}
 
-	// Convert mapped expenses to storage expenses
 	withoutCategory := 0
-
 	for _, mappedExp := range result.Expenses {
 		if mappedExp.CategoryID() == nil {
-			withoutCategory += 1
+			withoutCategory++
 		}
 	}
 
-	// Insert expenses
 	inserted, err := i.storage.InsertExpenses(ctx, result.Expenses)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error inserting expenses: %s", err.Error())
@@ -358,7 +335,6 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 	}
 	data.Banner = banner
 
-	// Clean up session
 	i.sessionStore.Delete(sessionID)
 
 	// Reset cache to refresh data
