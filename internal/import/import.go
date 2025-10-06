@@ -33,7 +33,6 @@ type ImportInfo struct {
 
 type entry struct {
 	charge      bool
-	source      string
 	date        time.Time
 	description string
 	amount      int64
@@ -80,6 +79,8 @@ func Import(
 			return info
 		}
 
+		captilizedSource := withTitleCase(source)
+
 		transformerFuncs, ok := defaultSourceTransformers[source]
 		if !ok {
 			info.Error = fmt.Errorf(
@@ -121,7 +122,6 @@ func Import(
 					}
 				}
 			}
-			ex.source = source
 
 			categoryID, category := categoryMatcher.Match(ex.description)
 			var et storageType.ExpenseType
@@ -133,7 +133,7 @@ func Import(
 
 			expense := storageType.NewExpense(
 				0,
-				ex.source,
+				captilizedSource,
 				ex.description,
 				ex.currency,
 				ex.amount,
@@ -214,4 +214,8 @@ func extractFileSource(filename string) (string, error) {
 		)
 	}
 	return parts[0], nil
+}
+
+func withTitleCase(s string) string {
+	return strings.ToUpper(s[:1]) + s[1:]
 }
