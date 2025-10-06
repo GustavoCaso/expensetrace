@@ -1,0 +1,106 @@
+{{define "import/preview"}}
+{{ if gt (len .Error) 0 }}
+  {{template "error" .Error}}
+{{else}}
+  <div class="card">
+    <div class="card-header">
+      <h2>File Preview: {{.Filename}}</h2>
+      <p>Total rows: {{.TotalRows}}</p>
+    </div>
+    <div class="card-body">
+      <p class="mb-2">We detected the following columns in your file. Please review the preview below:</p>
+
+      <div class="table-container">
+        <table class="preview-table">
+          <thead>
+            <tr>
+              {{range $index, $header := .Headers}}
+                <th>{{$header}}</th>
+              {{end}}
+            </tr>
+          </thead>
+          <tbody>
+            {{range .PreviewRows}}
+              <tr>
+                {{range .}}
+                  <td>{{.}}</td>
+                {{end}}
+              </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-4">
+        <h3>Map Fields</h3>
+        <p class="mb-2">Select which column corresponds to each expense field:</p>
+
+        <form id="mapping-form">
+          <input type="hidden" name="import_session_id" value="{{.ImportSessionID}}">
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="source">Source *</label>
+              <input type="text" id="source" name="source" placeholder="e.g., Chase Bank" required>
+              <small>Enter the source/bank name for all expenses in this file</small>
+            </div>
+
+            <div class="form-group">
+              <label for="date_column">Date *</label>
+              <select id="date_column" name="date_column" required>
+                <option value="">-- Select Column --</option>
+                {{range $index, $header := .Headers}}
+                  <option value="{{$index}}">{{$header}}</option>
+                {{end}}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="description_column">Description *</label>
+              <select id="description_column" name="description_column" required>
+                <option value="">-- Select Column --</option>
+                {{range $index, $header := .Headers}}
+                  <option value="{{$index}}">{{$header}}</option>
+                {{end}}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="amount_column">Amount *</label>
+              <select id="amount_column" name="amount_column" required>
+                <option value="">-- Select Column --</option>
+                {{range $index, $header := .Headers}}
+                  <option value="{{$index}}">{{$header}}</option>
+                {{end}}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="currency_column">Currency *</label>
+              <select id="currency_column" name="currency_column" required>
+                <option value="">-- Select Column --</option>
+                {{range $index, $header := .Headers}}
+                  <option value="{{$index}}">{{$header}}</option>
+                {{end}}
+              </select>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <a href="/import" class="btn-secondary">Cancel</a>
+            <button
+              type="submit"
+              class="btn-primary"
+              hx-post="/import/map"
+              hx-target="#mapping-preview">
+              Preview Mapping
+            </button>
+          </div>
+        </form>
+
+        <div id="mapping-preview" class="mt-4"></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+{{end}}

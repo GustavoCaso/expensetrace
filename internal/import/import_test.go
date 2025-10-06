@@ -29,7 +29,7 @@ func TestImportCSV(t *testing.T) {
 01/01/2024,,Restaurant bill,-1234.56,USD,,5000.00
 02/01/2024,,Uber ride,-5000.00,USD,,0.00
 03/01/2024,,Salary,500000.00,USD,,500000.00`,
-			expectedSource:       "evo",
+			expectedSource:       "Evo",
 			expectedCurrency:     "USD",
 			expectedAmounts:      []int64{-123456, -500000, 50000000},
 			expectedDescriptions: []string{"restaurant bill", "uber ride", "salary"},
@@ -41,7 +41,7 @@ func TestImportCSV(t *testing.T) {
 01/01/2024,01/01/2024,Restaurant bill,"-1,234.56",5000.00,,
 02/01/2024,02/01/2024,Uber ride,"-5,000.00",0.00,,
 03/01/2024,03/01/2024,Salary,"500,000.00",500000.00,,`,
-			expectedSource:       "bankinter",
+			expectedSource:       "Bankinter",
 			expectedCurrency:     "EUR",
 			expectedAmounts:      []int64{-123456, -500000, 50000000},
 			expectedDescriptions: []string{"restaurant bill", "uber ride", "salary"},
@@ -53,7 +53,7 @@ func TestImportCSV(t *testing.T) {
 CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,Restaurant bill,1234.56,0.00,USD,COMPLETED,5000.00
 CHARGE,Current,2024-01-02 11:00:00,2024-01-02 11:01:00,Uber ride,5000.00,0.00,USD,COMPLETED,0.00
 INCOME,Current,2024-01-03 12:00:00,2024-01-03 12:01:00,Salary,500000.00,0.00,USD,COMPLETED,500000.00`,
-			expectedSource:       "revolut",
+			expectedSource:       "Revolut",
 			expectedCurrency:     "USD",
 			expectedAmounts:      []int64{-123456, -500000, 50000000},
 			expectedDescriptions: []string{"restaurant bill", "uber ride", "salary"},
@@ -65,7 +65,7 @@ INCOME,Current,2024-01-03 12:00:00,2024-01-03 12:01:00,Salary,500000.00,0.00,USD
 CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,Restaurant bill,1234.56,50.00,USD,COMPLETED,5000.00
 CHARGE,Current,2024-01-02 11:00:00,2024-01-02 11:01:00,Uber ride,5000.00,100.50,USD,COMPLETED,0.00
 INCOME,Current,2024-01-03 12:00:00,2024-01-03 12:01:00,Salary,500000.00,0.00,USD,COMPLETED,500000.00`,
-			expectedSource:       "revolut",
+			expectedSource:       "Revolut",
 			expectedCurrency:     "USD",
 			expectedAmounts:      []int64{-118456, -489950, 50000000},
 			expectedDescriptions: []string{"restaurant bill", "uber ride", "salary"},
@@ -75,7 +75,7 @@ INCOME,Current,2024-01-03 12:00:00,2024-01-03 12:01:00,Salary,500000.00,0.00,USD
 			filename: "evo_special.csv",
 			csvData: `Fecha de la operación,Fecha Valor,Concepto,Importe,Divisa,Tipo de movimiento,Saldo disponible
 01/01/2024,,Pago en el dia TJ-Amazon Purchase,-50.00,EUR,,5000.00`,
-			expectedSource:       "evo",
+			expectedSource:       "Evo",
 			expectedCurrency:     "EUR",
 			expectedAmounts:      []int64{-5000},
 			expectedDescriptions: []string{"amazon purchase"},
@@ -85,7 +85,7 @@ INCOME,Current,2024-01-03 12:00:00,2024-01-03 12:01:00,Salary,500000.00,0.00,USD
 			filename: "revolut_single_fee.csv",
 			csvData: `Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance
 CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,ATM Withdrawal,100.00,2.50,USD,COMPLETED,5000.00`,
-			expectedSource:   "revolut",
+			expectedSource:   "Revolut",
 			expectedCurrency: "USD",
 			expectedAmounts:  []int64{-9750},
 			expectedDescriptions: []string{
@@ -97,7 +97,7 @@ CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,ATM Withdrawal,100.00,2.5
 			filename: "bankinter_large.csv",
 			csvData: `Fecha Contable,Fecha Valor,Descripcion,Importe,Saldo,Columna6,Columna7
 01/01/2024,01/01/2024,Large Purchase,"-12,345.67",5000.00,,`,
-			expectedSource:       "bankinter",
+			expectedSource:       "Bankinter",
 			expectedCurrency:     "EUR",
 			expectedAmounts:      []int64{-1234567},
 			expectedDescriptions: []string{"large purchase"},
@@ -126,7 +126,7 @@ CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,ATM Withdrawal,100.00,2.5
 			matcher := matcher.New(categories)
 
 			reader := strings.NewReader(tt.csvData)
-			info := Import(context.Background(), tt.filename, reader, s, matcher)
+			info := ImportCSV(context.Background(), tt.filename, reader, s, matcher)
 			if info.Error != nil {
 				t.Errorf("Import failed with error: %v", info.Error)
 			}
@@ -221,7 +221,13 @@ func TestImportJSON(t *testing.T) {
 	]`
 
 	reader := strings.NewReader(jsonData)
-	info := Import(context.Background(), "test.json", reader, s, matcher)
+	valid, jsonExpenses := SupportedJSONSchema(reader)
+	if !valid {
+		t.Fatal("JSON expenses are invalid")
+	}
+
+	info := ImportJSON(context.Background(), jsonExpenses, s, matcher)
+
 	if info.Error != nil {
 		t.Errorf("Import failed with error: %v", info.Error)
 	}
@@ -276,26 +282,6 @@ func TestImportJSON(t *testing.T) {
 	}
 }
 
-func TestImportInvalidFormat(t *testing.T) {
-	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
-
-	// Create test categories
-	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
-	}
-
-	matcher := matcher.New(categories)
-
-	// Test with invalid file format
-	reader := strings.NewReader("test data")
-	info := Import(context.Background(), "test.txt", reader, s, matcher)
-	if info.Error == nil || info.Error.Error() != "unsupported file format: .txt" {
-		t.Errorf("Expected error for unsupported file format")
-	}
-}
-
 func TestImportInvalidCSV(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -335,7 +321,7 @@ CHARGE,Current,invalid-date,2024-01-01 10:01:00,Restaurant bill,1234.56,0.00,USD
 			matcher := matcher.New(categories)
 
 			reader := strings.NewReader(tt.csvData)
-			info := Import(context.Background(), tt.filename, reader, s, matcher)
+			info := ImportCSV(context.Background(), tt.filename, reader, s, matcher)
 			if info.Error == nil {
 				t.Errorf("Expected error")
 			}
@@ -347,16 +333,6 @@ CHARGE,Current,invalid-date,2024-01-01 10:01:00,Restaurant bill,1234.56,0.00,USD
 }
 
 func TestImportInvalidJSON(t *testing.T) {
-	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
-
-	// Create test categories
-	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
-	}
-	matcher := matcher.New(categories)
-
 	// Test with invalid JSON data
 	jsonData := `[
 		{
@@ -369,11 +345,9 @@ func TestImportInvalidJSON(t *testing.T) {
 	]`
 
 	reader := strings.NewReader(jsonData)
-	info := Import(context.Background(), "test.json", reader, s, matcher)
-	if info.Error == nil {
-		t.Errorf("Expected 1 error")
-	}
-	if !strings.Contains(info.Error.Error(), "parsing time") {
-		t.Errorf("Expected parsing error, got: %v", info.Error)
+
+	valid, _ := SupportedJSONSchema(reader)
+	if valid {
+		t.Fatal("expected invalid JSON")
 	}
 }

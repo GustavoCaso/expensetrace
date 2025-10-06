@@ -140,3 +140,121 @@ func ensureNoErrorInTemplateResponse(t *testing.T, test string, body io.ReadClos
 		t.Fatalf("Error rendenring template for '%s' response: %s", test, response)
 	}
 }
+
+// TestInteractiveImportPreview tests the preview step of interactive import.
+func TestInteractiveImportPreview(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
+	categories, err := s.GetCategories(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get Categories: %v", err)
+	}
+
+	matcher := matcher.New(categories)
+	handler, _ := New(s, matcher, logger)
+
+	// Create CSV data for upload
+	csvData := `source,date,description,amount,currency
+Bank A,01/01/2024,Coffee,-5.00,USD
+Bank B,02/01/2024,Lunch,-12.00,USD`
+
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+
+	dataPart, err := writer.CreateFormFile("file", "test.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = dataPart.Write([]byte(csvData))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = writer.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/import", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status %v; got %v", http.StatusOK, resp.Status)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	responseBody := string(bodyBytes)
+
+	// Check response contains expected elements
+	if !strings.Contains(responseBody, "source") {
+		t.Error("Response should contain 'source' header")
+	}
+	if !strings.Contains(responseBody, "Coffee") {
+		t.Error("Response should contain 'Coffee' preview data")
+	}
+	if !strings.Contains(responseBody, "import_session_id") {
+		t.Error("Response should contain import_session_id hidden field")
+	}
+}
+
+// TestInteractiveImportInvalidFile tests error handling for invalid files.
+func TestInteractiveImportInvalidFile(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s := testutil.SetupTestStorage(t, logger)
+
+	categories, err := s.GetCategories(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get Categories: %v", err)
+	}
+
+	matcher := matcher.New(categories)
+	handler, _ := New(s, matcher, logger)
+
+	// Upload file with unsupported format
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+
+	dataPart, err := writer.CreateFormFile("file", "test.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = dataPart.Write([]byte("some random text"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = writer.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/import", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status %v; got %v", http.StatusOK, resp.Status)
+	}
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	responseBody := string(bodyBytes)
+
+	// Should contain error message
+	if !strings.Contains(responseBody, "error") && !strings.Contains(responseBody, "Error") {
+		t.Error("Response should contain error message for invalid file format")
+	}
+}

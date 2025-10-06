@@ -4,14 +4,10 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"maps"
-	"path"
-	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -19,11 +15,7 @@ import (
 	storageType "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
-var re = regexp.MustCompile(`(?P<charge>-)?(?P<amount>\d+)\.?(?P<decimal>\d*)`)
-var amountIndex = re.SubexpIndex("amount")
-var decimalIndex = re.SubexpIndex("decimal")
-
-type jsonExpense struct {
+type JSONExpense struct {
 	Source      string    `json:"source"`
 	Date        time.Time `json:"date"`
 	Description string    `json:"description"`
@@ -33,14 +25,12 @@ type jsonExpense struct {
 
 type ImportInfo struct {
 	TotalImports          int
-	ImportWithoutCategory []storageType.Expense
-	ImportWithCategory    []storageType.Expense
+	ImportWithoutCategory int
 	Error                 error
 }
 
 type entry struct {
 	charge      bool
-	source      string
 	date        time.Time
 	description string
 	amount      int64
@@ -48,27 +38,6 @@ type entry struct {
 }
 
 type transformer func(v string, entry *entry) error
-
-func parseAmount(v string) (int64, error) {
-	matches := re.FindStringSubmatch(v)
-	if len(matches) == 0 {
-		return 0, errors.New("amount regex did not find any matches")
-	}
-
-	amount := matches[amountIndex]
-	decimal := matches[decimalIndex]
-
-	parsedAmount, err := strconv.ParseInt(fmt.Sprintf("%s%s", amount, decimal), 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	if strings.HasPrefix(v, "-") || strings.HasPrefix(v, "−") {
-		parsedAmount *= -1
-	}
-
-	return parsedAmount, nil
-}
 
 var defaultSourceTransformers = map[string][]transformer{
 	"evo":       evoTransformers,
@@ -78,7 +47,83 @@ var defaultSourceTransformers = map[string][]transformer{
 
 var availableSources = slices.Sorted(maps.Keys(defaultSourceTransformers))
 
-func Import(
+func SupportedProvider(filename string) bool {
+	source, err := extractFileSource(filename)
+	if err != nil {
+		return false
+	}
+	_, ok := defaultSourceTransformers[source]
+	return ok
+}
+
+func SupportedJSONSchema(reader io.Reader) (bool, []JSONExpense) {
+	var expenses []JSONExpense
+
+	// Try to unmarshal into expected type
+	if err := json.NewDecoder(reader).Decode(&expenses); err != nil {
+		return false, expenses
+	}
+
+	// Validate that it's not empty and has required fields
+	if len(expenses) == 0 {
+		return false, expenses
+	}
+
+	// Validate first expense has all required fields
+	first := expenses[0]
+	if first.Source == "" || first.Description == "" ||
+		first.Currency == "" || first.Date.IsZero() {
+		return false, expenses
+	}
+
+	return true, expenses
+}
+
+func ImportJSON(ctx context.Context, expenses []JSONExpense, storage storageType.Storage,
+	categoryMatcher *matcher.Matcher) ImportInfo {
+	info := ImportInfo{}
+	storageExpenses := []storageType.Expense{}
+
+	for _, jsonExp := range expenses {
+		description := strings.ToLower(jsonExp.Description)
+		categoryID, _ := categoryMatcher.Match(description)
+
+		var et storageType.ExpenseType
+		if jsonExp.Amount < 0 {
+			et = storageType.ChargeType
+		} else {
+			et = storageType.IncomeType
+		}
+
+		expense := storageType.NewExpense(
+			0,
+			jsonExp.Source,
+			description,
+			jsonExp.Currency,
+			jsonExp.Amount,
+			jsonExp.Date,
+			et,
+			categoryID,
+		)
+
+		if categoryID == nil {
+			info.ImportWithoutCategory++
+		}
+
+		storageExpenses = append(storageExpenses, expense)
+	}
+
+	inserted, err := storage.InsertExpenses(ctx, storageExpenses)
+
+	info.TotalImports = int(inserted)
+	if err != nil {
+		info.Error = fmt.Errorf("unexpected error inserting expenses: %w", err)
+	}
+
+	return info
+}
+
+func ImportCSV(
 	ctx context.Context,
 	filename string,
 	reader io.Reader,
@@ -88,130 +133,81 @@ func Import(
 	info := ImportInfo{}
 	expenses := []storageType.Expense{}
 
-	fileFormat := path.Ext(filename)
+	source, err := extractFileSource(filename)
 
-	switch fileFormat {
-	case ".csv":
-		source, err := extractFileSource(filename)
-
-		if err != nil {
-			info.Error = err
-			return info
-		}
-
-		transformerFuncs, ok := defaultSourceTransformers[source]
-		if !ok {
-			info.Error = fmt.Errorf(
-				"no source transformer avilable for %s. Available sources: %s",
-				source,
-				availableSources,
-			)
-			return info
-		}
-
-		r := csv.NewReader(reader)
-
-		// Read all records
-		records, err := r.ReadAll()
-		if err != nil {
-			info.Error = err
-			return info
-		}
-
-		startRow := 1 // Skip header row
-
-		// Process each record
-		for i := startRow; i < len(records); i++ {
-			record := records[i]
-
-			ex := &entry{}
-			for idxcol, f := range transformerFuncs {
-				if f == nil {
-					// skip this col
-					continue
-				}
-
-				value := record[idxcol]
-				if value != "" {
-					tranformerErr := f(value, ex)
-					if tranformerErr != nil {
-						info.Error = tranformerErr
-						return info
-					}
-				}
-			}
-			ex.source = source
-
-			categoryID, category := categoryMatcher.Match(ex.description)
-			var et storageType.ExpenseType
-			if ex.amount < 0 {
-				et = storageType.ChargeType
-			} else {
-				et = storageType.IncomeType
-			}
-
-			expense := storageType.NewExpense(
-				0,
-				ex.source,
-				ex.description,
-				ex.currency,
-				ex.amount,
-				ex.date,
-				et,
-				categoryID,
-			)
-
-			if category == "" {
-				info.ImportWithoutCategory = append(info.ImportWithoutCategory, expense)
-			} else {
-				info.ImportWithCategory = append(info.ImportWithCategory, expense)
-			}
-
-			expenses = append(expenses, expense)
-		}
-	case ".json":
-		e := []jsonExpense{}
-
-		err := json.NewDecoder(reader).Decode(&e)
-		if err != nil {
-			info.Error = err
-			return info
-		}
-
-		for _, jsonExp := range e {
-			description := strings.ToLower(jsonExp.Description)
-			categoryID, category := categoryMatcher.Match(description)
-
-			var et storageType.ExpenseType
-			if jsonExp.Amount < 0 {
-				et = storageType.ChargeType
-			} else {
-				et = storageType.IncomeType
-			}
-
-			expense := storageType.NewExpense(
-				0,
-				jsonExp.Source,
-				description,
-				jsonExp.Currency,
-				jsonExp.Amount,
-				jsonExp.Date,
-				et,
-				categoryID,
-			)
-
-			if category == "" {
-				info.ImportWithoutCategory = append(info.ImportWithoutCategory, expense)
-			} else {
-				info.ImportWithCategory = append(info.ImportWithCategory, expense)
-			}
-
-			expenses = append(expenses, expense)
-		}
-
-	default:
-		info.Error = fmt.Errorf("unsupported file format: %s", fileFormat)
+	if err != nil {
+		info.Error = err
 		return info
+	}
+
+	transformerFuncs, ok := defaultSourceTransformers[source]
+	if !ok {
+		info.Error = fmt.Errorf(
+			"no source transformer avilable for %s. Available sources: %s",
+			source,
+			availableSources,
+		)
+		return info
+	}
+
+	captilizedSource := withTitleCase(source)
+
+	r := csv.NewReader(reader)
+
+	// Read all records
+	records, err := r.ReadAll()
+	if err != nil {
+		info.Error = err
+		return info
+	}
+
+	startRow := 1 // Skip header row
+
+	// Process each record
+	for i := startRow; i < len(records); i++ {
+		record := records[i]
+
+		ex := &entry{}
+		for idxcol, f := range transformerFuncs {
+			if f == nil {
+				// skip this col
+				continue
+			}
+
+			value := record[idxcol]
+			if value != "" {
+				tranformerErr := f(value, ex)
+				if tranformerErr != nil {
+					info.Error = tranformerErr
+					return info
+				}
+			}
+		}
+
+		categoryID, _ := categoryMatcher.Match(ex.description)
+		var et storageType.ExpenseType
+		if ex.amount < 0 {
+			et = storageType.ChargeType
+		} else {
+			et = storageType.IncomeType
+		}
+
+		expense := storageType.NewExpense(
+			0,
+			captilizedSource,
+			ex.description,
+			ex.currency,
+			ex.amount,
+			ex.date,
+			et,
+			categoryID,
+		)
+
+		if categoryID == nil {
+			info.ImportWithoutCategory++
+		}
+
+		expenses = append(expenses, expense)
 	}
 
 	inserted, err := storage.InsertExpenses(ctx, expenses)
@@ -233,4 +229,8 @@ func extractFileSource(filename string) (string, error) {
 		)
 	}
 	return parts[0], nil
+}
+
+func withTitleCase(s string) string {
+	return strings.ToUpper(s[:1]) + s[1:]
 }

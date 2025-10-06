@@ -1,23 +1,13 @@
-{{define "title"}}Import Expeses{{end}}
+{{define "title"}}Import Expenses{{end}}
 {{define "css"}}/static/css/import.css{{end}}
 
 {{define "main"}}
-<form class="form-with-bg">
-  <div class="form-group">
-    <label for="file-upload">Select file to import</label>
-    <input id="file-upload" type="file" name="file" required>
+<div class="import-container">
+  <div class="import-header">
+    <h2>Import Expenses</h2>
+    <p>Upload a CSV or JSON file to import your expenses</p>
   </div>
-  <div class="form-actions">
-    <button 
-      class="btn-primary" 
-      hx-post="/import" 
-      hx-encoding="multipart/form-data" 
-      hx-target="#form-results" 
-      type="submit">
-      Import
-    </button>
-  </div>
-</form>
-<div id='form-results'>
+  
+  {{template "import/form" .}}
 </div>
 {{end}}

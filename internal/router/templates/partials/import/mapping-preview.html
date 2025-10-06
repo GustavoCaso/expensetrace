@@ -1,0 +1,66 @@
+{{define "import/mapping-preview"}}
+{{ if gt (len .Error) 0 }}
+  {{template "error" .Error}}
+{{else}}
+  <div class="card success">
+    <div class="card-header">
+      <h3>Mapping Preview</h3>
+      <p>Review how your data will be imported</p>
+    </div>
+    <div class="card-body">
+      {{ if gt (len .Errors) 0 }}
+        <div class="error-message mb-4">
+          <div class="error-icon">⚠️</div>
+          <div>
+            <p class="error-title">Some rows have errors</p>
+            <p>The following rows could not be mapped:</p>
+            <ul class="error-list">
+              {{range .Errors}}
+                <li>{{.}}</li>
+              {{end}}
+            </ul>
+            <p class="mt-2">These rows will be skipped during import.</p>
+          </div>
+        </div>
+      {{end}}
+
+      <p><span class="font-bold">Preview of mapped expenses</span> (first 5 rows):</p>
+
+      <div class="card-grid mt-2">
+        {{range .PreviewExpenses}}
+          <div class="card">
+            <div class="card-header">
+              <p><span class="font-bold">Description:</span> {{.Description}}</p>
+            </div>
+            <div class="card-body">
+              <p><span class="font-bold">Source:</span> {{.Source}}</p>
+              <p><span class="font-bold">Date:</span> {{.Date.Format "2006-01-02"}}</p>
+              <p><span class="font-bold">Currency:</span> {{.Currency}}</p>
+              {{if gt .Amount 0}}
+                <p class="income ta-center">{{formatMoney .Amount "." ","}}</p>
+              {{else}}
+                <p class="expense ta-center">{{formatMoney .Amount "." ","}}</p>
+              {{end}}
+            </div>
+          </div>
+        {{end}}
+      </div>
+
+      <form id="execute-form" class="mt-4">
+        <input type="hidden" name="import_session_id" value="{{.ImportSessionID}}">
+        <div class="form-actions">
+          <a href="/import" class="btn-secondary">Cancel</a>
+          <button
+            type="submit"
+            class="btn-primary"
+            hx-post="/import/execute"
+            hx-target="#import-body"
+            hx-swap="innerHTML">
+            Confirm and Import
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{{end}}
+{{end}}

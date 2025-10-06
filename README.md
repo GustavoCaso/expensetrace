@@ -28,7 +28,7 @@ In an era where financial data privacy is increasingly important, ExpenseTrace o
 - 📈 Detailed financial reports and insights
 - 🔒 Local data storage with SQLite
 - 🎨 Beautiful terminal output with color coding
-- 📝 Import expenses via web interface (CSV, JSON)
+- 📝 Import expenses via web interface (CSV, JSON) with automatic or interactive mapping
 
 ## Data Privacy
 
@@ -134,6 +134,51 @@ expensetrace web
    ```
 
 Both interfaces work with the same underlying data, so you can switch between them as needed.
+
+### Importing Expenses
+
+ExpenseTrace provides a flexible import system through the web interface that supports both automatic and interactive workflows:
+
+#### Automatic Import
+
+##### CSV
+
+For supported banking providers, ExpenseTrace automatically handles field mapping. Simply name your CSV file with the provider prefix:
+
+- **EVO**: `evo_transactions.csv`
+- **Revolut**: `revolut_transactions.csv`
+- **Bankinter**: `bankinter_transactions.csv`
+
+The system will automatically detect the provider and parse the CSV correctly.
+
+#### JSON
+Uploading a json file that containts an array with objects containing `source`, `date`, `description`, `amount`, and `currency` fields
+
+Example JSON format:
+```json
+[
+  {
+    "source": "MyBank",
+    "date": "2024-01-15T10:30:00Z",
+    "description": "grocery store",
+    "amount": -5000,
+    "currency": "EUR"
+  }
+]
+```
+
+#### Interactive Import
+
+For custom CSV or JSON files, ExpenseTrace provides an interactive 3-step import process:
+
+1. **Upload & Preview**: Upload your file and see a preview of the data
+2. **Field Mapping**: Map your file's columns to expense fields:
+   - Date column
+   - Description column
+   - Amount column
+   - Currency column
+   - Source (custom name for your data source)
+3. **Review & Confirm**: Preview the parsed expenses and confirm the import
 
 ### Using Docker Compose
 
