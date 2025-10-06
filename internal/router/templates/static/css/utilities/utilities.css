@@ -25,6 +25,10 @@
   color: var(--color-primary);
 }
 
+.text-primary-dark {
+  color: var(--color-primary-dark);
+}
+
 .text-warning {
   color: var(--color-warning);
 }

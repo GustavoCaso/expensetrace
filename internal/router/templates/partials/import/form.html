@@ -1,15 +1,25 @@
 {{define "import/form"}}
   <div id="import-body">
     <div class="import-option">
-      {{if gt (len .Banner.Icon) 0}} 
+      {{if gt (len .Banner.Icon) 0}}
         {{template "banner" .Banner}}
       {{end}}
-    
+
       {{ if gt (len .Error) 0 }}
         {{template "error" .Error}}
       {{end}}
-      
-      <p class="mb-4 text-sm text-gray-600">Upload your file and map columns to expense fields. Works with any CSV/JSON format.</p>
+
+      <div class="flex items-start gap-4 bg-primary-light p-4 rounded mb-4">
+        <span class="text-sm">ℹ️</span>
+        <div class="text-sm text-gray-700">
+          <p class="font-semibold mb-2 text-primary-dark">How Import Works</p>
+          <ul class="ml-4 flex flex-col gap-2">
+            <li><strong>Supported providers</strong> (EVO, Revolut, Bankinter): Name your CSV file as <code class="bg-gray-100 px-2 py-1 rounded text-xs">provider_transactions.csv</code> for automatic import. ex. <code class="bg-gray-100 px-2 py-1 rounded text-xs">evo_transactions.csv</code></li>
+            <li><strong>Custom CSV/JSON files</strong>: Upload your file, map columns to expense fields (date, description, amount, currency), preview, and confirm</li>
+            <li><strong>Automatic categorization</strong>: Expenses are matched to categories based on your defined categories</li>
+          </ul>
+        </div>
+      </div>
       <form id="import-form">
         <div class="form-group">
           <label for="file-upload">Select file to import</label>
