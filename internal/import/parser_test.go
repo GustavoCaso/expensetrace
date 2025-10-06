@@ -17,7 +17,6 @@ Bank A,03/01/2024,Grocery,-45.20,EUR`
 		t.Fatalf("ParseFile failed: %v", err)
 	}
 
-	// Check headers
 	expectedHeaders := []string{"source", "date", "description", "amount", "currency"}
 	if len(parsed.Headers) != len(expectedHeaders) {
 		t.Fatalf("Expected %d headers, got %d", len(expectedHeaders), len(parsed.Headers))
@@ -28,12 +27,10 @@ Bank A,03/01/2024,Grocery,-45.20,EUR`
 		}
 	}
 
-	// Check rows
 	if len(parsed.Rows) != 3 {
 		t.Fatalf("Expected 3 rows, got %d", len(parsed.Rows))
 	}
 
-	// Check first row
 	expectedRow := []string{"Bank A", "01/01/2024", "Coffee shop", "-5.50", "USD"}
 	for i, val := range expectedRow {
 		if parsed.Rows[0][i] != val {
@@ -41,12 +38,10 @@ Bank A,03/01/2024,Grocery,-45.20,EUR`
 		}
 	}
 
-	// Check format
 	if parsed.Format != "csv" {
 		t.Errorf("Format = %q, want %q", parsed.Format, "csv")
 	}
 
-	// Check total rows
 	if parsed.GetTotalRows() != 3 {
 		t.Errorf("GetTotalRows() = %d, want 3", parsed.GetTotalRows())
 	}
@@ -76,17 +71,14 @@ func TestParseJSON(t *testing.T) {
 		t.Fatalf("ParseFile failed: %v", err)
 	}
 
-	// Check that we have headers (keys from JSON)
 	if len(parsed.Headers) != 5 {
 		t.Fatalf("Expected 5 headers, got %d", len(parsed.Headers))
 	}
 
-	// Check rows
 	if len(parsed.Rows) != 2 {
 		t.Fatalf("Expected 2 rows, got %d", len(parsed.Rows))
 	}
 
-	// Check format
 	if parsed.Format != "json" {
 		t.Errorf("Format = %q, want %q", parsed.Format, "json")
 	}

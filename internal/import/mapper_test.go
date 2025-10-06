@@ -71,7 +71,6 @@ func TestFieldMappingValidate(t *testing.T) {
 }
 
 func TestApplyMapping(t *testing.T) {
-	// Create test data (no source column needed)
 	csvData := `date,description,amount,currency
 01/01/2024,restaurant bill,-50.00,USD
 02/01/2024,uber ride,-25.00,USD
@@ -83,7 +82,6 @@ func TestApplyMapping(t *testing.T) {
 		t.Fatalf("ParseFile failed: %v", err)
 	}
 
-	// Create mapping with manual source
 	mapping := &FieldMapping{
 		Source:            "Test Bank",
 		DateColumn:        0,
@@ -92,7 +90,6 @@ func TestApplyMapping(t *testing.T) {
 		CurrencyColumn:    3,
 	}
 
-	// Create category matcher
 	catFoodID := int64(1)
 	catTransportID := int64(2)
 	categories := []storage.Category{
@@ -101,13 +98,11 @@ func TestApplyMapping(t *testing.T) {
 	}
 	categoryMatcher := matcher.New(categories)
 
-	// Apply mapping
 	result, err := ApplyMapping(parsed, mapping, categoryMatcher)
 	if err != nil {
 		t.Fatalf("ApplyMapping failed: %v", err)
 	}
 
-	// Check results
 	if len(result.Expenses) != 3 {
 		t.Fatalf("Expected 3 expenses, got %d", len(result.Expenses))
 	}
@@ -116,7 +111,6 @@ func TestApplyMapping(t *testing.T) {
 		t.Errorf("Expected 0 errors, got %d", len(result.Errors))
 	}
 
-	// Check first expense
 	exp1 := result.Expenses[0]
 	if exp1.Source() != "Test Bank" {
 		t.Errorf("Expense[0].Source = %q, want 'Test Bank'", exp1.Source())
@@ -134,13 +128,11 @@ func TestApplyMapping(t *testing.T) {
 		t.Errorf("Expense[0].CategoryID = %d, want %d", *exp1.CategoryID(), catFoodID)
 	}
 
-	// Check second expense (transport)
 	exp2 := result.Expenses[1]
 	if *exp2.CategoryID() != catTransportID {
 		t.Errorf("Expense[1].Category = %d, want %d", *exp2.CategoryID(), catTransportID)
 	}
 
-	// Check third expense (income)
 	exp3 := result.Expenses[2]
 	if exp3.Amount() != 250000 {
 		t.Errorf("Expense[2].Amount = %d, want 250000", exp3.Amount())
@@ -154,7 +146,6 @@ func TestApplyMapping(t *testing.T) {
 }
 
 func TestApplyMappingWithErrors(t *testing.T) {
-	// Create test data with invalid date
 	csvData := `date,description,amount,currency
 invalid-date,Coffee,-5.00,USD
 02/01/2024,Lunch,-12.00,USD
@@ -182,7 +173,6 @@ invalid-date,Coffee,-5.00,USD
 		t.Fatalf("ApplyMapping failed: %v", err)
 	}
 
-	// Should have 1 successful expense and 2 errors
 	if len(result.Expenses) != 1 {
 		t.Errorf("Expected 1 successful expense, got %d", len(result.Expenses))
 	}
@@ -190,12 +180,10 @@ invalid-date,Coffee,-5.00,USD
 		t.Errorf("Expected 2 errors, got %d", len(result.Errors))
 	}
 
-	// Check that successful expense is the middle one
 	if result.Expenses[0].Source() != "Test Bank" {
 		t.Errorf("Successful expense source = %q, want 'Test Bank'", result.Expenses[0].Source())
 	}
 
-	// Check error details
 	if result.Errors[0].RowIndex != 0 {
 		t.Errorf("Error[0].RowIndex = %d, want 0", result.Errors[0].RowIndex)
 	}
@@ -209,11 +197,11 @@ func TestParseDateWithDifferentFormats(t *testing.T) {
 		dateStr string
 		wantErr bool
 	}{
-		{"01/01/2024", false},           // DD/MM/YYYY
-		{"01/01/2024", false},           // MM/DD/YYYY
-		{"2024-01-01", false},           // ISO date
-		{"2024-01-01T10:30:00Z", false}, // ISO datetime
-		{"invalid", true},               // Invalid date
+		{"01/01/2024", false},
+		{"01/01/2024", false},
+		{"2024-01-01", false},
+		{"2024-01-01T10:30:00Z", false},
+		{"invalid", true},
 	}
 
 	for _, tt := range tests {
