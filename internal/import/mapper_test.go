@@ -93,9 +93,11 @@ func TestApplyMapping(t *testing.T) {
 	}
 
 	// Create category matcher
+	catFoodID := int64(1)
+	catTransportID := int64(2)
 	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
+		storage.NewCategory(catFoodID, "Food", "restaurant|food|grocery"),
+		storage.NewCategory(catTransportID, "Transport", "uber|taxi|transit"),
 	}
 	categoryMatcher := matcher.New(categories)
 
@@ -116,38 +118,38 @@ func TestApplyMapping(t *testing.T) {
 
 	// Check first expense
 	exp1 := result.Expenses[0]
-	if exp1.Expense.Source() != "Test Bank" {
-		t.Errorf("Expense[0].Source = %q, want 'Test Bank'", exp1.Expense.Source())
+	if exp1.Source() != "Test Bank" {
+		t.Errorf("Expense[0].Source = %q, want 'Test Bank'", exp1.Source())
 	}
-	if exp1.Expense.Description() != "restaurant bill" {
-		t.Errorf("Expense[0].Description = %q, want 'restaurant bill'", exp1.Expense.Description())
+	if exp1.Description() != "restaurant bill" {
+		t.Errorf("Expense[0].Description = %q, want 'restaurant bill'", exp1.Description())
 	}
-	if exp1.Expense.Amount() != -5000 {
-		t.Errorf("Expense[0].Amount = %d, want -5000", exp1.Expense.Amount())
+	if exp1.Amount() != -5000 {
+		t.Errorf("Expense[0].Amount = %d, want -5000", exp1.Amount())
 	}
-	if exp1.Expense.Type() != storage.ChargeType {
-		t.Errorf("Expense[0].Type = %v, want ChargeType", exp1.Expense.Type())
+	if exp1.Type() != storage.ChargeType {
+		t.Errorf("Expense[0].Type = %v, want ChargeType", exp1.Type())
 	}
-	if exp1.Category != "Food" {
-		t.Errorf("Expense[0].Category = %q, want 'Food'", exp1.Category)
+	if *exp1.CategoryID() != catFoodID {
+		t.Errorf("Expense[0].CategoryID = %d, want %d", *exp1.CategoryID(), catFoodID)
 	}
 
 	// Check second expense (transport)
 	exp2 := result.Expenses[1]
-	if exp2.Category != "Transport" {
-		t.Errorf("Expense[1].Category = %q, want 'Transport'", exp2.Category)
+	if *exp2.CategoryID() != catTransportID {
+		t.Errorf("Expense[1].Category = %d, want %d", *exp2.CategoryID(), catTransportID)
 	}
 
 	// Check third expense (income)
 	exp3 := result.Expenses[2]
-	if exp3.Expense.Amount() != 250000 {
-		t.Errorf("Expense[2].Amount = %d, want 250000", exp3.Expense.Amount())
+	if exp3.Amount() != 250000 {
+		t.Errorf("Expense[2].Amount = %d, want 250000", exp3.Amount())
 	}
-	if exp3.Expense.Type() != storage.IncomeType {
-		t.Errorf("Expense[2].Type = %v, want IncomeType", exp3.Expense.Type())
+	if exp3.Type() != storage.IncomeType {
+		t.Errorf("Expense[2].Type = %v, want IncomeType", exp3.Type())
 	}
-	if exp3.Category != "" {
-		t.Errorf("Expense[2].Category = %q, want empty (uncategorized)", exp3.Category)
+	if exp3.CategoryID() != nil {
+		t.Errorf("Expense[2].Category = <nil>, got: %d", *exp3.CategoryID())
 	}
 }
 
@@ -189,8 +191,8 @@ invalid-date,Coffee,-5.00,USD
 	}
 
 	// Check that successful expense is the middle one
-	if result.Expenses[0].Expense.Source() != "Test Bank" {
-		t.Errorf("Successful expense source = %q, want 'Test Bank'", result.Expenses[0].Expense.Source())
+	if result.Expenses[0].Source() != "Test Bank" {
+		t.Errorf("Successful expense source = %q, want 'Test Bank'", result.Expenses[0].Source())
 	}
 
 	// Check error details

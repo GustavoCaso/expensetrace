@@ -26,13 +26,6 @@ type FieldMapping struct {
 	CurrencyColumn    int    // Index of currency column
 }
 
-// MappedExpense represents a successfully mapped expense with its original row.
-type MappedExpense struct {
-	Expense  storageType.Expense
-	RowIndex int
-	Category string // Category name (empty if uncategorized)
-}
-
 // MappingError represents an error that occurred while mapping a specific row.
 type MappingError struct {
 	RowIndex int
@@ -41,7 +34,7 @@ type MappingError struct {
 
 // MappingResult contains the results of applying a field mapping.
 type MappingResult struct {
-	Expenses []MappedExpense
+	Expenses []storageType.Expense
 	Errors   []MappingError
 }
 
@@ -76,7 +69,7 @@ func ApplyMapping(
 	}
 
 	result := &MappingResult{
-		Expenses: make([]MappedExpense, 0, len(data.Rows)),
+		Expenses: make([]storageType.Expense, 0, len(data.Rows)),
 		Errors:   make([]MappingError, 0),
 	}
 
@@ -101,7 +94,7 @@ func mapRow(
 	mapping *FieldMapping,
 	categoryMatcher *matcher.Matcher,
 	rowIndex int,
-) (MappedExpense, error) {
+) (storageType.Expense, error) {
 	// Extract values from row
 	source := mapping.Source // Use manual source input
 	dateStr := row[mapping.DateColumn]
@@ -112,13 +105,13 @@ func mapRow(
 	// Parse date
 	date, err := parseDate(dateStr)
 	if err != nil {
-		return MappedExpense{}, fmt.Errorf("invalid date %q: %w", dateStr, err)
+		return nil, fmt.Errorf("invalid date %q: %w", dateStr, err)
 	}
 
 	// Parse amount
 	amount, err := parseAmount(amountStr)
 	if err != nil {
-		return MappedExpense{}, fmt.Errorf("invalid amount %q: %w", amountStr, err)
+		return nil, fmt.Errorf("invalid amount %q: %w", amountStr, err)
 	}
 
 	// Determine expense type
@@ -130,7 +123,7 @@ func mapRow(
 	}
 
 	// Match category
-	categoryID, categoryName := categoryMatcher.Match(description)
+	categoryID, _ := categoryMatcher.Match(description)
 
 	// Create expense
 	expense := storageType.NewExpense(
@@ -144,11 +137,7 @@ func mapRow(
 		categoryID,
 	)
 
-	return MappedExpense{
-		Expense:  expense,
-		RowIndex: rowIndex,
-		Category: categoryName,
-	}, nil
+	return expense, nil
 }
 
 const defaultDateFormat = "02/01/2006"

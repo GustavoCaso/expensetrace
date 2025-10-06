@@ -260,11 +260,11 @@ func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter,
 
 	previewExpenses := make([]storage.Expense, previewCount)
 	for i := range previewCount {
-		previewExpenses[i] = result.Expenses[i].Expense
+		previewExpenses[i] = result.Expenses[i]
 	}
 
 	// Collect error messages
-	const headerRowOffset = 2
+	const headerRowOffset = 1
 	errorMessages := make([]string, 0, len(result.Errors))
 	for _, mappingErr := range result.Errors {
 		rowNum := mappingErr.RowIndex + headerRowOffset
@@ -324,18 +324,16 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 	}
 
 	// Convert mapped expenses to storage expenses
-	expenses := make([]storage.Expense, len(result.Expenses))
-	withoutCategory := make([]storage.Expense, 0)
+	withoutCategory := 0
 
-	for i, mappedExp := range result.Expenses {
-		expenses[i] = mappedExp.Expense
-		if mappedExp.Category == "" {
-			withoutCategory = append(withoutCategory, mappedExp.Expense)
+	for _, mappedExp := range result.Expenses {
+		if mappedExp.CategoryID() == nil {
+			withoutCategory += 1
 		}
 	}
 
 	// Insert expenses
-	inserted, err := i.storage.InsertExpenses(ctx, expenses)
+	inserted, err := i.storage.InsertExpenses(ctx, result.Expenses)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error inserting expenses: %s", err.Error())
 		return
@@ -351,7 +349,7 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 	var b strings.Builder
 	fmt.Fprintf(&b, "%d expenses imported.", int(inserted))
 	if int(inserted) > 0 {
-		fmt.Fprintf(&b, "%d expenses without category", len(withoutCategory))
+		fmt.Fprintf(&b, "%d expenses without category", withoutCategory)
 	}
 
 	banner := banner{
