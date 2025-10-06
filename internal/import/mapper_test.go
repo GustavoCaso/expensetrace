@@ -263,28 +263,6 @@ func TestParseAmount(t *testing.T) {
 	}
 }
 
-func TestDetectDateFormat(t *testing.T) {
-	tests := []struct {
-		dateStr string
-		want    string
-	}{
-		{"31/12/2024", "02/01/2006"},                     // DD/MM/YYYY
-		{"12/31/2024", "01/02/2006"},                     // MM/DD/YYYY
-		{"2024-12-31", "2006-01-02"},                     // ISO
-		{"2024-01-01T10:30:00Z", "2006-01-02T15:04:05Z"}, // ISO with time
-		{"invalid", "02/01/2006"},                        // Falls back to default
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.dateStr, func(t *testing.T) {
-			got := DetectDateFormat(tt.dateStr)
-			if got != tt.want {
-				t.Errorf("DetectDateFormat(%q) = %q, want %q", tt.dateStr, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestApplyMappingInvalidMapping(t *testing.T) {
 	csvData := `date,description,amount,currency
 01/01/2024,Coffee,-5.00,USD`

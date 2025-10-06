@@ -205,22 +205,3 @@ func parseAmount(amountStr string) (int64, error) {
 
 	return parsedAmount, nil
 }
-
-// DetectDateFormat attempts to detect the date format from a sample date string.
-func DetectDateFormat(dateStr string) string {
-	formats := map[string]string{
-		"02/01/2006":           "DD/MM/YYYY",
-		"01/02/2006":           "MM/DD/YYYY",
-		"2006-01-02":           "YYYY-MM-DD",
-		"2006-01-02T15:04:05Z": "ISO 8601",
-	}
-
-	for format := range formats {
-		if _, err := time.Parse(format, dateStr); err == nil {
-			return format
-		}
-	}
-
-	// Default to DD/MM/YYYY if detection fails
-	return "02/01/2006"
-}
