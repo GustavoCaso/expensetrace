@@ -126,7 +126,7 @@ CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,ATM Withdrawal,100.00,2.5
 			matcher := matcher.New(categories)
 
 			reader := strings.NewReader(tt.csvData)
-			info := Import(context.Background(), tt.filename, reader, s, matcher)
+			info := ImportCSV(context.Background(), tt.filename, reader, s, matcher)
 			if info.Error != nil {
 				t.Errorf("Import failed with error: %v", info.Error)
 			}
@@ -221,7 +221,13 @@ func TestImportJSON(t *testing.T) {
 	]`
 
 	reader := strings.NewReader(jsonData)
-	info := Import(context.Background(), "test.json", reader, s, matcher)
+	valid, jsonExpenses := SupportedJSONSchema(reader)
+	if !valid {
+		t.Fatal("JSON expenses are invalid")
+	}
+
+	info := ImportJSON(context.Background(), jsonExpenses, s, matcher)
+
 	if info.Error != nil {
 		t.Errorf("Import failed with error: %v", info.Error)
 	}
@@ -276,26 +282,6 @@ func TestImportJSON(t *testing.T) {
 	}
 }
 
-func TestImportInvalidFormat(t *testing.T) {
-	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
-
-	// Create test categories
-	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
-	}
-
-	matcher := matcher.New(categories)
-
-	// Test with invalid file format
-	reader := strings.NewReader("test data")
-	info := Import(context.Background(), "test.txt", reader, s, matcher)
-	if info.Error == nil || info.Error.Error() != "unsupported file format: .txt" {
-		t.Errorf("Expected error for unsupported file format")
-	}
-}
-
 func TestImportInvalidCSV(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -335,7 +321,7 @@ CHARGE,Current,invalid-date,2024-01-01 10:01:00,Restaurant bill,1234.56,0.00,USD
 			matcher := matcher.New(categories)
 
 			reader := strings.NewReader(tt.csvData)
-			info := Import(context.Background(), tt.filename, reader, s, matcher)
+			info := ImportCSV(context.Background(), tt.filename, reader, s, matcher)
 			if info.Error == nil {
 				t.Errorf("Expected error")
 			}
@@ -347,16 +333,6 @@ CHARGE,Current,invalid-date,2024-01-01 10:01:00,Restaurant bill,1234.56,0.00,USD
 }
 
 func TestImportInvalidJSON(t *testing.T) {
-	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
-
-	// Create test categories
-	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
-	}
-	matcher := matcher.New(categories)
-
 	// Test with invalid JSON data
 	jsonData := `[
 		{
@@ -369,11 +345,9 @@ func TestImportInvalidJSON(t *testing.T) {
 	]`
 
 	reader := strings.NewReader(jsonData)
-	info := Import(context.Background(), "test.json", reader, s, matcher)
-	if info.Error == nil {
-		t.Errorf("Expected 1 error")
-	}
-	if !strings.Contains(info.Error.Error(), "parsing time") {
-		t.Errorf("Expected parsing error, got: %v", info.Error)
+
+	valid, _ := SupportedJSONSchema(reader)
+	if valid {
+		t.Fatal("expected invalid JSON")
 	}
 }

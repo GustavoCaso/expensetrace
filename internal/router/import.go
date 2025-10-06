@@ -80,6 +80,17 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 		return
 	}
 
+	var info importUtil.ImportInfo
+	fileExtension := path.Ext(header.Filename)
+
+	switch fileExtension {
+	case ".csv":
+	case ".json":
+	default:
+		data.Error = fmt.Sprintf("Error: unsupported file extesion: %s", fileExtension)
+		return
+	}
+
 	// Copy the file data to my buffer
 	var buf bytes.Buffer
 	_, err = io.Copy(&buf, file)
@@ -92,22 +103,39 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 	i.logger.Info("File uploaded for import", "filename", header.Filename, "size", sizeKB)
 	defer file.Close()
 
-	fileFormat := path.Ext(header.Filename)
-	if fileFormat == ".csv" {
+	if fileExtension == ".csv" {
 		if !importUtil.SupportedProvider(header.Filename) {
-			// Start prevideflow
+			// Start interactive flow
 			previewFlow = true
 			i.previewHandler(ctx, &buf, header, w)
 			return
 		}
+
+		info = importUtil.ImportCSV(ctx, header.Filename, &buf, i.storage, i.matcher)
 	}
 
-	info := importUtil.Import(ctx, header.Filename, &buf, i.storage, i.matcher)
+	if fileExtension == ".json" {
+		data := buf.Bytes()
+		reader := bytes.NewReader(data)
+		valid, jsonExpenses := importUtil.SupportedJSONSchema(reader)
+
+		if !valid {
+			// Rewind reader
+			reader.Seek(0, io.SeekStart)
+			// Start interactive flow
+			previewFlow = true
+			i.previewHandler(ctx, reader, header, w)
+			return
+		}
+
+		info = importUtil.ImportJSON(ctx, jsonExpenses, i.storage, i.matcher)
+	}
 
 	if info.Error != nil && info.TotalImports == 0 {
 		data.Error = fmt.Sprintf("Error importing expenses: %s", info.Error.Error())
 		return
 	}
+
 	i.logger.Info("Imported succeeded 🎉", "total", info.TotalImports)
 
 	var b strings.Builder
@@ -140,7 +168,7 @@ const previewExpenseCount = 5
 // previewHandler handles file upload and shows preview with column detection.
 func (i *importHandler) previewHandler(
 	_ context.Context,
-	buf *bytes.Buffer,
+	reader io.Reader,
 	fileHeader *multipart.FileHeader,
 	w http.ResponseWriter,
 ) {
@@ -150,7 +178,7 @@ func (i *importHandler) previewHandler(
 		i.templates.Render(w, "partials/import/preview.html", data)
 	}()
 
-	parsedData, err := importUtil.ParseFile(fileHeader.Filename, buf)
+	parsedData, err := importUtil.ParseFile(fileHeader.Filename, reader)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error parsing file: %s", err.Error())
 		return
