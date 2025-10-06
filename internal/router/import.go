@@ -90,7 +90,7 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 
 	sizeKB := fmt.Sprintf("%dKB", buf.Len()/bytesPerKB)
 	i.logger.Info("File uploaded for import", "filename", header.Filename, "size", sizeKB)
-	file.Close()
+	defer file.Close()
 
 	fileFormat := path.Ext(header.Filename)
 	if fileFormat == ".csv" {
