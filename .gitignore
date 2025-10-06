@@ -1,6 +1,3 @@
 *.db
 expense*.yml
-reports/**/*
-docker-compose.yml
-convert/
 expensetrace
