@@ -113,7 +113,7 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 	var b strings.Builder
 	fmt.Fprintf(&b, "%d expenses imported.", info.TotalImports)
 	if info.TotalImports > 0 {
-		fmt.Fprintf(&b, "%d expenses without category", len(info.ImportWithoutCategory))
+		fmt.Fprintf(&b, "%d expenses without category", info.ImportWithoutCategory)
 	}
 
 	banner := banner{

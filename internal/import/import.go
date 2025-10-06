@@ -26,8 +26,7 @@ type jsonExpense struct {
 
 type ImportInfo struct {
 	TotalImports          int
-	ImportWithoutCategory []storageType.Expense
-	ImportWithCategory    []storageType.Expense
+	ImportWithoutCategory int
 	Error                 error
 }
 
@@ -123,7 +122,7 @@ func Import(
 				}
 			}
 
-			categoryID, category := categoryMatcher.Match(ex.description)
+			categoryID, _ := categoryMatcher.Match(ex.description)
 			var et storageType.ExpenseType
 			if ex.amount < 0 {
 				et = storageType.ChargeType
@@ -142,10 +141,8 @@ func Import(
 				categoryID,
 			)
 
-			if category == "" {
-				info.ImportWithoutCategory = append(info.ImportWithoutCategory, expense)
-			} else {
-				info.ImportWithCategory = append(info.ImportWithCategory, expense)
+			if categoryID == nil {
+				info.ImportWithoutCategory++
 			}
 
 			expenses = append(expenses, expense)
@@ -161,7 +158,7 @@ func Import(
 
 		for _, jsonExp := range e {
 			description := strings.ToLower(jsonExp.Description)
-			categoryID, category := categoryMatcher.Match(description)
+			categoryID, _ := categoryMatcher.Match(description)
 
 			var et storageType.ExpenseType
 			if jsonExp.Amount < 0 {
@@ -181,10 +178,8 @@ func Import(
 				categoryID,
 			)
 
-			if category == "" {
-				info.ImportWithoutCategory = append(info.ImportWithoutCategory, expense)
-			} else {
-				info.ImportWithCategory = append(info.ImportWithCategory, expense)
+			if categoryID == nil {
+				info.ImportWithoutCategory++
 			}
 
 			expenses = append(expenses, expense)
