@@ -15,7 +15,7 @@ import (
 	storageType "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
-type JsonExpense struct {
+type JSONExpense struct {
 	Source      string    `json:"source"`
 	Date        time.Time `json:"date"`
 	Description string    `json:"description"`
@@ -56,8 +56,8 @@ func SupportedProvider(filename string) bool {
 	return ok
 }
 
-func SupportedJSONSchema(reader io.Reader) (bool, []JsonExpense) {
-	var expenses []JsonExpense
+func SupportedJSONSchema(reader io.Reader) (bool, []JSONExpense) {
+	var expenses []JSONExpense
 
 	// Try to unmarshal into expected type
 	if err := json.NewDecoder(reader).Decode(&expenses); err != nil {
@@ -79,7 +79,7 @@ func SupportedJSONSchema(reader io.Reader) (bool, []JsonExpense) {
 	return true, expenses
 }
 
-func ImportJSON(ctx context.Context, expenses []JsonExpense, storage storageType.Storage,
+func ImportJSON(ctx context.Context, expenses []JSONExpense, storage storageType.Storage,
 	categoryMatcher *matcher.Matcher) ImportInfo {
 	info := ImportInfo{}
 	storageExpenses := []storageType.Expense{}

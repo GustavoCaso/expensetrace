@@ -115,13 +115,16 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 	}
 
 	if fileExtension == ".json" {
-		data := buf.Bytes()
-		reader := bytes.NewReader(data)
+		reader := bytes.NewReader(buf.Bytes())
 		valid, jsonExpenses := importUtil.SupportedJSONSchema(reader)
 
 		if !valid {
 			// Rewind reader
-			reader.Seek(0, io.SeekStart)
+			_, seekErr := reader.Seek(0, io.SeekStart)
+			if seekErr != nil {
+				data.Error = fmt.Sprintf("Error occurred when reading the file: %s", seekErr.Error())
+				return
+			}
 			// Start interactive flow
 			previewFlow = true
 			i.previewHandler(ctx, reader, header, w)
