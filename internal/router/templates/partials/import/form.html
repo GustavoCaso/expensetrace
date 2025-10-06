@@ -1,0 +1,32 @@
+{{define "import/form"}}
+  <div id="import-body">
+    <div class="import-option">
+      {{if gt (len .Banner.Icon) 0}} 
+        {{template "banner" .Banner}}
+      {{end}}
+    
+      {{ if gt (len .Error) 0 }}
+        {{template "error" .Error}}
+      {{end}}
+      
+      <p class="mb-4 text-sm text-gray-600">Upload your file and map columns to expense fields. Works with any CSV/JSON format.</p>
+      <form id="import-form">
+        <div class="form-group">
+          <label for="file-upload">Select file to import</label>
+          <input id="file-upload" type="file" name="file" accept=".csv,.json" required>
+        </div>
+        <div class="form-actions">
+          <button
+            class="btn-primary"
+            hx-post="/import"
+            hx-encoding="multipart/form-data"
+            hx-target="#import-body"
+            hx-swap="innerHTML"
+            type="submit">
+            Start Import
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{{end}}

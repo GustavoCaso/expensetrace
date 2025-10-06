@@ -50,6 +50,15 @@ var defaultSourceTransformers = map[string][]transformer{
 
 var availableSources = slices.Sorted(maps.Keys(defaultSourceTransformers))
 
+func SupportedProvider(filename string) bool {
+	source, err := extractFileSource(filename)
+	if err != nil {
+		return false
+	}
+	_, ok := defaultSourceTransformers[source]
+	return ok
+}
+
 func Import(
 	ctx context.Context,
 	filename string,

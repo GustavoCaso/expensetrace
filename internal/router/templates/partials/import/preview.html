@@ -1,12 +1,6 @@
 {{define "import/preview"}}
 {{ if gt (len .Error) 0 }}
-  <div class="error-message">
-    <div class="error-icon">⚠️</div>
-    <div>
-      <p class="error-title">Error</p>
-      <p>{{.Error}}</p>
-    </div>
-  </div>
+  {{template "error" .Error}}
 {{else}}
   <div class="card">
     <div class="card-header">

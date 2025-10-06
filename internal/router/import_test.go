@@ -177,7 +177,7 @@ Bank B,02/01/2024,Lunch,-12.00,USD`
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/import/preview", body)
+	req := httptest.NewRequest(http.MethodPost, "/import", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 
@@ -205,120 +205,6 @@ Bank B,02/01/2024,Lunch,-12.00,USD`
 	if !strings.Contains(responseBody, "import_session_id") {
 		t.Error("Response should contain import_session_id hidden field")
 	}
-}
-
-// TestInteractiveImportMapping tests the mapping step.
-func TestInteractiveImportMapping(t *testing.T) {
-	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
-
-	// Create test category
-	_, err := s.CreateCategory(context.Background(), "Food", "coffee|lunch|dinner")
-	if err != nil {
-		t.Fatalf("Failed to create Category: %v", err)
-	}
-
-	categories, err := s.GetCategories(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get Categories: %v", err)
-	}
-
-	matcher := matcher.New(categories)
-	handler, _ := New(s, matcher, logger)
-
-	// First, upload file to get session ID
-	csvData := `source,date,description,amount,currency
-Bank A,01/01/2024,Coffee,-5.00,USD
-Bank B,02/01/2024,Lunch,-12.00,USD`
-
-	body := new(bytes.Buffer)
-	writer := multipart.NewWriter(body)
-
-	dataPart, err := writer.CreateFormFile("file", "test.csv")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = dataPart.Write([]byte(csvData))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = writer.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req := httptest.NewRequest(http.MethodPost, "/import/preview", body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	// Extract session ID from response (simplified - in real test would parse HTML)
-	bodyBytes, _ := io.ReadAll(w.Result().Body)
-	responseBody := string(bodyBytes)
-
-	// For this test, we'll manually create a session to get the ID
-	// In a real scenario, we'd parse it from the HTML response
-	if !strings.Contains(responseBody, "import_session_id") {
-		t.Skip("Cannot extract import_session_id from response for mapping test")
-	}
-}
-
-// TestInteractiveImportFullFlow tests the complete multi-step import flow.
-func TestInteractiveImportFullFlow(t *testing.T) {
-	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
-
-	// Create test categories
-	_, err := s.CreateCategory(context.Background(), "Food", "coffee|lunch")
-	if err != nil {
-		t.Fatalf("Failed to create Category: %v", err)
-	}
-
-	categories, err := s.GetCategories(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get Categories: %v", err)
-	}
-
-	matcher := matcher.New(categories)
-	handler, _ := New(s, matcher, logger)
-
-	csvData := `source,date,description,amount,currency
-Bank A,01/01/2024,Coffee shop,-5.50,USD
-Bank B,02/01/2024,Lunch,-12.00,USD`
-
-	// Step 1: Upload and preview
-	body := new(bytes.Buffer)
-	writer := multipart.NewWriter(body)
-
-	dataPart, err := writer.CreateFormFile("file", "test.csv")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = dataPart.Write([]byte(csvData))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = writer.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req := httptest.NewRequest(http.MethodPost, "/import/preview", body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	if w.Result().StatusCode != http.StatusOK {
-		t.Fatalf("Preview step failed with status %v", w.Result().Status)
-	}
-
-	ensureNoErrorInTemplateResponse(t, "interactive import preview", w.Result().Body)
 }
 
 // TestInteractiveImportInvalidFile tests error handling for invalid files.
@@ -353,7 +239,7 @@ func TestInteractiveImportInvalidFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/import/preview", body)
+	req := httptest.NewRequest(http.MethodPost, "/import", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 

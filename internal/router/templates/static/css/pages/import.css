@@ -1,35 +1,9 @@
 /* Import options layout */
-.import-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-6);
-  margin-top: var(--spacing-4);
-}
-
-@media (max-width: 768px) {
-  .import-options {
-    grid-template-columns: 1fr;
-  }
-}
-
 .import-option {
   padding: var(--spacing-4);
   border: 1px solid var(--color-gray-200);
   border-radius: var(--border-radius);
   background-color: var(--color-gray-50);
-}
-
-.import-option h3 {
-  margin-top: 0;
-  margin-bottom: var(--spacing-2);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
-}
-
-.import-option p {
-  color: var(--color-gray-600);
-  margin-bottom: var(--spacing-4);
-  font-size: var(--font-size-sm);
 }
 
 /* Form grid for field mapping */

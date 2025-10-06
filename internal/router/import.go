@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -34,14 +36,8 @@ func (i *importHandler) RegisterRoutes(mux *http.ServeMux) {
 		i.templates.Render(w, "pages/import/index.html", data)
 	})
 
-	// Legacy direct import (backward compatible)
 	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
 		i.importHandler(r.Context(), w, r)
-	})
-
-	// New multi-step import flow
-	mux.HandleFunc("POST /import/preview", func(w http.ResponseWriter, r *http.Request) {
-		i.previewHandler(r.Context(), w, r)
 	})
 
 	mux.HandleFunc("POST /import/map", func(w http.ResponseWriter, r *http.Request) {
@@ -53,12 +49,17 @@ func (i *importHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 }
 
+const bytesPerKB = 1024
+
 func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	data := viewBase{}
 	data.CurrentPage = pageImport
+	previewFlow := false
 
 	defer func() {
-		i.templates.Render(w, "pages/import/index.html", data)
+		if !previewFlow {
+			i.templates.Render(w, "partials/import/form.html", data)
+		}
 	}()
 
 	err := r.ParseMultipartForm(maxMemory)
@@ -78,7 +79,6 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 		data.Error = fmt.Sprintf("Error parsing form: %s", errorMessage)
 		return
 	}
-	defer file.Close()
 
 	// Copy the file data to my buffer
 	var buf bytes.Buffer
@@ -87,7 +87,20 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 		data.Error = fmt.Sprintf("Error copying bytes: %s", err.Error())
 		return
 	}
-	i.logger.Info("Importing started", "file_name", header.Filename, "size", fmt.Sprintf("%dKB", buf.Len()))
+
+	sizeKB := fmt.Sprintf("%dKB", buf.Len()/bytesPerKB)
+	i.logger.Info("File uploaded for import", "filename", header.Filename, "size", sizeKB)
+	file.Close()
+
+	fileFormat := path.Ext(header.Filename)
+	if fileFormat == ".csv" {
+		if !importUtil.SupportedProvider(header.Filename) {
+			// Start prevideflow
+			previewFlow = true
+			i.previewHandler(ctx, &buf, header, w)
+			return
+		}
+	}
 
 	info := importUtil.Import(ctx, header.Filename, &buf, i.storage, i.matcher)
 
@@ -122,59 +135,33 @@ type previewData struct {
 	TotalRows       int
 }
 
+const previewRowCount = 5
+
 // previewHandler handles file upload and shows preview with column detection.
-func (i *importHandler) previewHandler(_ context.Context, w http.ResponseWriter, r *http.Request) {
+func (i *importHandler) previewHandler(
+	_ context.Context,
+	buf *bytes.Buffer,
+	fileHeader *multipart.FileHeader,
+	w http.ResponseWriter,
+) {
 	data := previewData{viewBase: viewBase{CurrentPage: pageImport}}
 
 	defer func() {
 		i.templates.Render(w, "partials/import/preview.html", data)
 	}()
 
-	err := r.ParseMultipartForm(maxMemory)
-	if err != nil {
-		data.Error = fmt.Sprintf("Error parsing form: %s", err.Error())
-		return
-	}
-
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		var errorMessage string
-		if errors.Is(err, http.ErrMissingFile) {
-			errorMessage = "No file submitted"
-		} else {
-			errorMessage = "Error retrieving the file"
-		}
-		data.Error = errorMessage
-		return
-	}
-	defer file.Close()
-
-	// Copy the file data to buffer
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, file)
-	if err != nil {
-		data.Error = fmt.Sprintf("Error reading file: %s", err.Error())
-		return
-	}
-
-	const bytesPerKB = 1024
-	sizeKB := fmt.Sprintf("%dKB", buf.Len()/bytesPerKB)
-	i.logger.Info("File uploaded for import", "filename", header.Filename, "size", sizeKB)
-
 	// Parse the file
-	parsedData, err := importUtil.ParseFile(header.Filename, &buf)
+	parsedData, err := importUtil.ParseFile(fileHeader.Filename, buf)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error parsing file: %s", err.Error())
 		return
 	}
 
 	// Create session
-	sessionID := i.sessionStore.Create(header.Filename, parsedData)
+	sessionID := i.sessionStore.Create(fileHeader.Filename, parsedData)
 
-	// Prepare preview data
-	const previewRowCount = 5
 	data.ImportSessionID = sessionID
-	data.Filename = header.Filename
+	data.Filename = fileHeader.Filename
 	data.Headers = parsedData.Headers
 	data.PreviewRows = parsedData.GetPreviewRows(previewRowCount)
 	data.TotalRows = parsedData.GetTotalRows()
@@ -305,7 +292,7 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 	data.CurrentPage = pageImport
 
 	defer func() {
-		i.templates.Render(w, "pages/import/index.html", data)
+		i.templates.Render(w, "partials/import/form.html", data)
 	}()
 	// Get session ID from form
 	sessionID := r.FormValue("import_session_id")
