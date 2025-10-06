@@ -26,8 +26,8 @@ type FieldMapping struct {
 	CurrencyColumn    int    // Index of currency column
 }
 
-// MappingError represents an error that occurred while mapping a specific row.
-type MappingError struct {
+// mappingError represents an error that occurred while mapping a specific row.
+type mappingError struct {
 	RowIndex int
 	Error    error
 }
@@ -35,7 +35,7 @@ type MappingError struct {
 // MappingResult contains the results of applying a field mapping.
 type MappingResult struct {
 	Expenses []storageType.Expense
-	Errors   []MappingError
+	Errors   []mappingError
 }
 
 // Validate checks if the field mapping is valid.
@@ -70,13 +70,13 @@ func ApplyMapping(
 
 	result := &MappingResult{
 		Expenses: make([]storageType.Expense, 0, len(data.Rows)),
-		Errors:   make([]MappingError, 0),
+		Errors:   make([]mappingError, 0),
 	}
 
 	for i, row := range data.Rows {
-		expense, err := mapRow(row, mapping, categoryMatcher, i)
+		expense, err := mapRow(row, mapping, categoryMatcher)
 		if err != nil {
-			result.Errors = append(result.Errors, MappingError{
+			result.Errors = append(result.Errors, mappingError{
 				RowIndex: i,
 				Error:    err,
 			})
@@ -93,7 +93,6 @@ func mapRow(
 	row []string,
 	mapping *FieldMapping,
 	categoryMatcher *matcher.Matcher,
-	rowIndex int,
 ) (storageType.Expense, error) {
 	// Extract values from row
 	source := mapping.Source // Use manual source input
