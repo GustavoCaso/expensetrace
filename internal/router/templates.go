@@ -3,6 +3,7 @@ package router
 import (
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -76,18 +77,18 @@ func (t *templates) Render(w io.Writer, templateName string, data interface{}) {
 	}
 }
 
-func localFSDirectory(logger *logger.Logger) (fs.FS, error) {
+func localFSDirectory(logger *logger.Logger, path string) (fs.FS, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		logger.Warn("Unable to get current directory, defaulting to embedded templates", "filename", filename)
-		return embeddedFS()
+		logger.Warn("Unable to get current directory for static files")
+		return nil, errors.New("unable to get current directory")
 	}
-
-	return os.DirFS(filepath.Join(filename, "../templates")), nil
+	logger.Debug("Loading static files from local filesystem", "path", path)
+	return os.DirFS(filepath.Join(filename, path)), nil
 }
 
-func embeddedFS() (fs.FS, error) {
-	subTemplateFS, err := fs.Sub(templatesFS, "templates")
+func embeddedFS(path string) (fs.FS, error) {
+	subTemplateFS, err := fs.Sub(templatesFS, path)
 	if err != nil {
 		return nil, err
 	}
