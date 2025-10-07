@@ -1,4 +1,4 @@
-.PHONY: build test lint generate-test-coverage clean help
+.PHONY: build test run_web lint generate-test-coverage clean help
 
 .DEFAULT_GOAL := help
 
@@ -7,6 +7,9 @@ build:
 
 test:
 	go test ./...
+
+run_web:
+	EXPENSE_LIVERELOAD=true go run cmd/main.go web
 
 lint:
 	golangci-lint run
@@ -27,6 +30,7 @@ help:
 	@echo "Available targets:"
 	@echo "  build                  - Build the CLI binary"
 	@echo "  test                   - Run all tests"
+	@echo "  run_web                - Run the web server using EXPENSE_LIVERELOAD=true set"
 	@echo "  generate-test-coverage - Generate coverage report"
 	@echo "  lint                   - Run golangci-lint"
 	@echo "  format                 - Format Go code"

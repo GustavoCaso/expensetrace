@@ -1,7 +1,6 @@
 package router
 
 import (
-	"embed"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -13,10 +12,6 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
-
-//go:embed templates/static/*
-var static embed.FS
-var staticFS, _ = fs.Sub(static, "templates/static")
 
 type router struct {
 	matcher   *matcher.Matcher
@@ -40,7 +35,11 @@ func New(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logge
 		logger:      logger,
 	}
 
-	mux := &http.ServeMux{}
+	staticFS, staticFSError := router.parserStaticFiles()
+
+	if staticFSError != nil {
+		logger.Fatal("error parsing static files", "error", staticFSError.Error())
+	}
 
 	parseError := router.parseTemplates()
 
@@ -64,6 +63,8 @@ func New(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logge
 		router:       router,
 		sessionStore: nil, // Will be initialized in RegisterRoutes
 	}
+
+	mux := &http.ServeMux{}
 
 	reports.RegisterRoutes(mux)
 	importHanlder.RegisterRoutes(mux)
@@ -101,9 +102,9 @@ func (r *router) parseTemplates() error {
 	var fs fs.FS
 	var err error
 	if r.reload {
-		fs, err = localFSDirectory(r.logger)
+		fs, err = localFSDirectory(r.logger, "../templates")
 	} else {
-		fs, err = embeddedFS()
+		fs, err = embeddedFS("templates")
 	}
 
 	if err != nil {
@@ -118,4 +119,20 @@ func (r *router) parseTemplates() error {
 
 	r.templates = t
 	return nil
+}
+
+func (r *router) parserStaticFiles() (fs.FS, error) {
+	var fs fs.FS
+	var err error
+	if r.reload {
+		fs, err = localFSDirectory(r.logger, "../templates/static")
+		if err != nil {
+			r.logger.Warn("Failed to load local static files, falling back to embedded", "error", err.Error())
+			fs, err = embeddedFS("templates/static")
+		}
+	} else {
+		fs, err = embeddedFS("templates/static")
+	}
+
+	return fs, err
 }
