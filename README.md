@@ -82,6 +82,7 @@ ExpenseTrace can be run using Docker. The simplest way is to use Docker Compose:
 services:
   expensetrace:
     image: gustavocaso/expensetrace:latest
+    command: ["web"]                                   # Run in web mode (default). Use ["tui"] for terminal UI
     environment:
       EXPENSETRACE_CONFIG: /app/data/expensetrace.yml  # Path to the configuration file inside the container
       EXPENSETRACE_DB: /app/data/expenses.db            # Path to the SQLite database file inside the container
@@ -89,7 +90,6 @@ services:
       EXPENSETRACE_LOG_LEVEL: info                     # Log level: debug, info, warn, error
       EXPENSETRACE_LOG_FORMAT: text                    # Log format: text or json
       EXPENSETRACE_LOG_OUTPUT: stdout                  # Log output: stdout, stderr, or file path
-      SUBCOMMAND: web
     ports:
       - "8082:8081"                                    # Maps container port 8081 to host port 8082
     volumes:

@@ -13,13 +13,10 @@ RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o expensetrace /app/cmd/
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/expensetrace .
-COPY start.sh .
-RUN chmod +x /app/start.sh
 
 ARG EXPENSETRACE_DB=expensetrace.db
 ARG EXPENSETRACE_CONFIG=expensetrace.yml
 ARG EXPENSETRACE_PORT=8080
-ARG EXPENSETRACE_SUBCOMMAND=web
 ARG EXPENSETRACE_ALLOW_EMBEDDING="false"
 ARG EXPENSETRACE_LOG_LEVEL=info
 ARG EXPENSETRACE_LOG_FORMAT=text
@@ -35,9 +32,10 @@ ENV EXPENSETRACE_DB=${EXPENSETRACE_DB} \
     EXPENSETRACE_LOG_LEVEL=${EXPENSETRACE_LOG_LEVEL} \
     EXPENSETRACE_LOG_FORMAT=${EXPENSETRACE_LOG_FORMAT} \
     EXPENSETRACE_LOG_OUTPUT=${EXPENSETRACE_LOG_OUTPUT} \
-    EXPENSETRACE_SUBCOMMAND=${EXPENSETRACE_SUBCOMMAND} \
     EXPENSETRACE_ALLOW_EMBEDDING=${EXPENSETRACE_ALLOW_EMBEDDING}
     
 
-# Use the startup script as entrypoint
-ENTRYPOINT ["/app/start.sh"]
+# Run the expensetrace binary directly
+ENTRYPOINT ["./expensetrace"]
+# Default to web mode (can be overridden with: docker run ... expensetrace tui)
+CMD ["web"]
