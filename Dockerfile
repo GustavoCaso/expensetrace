@@ -30,16 +30,17 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Final stage
 FROM alpine:3.21.0
 
-# Install runtime dependencies and create non-root user
-RUN apk add --no-cache ca-certificates tzdata sqlite-libs && \
+# Install runtime dependencies and shadow package (for usermod/groupmod) and su-exec (for privilege dropping)
+RUN apk add --no-cache ca-certificates tzdata sqlite-libs shadow su-exec && \
     rm -rf /var/cache/apk/* && \
-    addgroup -g 1234 expensetrace && \
-    adduser -u 1234 -G expensetrace -s /bin/sh -D expensetrace && \
+    addgroup -g 1000 expensetrace && \
+    adduser -u 1000 -G expensetrace -s /bin/sh -D expensetrace && \
     mkdir -p /app /data && \
     chown -R expensetrace:expensetrace /app /data
 
-# Copy binary from builder with proper ownership
-COPY --from=builder --chown=expensetrace:expensetrace /app/expensetrace /app/
+# Copy binary and entrypoint script from builder
+COPY --from=builder --chown=root:root /app/expensetrace /app/
+COPY --chmod=755 scripts/entrypoint.sh /usr/local/bin/
 
 # Environment variables with defaults pointing to /data directory
 ENV EXPENSETRACE_DB=/data/expensetrace.db \
@@ -52,13 +53,10 @@ ENV EXPENSETRACE_DB=/data/expensetrace.db \
 # Expose the default port
 EXPOSE 8080
 
-# Switch to non-root user
-USER expensetrace
-
 # Set working directory to data directory
 WORKDIR /data
 
-# Run the expensetrace binary directly
-ENTRYPOINT ["/app/expensetrace"]
+# Use entrypoint script to handle PUID/PGID and drop privileges
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 # Default to web mode (can be overridden with: docker run ... expensetrace tui)
 CMD ["web"]
