@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/export"
 	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
@@ -78,6 +79,10 @@ func (c *expenseHandler) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("POST /expense/search", func(w http.ResponseWriter, r *http.Request) {
 		c.expenseSearchHandler(r.Context(), w, r)
+	})
+
+	mux.HandleFunc("GET /expenses/export", func(w http.ResponseWriter, r *http.Request) {
+		c.exportExpensesHandler(r.Context(), w)
 	})
 }
 
@@ -582,4 +587,28 @@ func (c *expenseHandler) expenseSearchHandler(ctx context.Context, w http.Respon
 	data.CurrentYear = today.Year()
 	data.CurrentMonth = today.Month().String()
 	data.Query = query
+}
+
+func (c *expenseHandler) exportExpensesHandler(ctx context.Context, w http.ResponseWriter) {
+	// Get all expenses
+	expenses, err := c.storage.GetAllExpenseTypes(ctx)
+	if err != nil {
+		c.logger.Error("Failed to get expenses for export", "error", err)
+		http.Error(w, fmt.Sprintf("Failed to get expenses: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	// Set CSV headers
+	filename := fmt.Sprintf("expenses_%s.csv", time.Now().Format("2006-01-02"))
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+
+	// Export to CSV
+	if exportErr := export.CSV(ctx, w, expenses, c.storage); exportErr != nil {
+		c.logger.Error("Failed to export expenses to CSV", "error", exportErr)
+		http.Error(w, fmt.Sprintf("Failed to export expenses: %s", exportErr.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	c.logger.Info("Expenses exported successfully", "count", len(expenses))
 }
