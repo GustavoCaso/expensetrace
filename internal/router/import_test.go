@@ -12,32 +12,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestImport(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	_, err := s.CreateCategory(context.Background(), "Food", "restaurant|food|grocery")
+	_, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery")
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	_, err = s.CreateCategory(context.Background(), "Transport", "uber|taxi|transit")
+	_, err = s.CreateCategory(context.Background(), user.ID(), "Transport", "uber|taxi|transit")
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
-
-	categories, err := s.GetCategories(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get Categories: %v", err)
-	}
-
-	matcher := matcher.New(categories)
 
 	// Create test expenses
 	now := time.Now()
@@ -46,16 +38,17 @@ func TestImport(t *testing.T) {
 		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, nil),
 	}
 
-	_, expenseError := s.InsertExpenses(context.Background(), expenses)
+	_, expenseError := s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if expenseError != nil {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
 	// Create router
-	handler, router := New(s, matcher, logger)
+	handler, router := New(s, logger)
 
 	// Hit home to populate cache
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -96,6 +89,7 @@ func TestImport(t *testing.T) {
 
 	req = httptest.NewRequest(http.MethodPost, "/import", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w = httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -109,6 +103,7 @@ func TestImport(t *testing.T) {
 
 	// Hit home again t valiadte the cache has been busted and the reports have being updated
 	req = httptest.NewRequest(http.MethodGet, "/", nil)
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w = httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -144,15 +139,9 @@ func ensureNoErrorInTemplateResponse(t *testing.T, test string, body io.ReadClos
 // TestInteractiveImportPreview tests the preview step of interactive import.
 func TestInteractiveImportPreview(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	categories, err := s.GetCategories(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get Categories: %v", err)
-	}
-
-	matcher := matcher.New(categories)
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	// Create CSV data for upload
 	csvData := `source,date,description,amount,currency
@@ -179,6 +168,7 @@ Bank B,02/01/2024,Lunch,-12.00,USD`
 
 	req := httptest.NewRequest(http.MethodPost, "/import", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -210,15 +200,9 @@ Bank B,02/01/2024,Lunch,-12.00,USD`
 // TestInteractiveImportInvalidFile tests error handling for invalid files.
 func TestInteractiveImportInvalidFile(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	categories, err := s.GetCategories(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get Categories: %v", err)
-	}
-
-	matcher := matcher.New(categories)
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	// Upload file with unsupported format
 	body := new(bytes.Buffer)
@@ -241,6 +225,7 @@ func TestInteractiveImportInvalidFile(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/import", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)

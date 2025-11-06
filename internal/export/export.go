@@ -20,6 +20,7 @@ const (
 // format: ID,Source,Date,Description,Amount,Type,Currency,Category
 func CSV(
 	ctx context.Context,
+	userID int64,
 	writer io.Writer,
 	expenses []storageType.Expense,
 	storage storageType.Storage,
@@ -36,7 +37,7 @@ func CSV(
 
 	// Convert all expenses to CSV records
 	for _, expense := range expenses {
-		records = append(records, expenseToCSVRecord(ctx, expense, storage))
+		records = append(records, expenseToCSVRecord(ctx, userID, expense, storage))
 	}
 
 	// Write all records at once
@@ -49,13 +50,14 @@ func CSV(
 
 func expenseToCSVRecord(
 	ctx context.Context,
+	userID int64,
 	expense storageType.Expense,
 	storage storageType.Storage,
 ) []string {
 	// Get category name if category exists
 	categoryName := ""
 	if expense.CategoryID() != nil {
-		category, err := storage.GetCategory(ctx, *expense.CategoryID())
+		category, err := storage.GetCategory(ctx, userID, *expense.CategoryID())
 		if err == nil {
 			categoryName = category.Name()
 		}

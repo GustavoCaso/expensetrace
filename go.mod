@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/x/term v0.2.1
 	github.com/fatih/color v1.17.0
 	github.com/mattn/go-sqlite3 v1.14.22
+	golang.org/x/crypto v0.32.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -27,5 +28,5 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.3.8 // indirect
+	golang.org/x/text v0.21.0 // indirect
 )

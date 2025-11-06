@@ -1,21 +1,2 @@
-/* Main CSS file - imports all components */
-
-/* Base styles */
-@import 'base/variables.css';
-@import 'base/reset.css';
-
-/* Components */
-@import 'components/banners.css';
-@import 'components/buttons.css';
-@import 'components/errors.css';
-@import 'components/badges.css';
-@import 'components/cards.css';
-@import 'components/forms.css';
-@import 'components/tables.css';
-@import 'components/navigation.css';
-
 /* Page specific styles */
 @import 'pages/categories.css';
-
-/* Utilities */
-@import 'utilities/utilities.css';

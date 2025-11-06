@@ -79,6 +79,25 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
+  // Toggle details function
+  document.body.addEventListener('click', function (e) {
+    if (e.target.closest('.toggle')) {
+      const button = e.target.closest('.toggle');
+      const targetId = button.getAttribute('data-target');
+      const targetContent = document.getElementById(targetId);
+
+      if (targetContent) {
+        const isCollapsed = targetContent.classList.contains('show');
+
+        if (isCollapsed) {
+          targetContent.classList.remove('show');
+        } else {
+          targetContent.classList.add('show');
+        }
+      }
+    }
+  });
+
   // Toggle details swap function
   document.addEventListener('click', function (e) {
     if (e.target.closest('.toggle-details-swap')) {

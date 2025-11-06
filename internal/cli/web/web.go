@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/logger"
-	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/router"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
@@ -21,7 +20,7 @@ const (
 	defaultTimeout = 5 * time.Second
 )
 
-func Run(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logger) error {
+func Run(storage storage.Storage, logger *logger.Logger) error {
 	// Initialize configuration from environment variables
 	port := os.Getenv("EXPENSETRACE_PORT")
 	if port == "" {
@@ -42,7 +41,7 @@ func Run(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logge
 		timeout = defaultTimeout
 	}
 
-	handler, _ := router.New(storage, matcher, logger)
+	handler, _ := router.New(storage, logger)
 	logger.Info("Starting web server", "url", fmt.Sprintf("http://localhost:%s", port))
 
 	server := &http.Server{

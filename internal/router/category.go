@@ -27,8 +27,9 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 		c.categoriesHandler(r.Context(), w, nil, nil)
 	})
 
-	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, _ *http.Request) {
-		c.templates.Render(w, "pages/categories/new.html", viewBase{CurrentPage: pageCategories})
+	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, r *http.Request) {
+		base := newViewBase(r.Context(), c.storage, c.logger, pageCategories)
+		c.templates.Render(w, "pages/categories/new.html", base)
 	})
 
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, r *http.Request) {
@@ -124,14 +125,17 @@ func (c *categoryHandler) categoriesHandler(
 	outerErr error,
 	banner *banner,
 ) {
-	data := categoriesViewData{}
-	data.CurrentPage = pageCategories
+	userID := userIDFromContext(ctx)
+	base := newViewBase(ctx, c.storage, c.logger, pageCategories)
+	data := categoriesViewData{
+		viewBase: base,
+	}
 
 	defer func() {
 		c.templates.Render(w, "pages/categories/index.html", data)
 	}()
 
-	categories, err := c.storage.GetCategories(ctx)
+	categories, err := c.storage.GetCategories(ctx, userID)
 	if err != nil {
 		data.Error = fmt.Sprintf("error fetch categories: %s", err.Error())
 		return
@@ -146,7 +150,7 @@ func (c *categoryHandler) categoriesHandler(
 	}
 
 	// Get counts for uncategorized expenses
-	uncategorizedInfos, err := c.storage.GetExpensesWithoutCategory(ctx)
+	uncategorizedInfos, err := c.storage.GetExpensesWithoutCategory(ctx, userID)
 	if err != nil {
 		data.Error = err.Error()
 		return
@@ -161,7 +165,7 @@ func (c *categoryHandler) categoriesHandler(
 
 	for i, cat := range categoriesWithoutExclude {
 		// Get expenses for this category
-		expenses, expensesErr := c.storage.GetExpensesByCategory(ctx, cat.ID())
+		expenses, expensesErr := c.storage.GetExpensesByCategory(ctx, userID, cat.ID())
 		if expensesErr != nil {
 			data.Error = expensesErr.Error()
 			return
@@ -189,13 +193,15 @@ func (c *categoryHandler) updatecategoryHandler(
 	id, name, pattern string,
 	w http.ResponseWriter,
 ) {
+	userID := userIDFromContext(ctx)
 	var categoryCardData *enhancedCategory
-	var errorData *viewBase
+	var err error
 
 	defer func() {
-		if errorData != nil {
-			errorData.CurrentPage = pageCategories
-			c.templates.Render(w, "pages/categories/index.html", *errorData)
+		if err != nil {
+			errorInfo := newViewBase(ctx, c.storage, c.logger, pageCategories)
+			errorInfo.Error = err.Error()
+			c.templates.Render(w, "pages/categories/index.html", errorInfo)
 		} else if categoryCardData != nil {
 			c.templates.Render(w, "partials/categories/card.html", *categoryCardData)
 		}
@@ -203,28 +209,19 @@ func (c *categoryHandler) updatecategoryHandler(
 
 	categoryID, err := strconv.Atoi(id)
 	if err != nil {
-		errorData = &viewBase{
-			Error: err.Error(),
-		}
 		return
 	}
 
 	categoryIDInt64 := int64(categoryID)
 
-	categoryEntry, err := c.storage.GetCategory(ctx, categoryIDInt64)
+	categoryEntry, err := c.storage.GetCategory(ctx, userID, categoryIDInt64)
 	if err != nil {
-		errorData = &viewBase{
-			Error: err.Error(),
-		}
 		return
 	}
 
 	// Get expenses that currently belong to this specific category
-	currentCategoryExpenses, categoryExpensesErr := c.storage.GetExpensesByCategory(ctx, categoryIDInt64)
-	if categoryExpensesErr != nil {
-		errorData = &viewBase{
-			Error: categoryExpensesErr.Error(),
-		}
+	currentCategoryExpenses, err := c.storage.GetExpensesByCategory(ctx, userID, categoryIDInt64)
+	if err != nil {
 		return
 	}
 
@@ -250,7 +247,7 @@ func (c *categoryHandler) updatecategoryHandler(
 		}
 	}
 
-	err = c.storage.UpdateCategory(ctx, categoryIDInt64, name, pattern)
+	err = c.storage.UpdateCategory(ctx, userID, categoryIDInt64, name, pattern)
 	if err != nil {
 		existingEnhancedCategory.Errors = true
 		existingEnhancedCategory.ErrorStrings = map[string]string{
@@ -271,20 +268,14 @@ func (c *categoryHandler) updatecategoryHandler(
 		return
 	}
 
-	updateCategoryMatcherErr := c.updateCategoryMatcher()
-	if updateCategoryMatcherErr != nil {
-		errorData = &viewBase{
-			Error: updateCategoryMatcherErr.Error(),
-		}
+	err = c.updateCategoryMatcher(userID)
+	if err != nil {
 		return
 	}
 
 	// Get uncategorized expenses to potentially categorize them
-	uncategorizedExpenses, uncatErr := c.storage.GetExpensesWithoutCategory(ctx)
-	if uncatErr != nil {
-		errorData = &viewBase{
-			Error: uncatErr.Error(),
-		}
+	uncategorizedExpenses, err := c.storage.GetExpensesWithoutCategory(ctx, userID)
+	if err != nil {
 		return
 	}
 
@@ -316,11 +307,9 @@ func (c *categoryHandler) updatecategoryHandler(
 	}
 
 	if len(toUpdated) > 0 {
-		updated, updateErr := c.storage.UpdateExpenses(ctx, toUpdated)
-		if updateErr != nil {
-			errorData = &viewBase{
-				Error: updateErr.Error(),
-			}
+		updated, updatedErr := c.storage.UpdateExpenses(ctx, userID, toUpdated)
+		if updatedErr != nil {
+			err = updatedErr
 			return
 		}
 
@@ -332,11 +321,9 @@ func (c *categoryHandler) updatecategoryHandler(
 
 		c.resetCache()
 
-		updatedExpenses, updatedExpensesErr := c.storage.GetExpensesByCategory(ctx, categoryIDInt64)
-		if updatedExpensesErr != nil {
-			errorData = &viewBase{
-				Error: updatedExpensesErr.Error(),
-			}
+		updatedExpenses, updateExpensesErr := c.storage.GetExpensesByCategory(ctx, userID, categoryIDInt64)
+		if updateExpensesErr != nil {
+			err = updateExpensesErr
 			return
 		}
 
@@ -375,8 +362,11 @@ func (c *categoryHandler) uncategorizedHandler(
 	query string,
 	banner *banner,
 ) {
-	data := uncategorizedViewData{}
-	data.CurrentPage = pageCategories
+	userID := userIDFromContext(ctx)
+	base := newViewBase(ctx, c.storage, c.logger, pageCategories)
+	data := uncategorizedViewData{
+		viewBase: base,
+	}
 
 	defer func() {
 		c.templates.Render(w, "pages/categories/uncategorized.html", data)
@@ -386,9 +376,9 @@ func (c *categoryHandler) uncategorizedHandler(
 	var err error
 
 	if query != "" {
-		expenses, err = c.storage.GetExpensesWithoutCategoryWithQuery(ctx, query)
+		expenses, err = c.storage.GetExpensesWithoutCategoryWithQuery(ctx, userID, query)
 	} else {
-		expenses, err = c.storage.GetExpensesWithoutCategory(ctx)
+		expenses, err = c.storage.GetExpensesWithoutCategory(ctx, userID)
 	}
 
 	if err != nil {
@@ -460,8 +450,8 @@ func slugify(s string) string {
 }
 
 func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	data := viewBase{}
-	data.CurrentPage = pageCategories
+	userID := userIDFromContext(ctx)
+	data := newViewBase(ctx, c.storage, c.logger, pageCategories)
 
 	defer func() {
 		if data.Error != "" {
@@ -489,7 +479,7 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 		return
 	}
 
-	cat, err := c.storage.GetCategory(ctx, int64(categoryID))
+	cat, err := c.storage.GetCategory(ctx, userID, int64(categoryID))
 
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("error GetCategory %s", err.Error()))
@@ -506,7 +496,7 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 		return
 	}
 
-	err = c.storage.UpdateCategory(ctx, cat.ID(), cat.Name(), extendedRegex)
+	err = c.storage.UpdateCategory(ctx, userID, cat.ID(), cat.Name(), extendedRegex)
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("error UpdateCategory %s", err.Error()))
 		data.Error = err.Error()
@@ -515,7 +505,7 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 
 	c.logger.Info("Category updated successfully", "id", cat.ID(), "extended_regex", extendedRegex)
 
-	expenses, err := c.storage.SearchExpensesByDescription(ctx, expenseDescription)
+	expenses, err := c.storage.SearchExpensesByDescription(ctx, userID, expenseDescription)
 
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("error SearchExpensesByDescription %s", err.Error()))
@@ -541,7 +531,7 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 			)
 			updatedExpenses[i] = expense
 		}
-		updated, updateErr := c.storage.UpdateExpenses(ctx, updatedExpenses)
+		updated, updateErr := c.storage.UpdateExpenses(ctx, userID, updatedExpenses)
 		if updateErr != nil {
 			data.Error = updateErr.Error()
 			return
@@ -553,7 +543,7 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 			c.logger.Warn("not all expenses updated succesfully")
 		}
 
-		updateCategoryMatcherErr := c.updateCategoryMatcher()
+		updateCategoryMatcherErr := c.updateCategoryMatcher(userID)
 		if updateCategoryMatcherErr != nil {
 			data.Error = updateCategoryMatcherErr.Error()
 			return
@@ -569,16 +559,17 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 }
 
 func (c *categoryHandler) resetcategoryHandler(ctx context.Context, w http.ResponseWriter) {
-	_, err := c.storage.DeleteCategories(ctx)
+	userID := userIDFromContext(ctx)
+	_, err := c.storage.DeleteCategories(ctx, userID)
 
 	if err != nil {
-		c.categoryIndexError(w, err)
+		c.categoryIndexError(ctx, w, err)
 		return
 	}
 
-	updateCategoryMatcherErr := c.updateCategoryMatcher()
+	updateCategoryMatcherErr := c.updateCategoryMatcher(userID)
 	if updateCategoryMatcherErr != nil {
-		c.categoryIndexError(w, updateCategoryMatcherErr)
+		c.categoryIndexError(ctx, w, updateCategoryMatcherErr)
 		return
 	}
 
@@ -591,6 +582,7 @@ func (c *categoryHandler) resetcategoryHandler(ctx context.Context, w http.Respo
 }
 
 func (c *categoryHandler) deletecategoryHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	userID := userIDFromContext(ctx)
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -598,7 +590,7 @@ func (c *categoryHandler) deletecategoryHandler(ctx context.Context, w http.Resp
 		return
 	}
 
-	_, err = c.storage.DeleteCategory(ctx, id)
+	_, err = c.storage.DeleteCategory(ctx, userID, id)
 	if err != nil {
 		c.logger.Error("Failed to delete category", "error", err, "id", id)
 
@@ -639,7 +631,9 @@ func (c *categoryHandler) createcategoryHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	userID := userIDFromContext(ctx)
 	data := createCategoryViewData{}
+	data.LoggedIn = true
 	data.CurrentPage = pageCategories
 	template := "partials/categories/test_category.html"
 	if create {
@@ -677,7 +671,7 @@ func (c *categoryHandler) createcategoryHandler(
 		return
 	}
 
-	expenses, err := c.storage.GetExpensesWithoutCategory(ctx)
+	expenses, err := c.storage.GetExpensesWithoutCategory(ctx, userID)
 
 	if err != nil {
 		data.Error = err.Error()
@@ -695,7 +689,7 @@ func (c *categoryHandler) createcategoryHandler(
 	total := len(toUpdated)
 
 	if create && total > 0 {
-		categoryID, createErr := c.storage.CreateCategory(ctx, name, pattern)
+		categoryID, createErr := c.storage.CreateCategory(ctx, userID, name, pattern)
 
 		if createErr != nil {
 			data.Error = createErr.Error()
@@ -720,7 +714,7 @@ func (c *categoryHandler) createcategoryHandler(
 			updatedExpenses[i] = expense
 		}
 
-		updated, updateErr := c.storage.UpdateExpenses(ctx, updatedExpenses)
+		updated, updateErr := c.storage.UpdateExpenses(ctx, userID, updatedExpenses)
 		if updateErr != nil {
 			data.Error = updateErr.Error()
 			return
@@ -734,7 +728,7 @@ func (c *categoryHandler) createcategoryHandler(
 			total = int(updated)
 		}
 
-		updateCategoryMatcherErr := c.updateCategoryMatcher()
+		updateCategoryMatcherErr := c.updateCategoryMatcher(userID)
 		if updateCategoryMatcherErr != nil {
 			data.Error = updateCategoryMatcherErr.Error()
 			return
@@ -797,16 +791,14 @@ func createEnhancedCategory(category storage.Category, expenses []storage.Expens
 	}
 }
 
-func (c *categoryHandler) categoryIndexError(w http.ResponseWriter, err error) {
-	data := viewBase{
-		Error:       err.Error(),
-		CurrentPage: pageCategories,
-	}
+func (c *categoryHandler) categoryIndexError(ctx context.Context, w http.ResponseWriter, err error) {
+	data := newViewBase(ctx, c.storage, c.logger, pageCategories)
+	data.Error = err.Error()
 	c.templates.Render(w, "pages/categories/index.html", data)
 }
 
-func (c *categoryHandler) updateCategoryMatcher() error {
-	categories, categoryErr := c.storage.GetCategories(context.Background())
+func (c *categoryHandler) updateCategoryMatcher(userID int64) error {
+	categories, categoryErr := c.storage.GetCategories(context.Background(), userID)
 	if categoryErr != nil {
 		return categoryErr
 	}

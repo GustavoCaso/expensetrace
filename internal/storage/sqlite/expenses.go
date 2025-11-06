@@ -15,7 +15,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
-func convertToTemplateExpenses(expenses []storage.Expense) []*templateExpense {
+func convertToTemplateExpenses(userID int64, expenses []storage.Expense) []*templateExpense {
 	templateExpenses := make([]*templateExpense, len(expenses))
 	for i, exp := range expenses {
 		categoryID := sql.NullInt64{}
@@ -32,6 +32,7 @@ func convertToTemplateExpenses(expenses []storage.Expense) []*templateExpense {
 			Type:        exp.Type(),
 			Currency:    exp.Currency(),
 			CategoryID:  categoryID,
+			UserID:      userID,
 		}
 	}
 	return templateExpenses
@@ -46,6 +47,7 @@ type templateExpense struct {
 	Type        storage.ExpenseType
 	Currency    string
 	CategoryID  sql.NullInt64
+	UserID      int64
 }
 
 // content holds our static content.
@@ -53,49 +55,49 @@ type templateExpense struct {
 //go:embed templates/*
 var content embed.FS
 
-func (s *sqliteStorage) GetExpenseByID(ctx context.Context, id int64) (storage.Expense, error) {
-	row := s.db.QueryRowContext(ctx, "SELECT * FROM expenses WHERE id = ?", id)
+func (s *sqliteStorage) GetExpenseByID(ctx context.Context, userID, id int64) (storage.Expense, error) {
+	row := s.db.QueryRowContext(ctx, "SELECT * FROM expenses WHERE id = ? AND user_id = ?", id, userID)
 	return expenseFromRow(row.Scan)
 }
 
-func (s *sqliteStorage) UpdateExpense(ctx context.Context, expense storage.Expense) (int64, error) {
+func (s *sqliteStorage) UpdateExpense(ctx context.Context, userID int64, expense storage.Expense) (int64, error) {
 	categoryID := sql.NullInt64{}
 	if expense.CategoryID() != nil {
 		categoryID = sql.NullInt64{Int64: *expense.CategoryID(), Valid: true}
 	}
 
 	r, err := s.db.ExecContext(ctx,
-		`UPDATE expenses SET source = ?, amount = ?, description = ?, 
-		 expense_type = ?, date = ?, currency = ?, category_id = ? 
-		 WHERE id = ?`,
+		`UPDATE expenses SET source = ?, amount = ?, description = ?,
+		 expense_type = ?, date = ?, currency = ?, category_id = ?
+		 WHERE id = ? AND user_id = ?`,
 		expense.Source(), expense.Amount(), expense.Description(),
 		expense.Type(), expense.Date().Unix(), expense.Currency(),
-		categoryID, expense.ID())
+		categoryID, expense.ID(), userID)
 	if err != nil {
 		return 0, err
 	}
 	return r.RowsAffected()
 }
 
-func (s *sqliteStorage) DeleteExpense(ctx context.Context, id int64) (int64, error) {
+func (s *sqliteStorage) DeleteExpense(ctx context.Context, userID, id int64) (int64, error) {
 	r, err := s.db.ExecContext(ctx,
-		"DELETE FROM expenses WHERE id = ?", id)
+		"DELETE FROM expenses WHERE id = ? AND user_id = ?", id, userID)
 	if err != nil {
 		return 0, err
 	}
 	return r.RowsAffected()
 }
 
-func (s *sqliteStorage) InsertExpenses(ctx context.Context, expenses []storage.Expense) (int64, error) {
+func (s *sqliteStorage) InsertExpenses(ctx context.Context, userID int64, expenses []storage.Expense) (int64, error) {
 	if len(expenses) == 0 {
 		return 0, nil
 	}
 
 	// Convert to internal template-compatible type
-	templateExpenses := convertToTemplateExpenses(expenses)
+	templateExpenses := convertToTemplateExpenses(userID, expenses)
 
 	// Insert records
-	query := "INSERT OR IGNORE INTO expenses(source, amount, description, expense_type, date, currency, category_id) VALUES %s;"
+	query := "INSERT OR IGNORE INTO expenses(source, amount, description, expense_type, date, currency, category_id, user_id) VALUES %s;"
 	var buffer = bytes.Buffer{}
 
 	err := s.renderTemplate(&buffer, "expenses/insert.tmpl", struct {
@@ -121,8 +123,8 @@ func (s *sqliteStorage) InsertExpenses(ctx context.Context, expenses []storage.E
 	return result.RowsAffected()
 }
 
-func (s *sqliteStorage) GetExpenses(ctx context.Context) ([]storage.Expense, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT * FROM expenses WHERE expense_type = 0")
+func (s *sqliteStorage) GetExpenses(ctx context.Context, userID int64) ([]storage.Expense, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT * FROM expenses WHERE expense_type = 0 AND user_id = ?", userID)
 	if err != nil {
 		return []storage.Expense{}, err
 	}
@@ -130,8 +132,8 @@ func (s *sqliteStorage) GetExpenses(ctx context.Context) ([]storage.Expense, err
 	return extractExpensesFromRows(rows)
 }
 
-func (s *sqliteStorage) GetAllExpenseTypes(ctx context.Context) ([]storage.Expense, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT * FROM expenses")
+func (s *sqliteStorage) GetAllExpenseTypes(ctx context.Context, userID int64) ([]storage.Expense, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT * FROM expenses WHERE user_id = ?", userID)
 	if err != nil {
 		return []storage.Expense{}, err
 	}
@@ -139,16 +141,16 @@ func (s *sqliteStorage) GetAllExpenseTypes(ctx context.Context) ([]storage.Expen
 	return extractExpensesFromRows(rows)
 }
 
-func (s *sqliteStorage) UpdateExpenses(ctx context.Context, expenses []storage.Expense) (int64, error) {
+func (s *sqliteStorage) UpdateExpenses(ctx context.Context, userID int64, expenses []storage.Expense) (int64, error) {
 	if len(expenses) == 0 {
 		return 0, nil
 	}
 
 	// Convert to internal template-compatible type
-	templateExpenses := convertToTemplateExpenses(expenses)
+	templateExpenses := convertToTemplateExpenses(userID, expenses)
 
 	// Update records
-	query := "INSERT OR REPLACE INTO expenses(id, source, amount, description, expense_type, date, currency, category_id) VALUES %s;"
+	query := "INSERT OR REPLACE INTO expenses(id, source, amount, description, expense_type, date, currency, category_id, user_id) VALUES %s;"
 	var buffer = bytes.Buffer{}
 
 	err := s.renderTemplate(&buffer, "expenses/updates.tmpl", struct {
@@ -176,11 +178,12 @@ func (s *sqliteStorage) UpdateExpenses(ctx context.Context, expenses []storage.E
 
 func (s *sqliteStorage) GetExpensesFromDateRange(
 	ctx context.Context,
+	userID int64,
 	start time.Time,
 	end time.Time,
 ) ([]storage.Expense, error) {
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT * FROM expenses WHERE date BETWEEN ? and ?", start.Unix(), end.Unix())
+		"SELECT * FROM expenses WHERE date BETWEEN ? and ? AND user_id = ?", start.Unix(), end.Unix(), userID)
 	if err != nil {
 		return []storage.Expense{}, err
 	}
@@ -188,9 +191,9 @@ func (s *sqliteStorage) GetExpensesFromDateRange(
 	return extractExpensesFromRows(rows)
 }
 
-func (s *sqliteStorage) GetExpensesWithoutCategory(ctx context.Context) ([]storage.Expense, error) {
+func (s *sqliteStorage) GetExpensesWithoutCategory(ctx context.Context, userID int64) ([]storage.Expense, error) {
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT * FROM expenses WHERE category_id IS NULL AND expense_type = 0")
+		"SELECT * FROM expenses WHERE category_id IS NULL AND expense_type = 0 AND user_id = ?", userID)
 	if err != nil {
 		return []storage.Expense{}, err
 	}
@@ -198,10 +201,10 @@ func (s *sqliteStorage) GetExpensesWithoutCategory(ctx context.Context) ([]stora
 	return extractExpensesFromRows(rows)
 }
 
-func (s *sqliteStorage) SearchExpenses(ctx context.Context, keyword string) ([]storage.Expense, error) {
+func (s *sqliteStorage) SearchExpenses(ctx context.Context, userID int64, keyword string) ([]storage.Expense, error) {
 	// Use parameterized query to prevent SQL injection
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT * FROM expenses WHERE description LIKE ?", "%"+keyword+"%")
+		"SELECT * FROM expenses WHERE description LIKE ? AND user_id = ?", "%"+keyword+"%", userID)
 	if err != nil {
 		return []storage.Expense{}, err
 	}
@@ -211,11 +214,12 @@ func (s *sqliteStorage) SearchExpenses(ctx context.Context, keyword string) ([]s
 
 func (s *sqliteStorage) SearchExpensesByDescription(
 	ctx context.Context,
+	userID int64,
 	description string,
 ) ([]storage.Expense, error) {
 	// Use parameterized query to prevent SQL injection
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT * FROM expenses WHERE description = ?", description)
+		"SELECT * FROM expenses WHERE description = ? AND user_id = ?", description, userID)
 	if err != nil {
 		return []storage.Expense{}, err
 	}
@@ -225,10 +229,15 @@ func (s *sqliteStorage) SearchExpensesByDescription(
 
 func (s *sqliteStorage) GetExpensesWithoutCategoryWithQuery(
 	ctx context.Context,
+	userID int64,
 	keyword string,
 ) ([]storage.Expense, error) {
-	rows, err := s.db.QueryContext(ctx,
-		"SELECT * FROM expenses WHERE category_id IS NULL AND expense_type = 0 AND description LIKE ?", "%"+keyword+"%")
+	rows, err := s.db.QueryContext(
+		ctx,
+		"SELECT * FROM expenses WHERE category_id IS NULL AND expense_type = 0 AND description LIKE ? AND user_id = ?",
+		"%"+keyword+"%",
+		userID,
+	)
 	if err != nil {
 		return []storage.Expense{}, err
 	}
@@ -236,13 +245,21 @@ func (s *sqliteStorage) GetExpensesWithoutCategoryWithQuery(
 	return extractExpensesFromRows(rows)
 }
 
-func (s *sqliteStorage) GetFirstExpense(ctx context.Context) (storage.Expense, error) {
-	row := s.db.QueryRowContext(ctx, "SELECT * FROM expenses ORDER BY date ASC LIMIT 1")
+func (s *sqliteStorage) GetFirstExpense(ctx context.Context, userID int64) (storage.Expense, error) {
+	row := s.db.QueryRowContext(ctx, "SELECT * FROM expenses WHERE user_id = ? ORDER BY date ASC LIMIT 1", userID)
 	return expenseFromRow(row.Scan)
 }
 
-func (s *sqliteStorage) GetExpensesByCategory(ctx context.Context, categoryID int64) ([]storage.Expense, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT * FROM expenses WHERE category_id = ?", categoryID)
+func (s *sqliteStorage) GetExpensesByCategory(
+	ctx context.Context,
+	userID, categoryID int64,
+) ([]storage.Expense, error) {
+	rows, err := s.db.QueryContext(
+		ctx,
+		"SELECT * FROM expenses WHERE category_id = ? AND user_id = ?",
+		categoryID,
+		userID,
+	)
 	if err != nil {
 		return []storage.Expense{}, err
 	}
@@ -295,8 +312,9 @@ func expenseFromRow(scan func(dest ...any) error) (storage.Expense, error) {
 	var date int64
 	var currency string
 	var categoryID sql.NullInt64
+	var userID int64
 
-	if err := scan(&id, &source, &amount, &description, &expenseType, &date, &currency, &categoryID); err != nil {
+	if err := scan(&id, &source, &amount, &description, &expenseType, &date, &currency, &categoryID, &userID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, &storage.NotFoundError{}
 		}

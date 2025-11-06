@@ -79,7 +79,7 @@ func SupportedJSONSchema(reader io.Reader) (bool, []JSONExpense) {
 	return true, expenses
 }
 
-func ImportJSON(ctx context.Context, expenses []JSONExpense, storage storageType.Storage,
+func ImportJSON(ctx context.Context, userID int64, expenses []JSONExpense, storage storageType.Storage,
 	categoryMatcher *matcher.Matcher) ImportInfo {
 	info := ImportInfo{}
 	storageExpenses := []storageType.Expense{}
@@ -113,7 +113,7 @@ func ImportJSON(ctx context.Context, expenses []JSONExpense, storage storageType
 		storageExpenses = append(storageExpenses, expense)
 	}
 
-	inserted, err := storage.InsertExpenses(ctx, storageExpenses)
+	inserted, err := storage.InsertExpenses(ctx, userID, storageExpenses)
 
 	info.TotalImports = int(inserted)
 	if err != nil {
@@ -125,6 +125,7 @@ func ImportJSON(ctx context.Context, expenses []JSONExpense, storage storageType
 
 func ImportCSV(
 	ctx context.Context,
+	userID int64,
 	filename string,
 	reader io.Reader,
 	storage storageType.Storage,
@@ -210,7 +211,7 @@ func ImportCSV(
 		expenses = append(expenses, expense)
 	}
 
-	inserted, err := storage.InsertExpenses(ctx, expenses)
+	inserted, err := storage.InsertExpenses(ctx, userID, expenses)
 
 	info.TotalImports = int(inserted)
 	if err != nil {

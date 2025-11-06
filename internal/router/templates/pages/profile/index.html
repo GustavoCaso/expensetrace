@@ -1,0 +1,63 @@
+{{define "title"}}Profile{{end}}
+{{define "css"}}/static/css/profile.css{{end}}
+
+{{define "main"}}
+  <div class="profile-container">
+    <h1>Profile Settings</h1>
+
+    {{if gt (len .Banner.Icon) 0}}
+      {{template "banner" .Banner}}
+    {{end}}
+
+    {{if gt (len .Error) 0}}
+      {{template "error" .Error}}
+    {{end}}
+
+    <div class="profile-sections">
+      <!-- Update Username Section -->
+      <div class="profile-section">
+        <h2>Update Username</h2>
+        <form action="/profile/username" method="POST">
+          <div class="form-group">
+            <label for="current-username">Current Username</label>
+            <input type="text" id="current-username" value="{{.Username}}" disabled>
+          </div>
+
+          <div class="form-group">
+            <label for="new-username">New Username</label>
+            <input type="text" id="new-username" name="username" required>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Update Username</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Update Password Section -->
+      <div class="profile-section">
+        <h2>Change Password</h2>
+        <form action="/profile/password" method="POST">
+          <div class="form-group">
+            <label for="current-password">Current Password</label>
+            <input type="password" id="current-password" name="current_password" required>
+          </div>
+
+          <div class="form-group">
+            <label for="new-password">New Password</label>
+            <input type="password" id="new-password" name="new_password" required minlength="8">
+          </div>
+
+          <div class="form-group">
+            <label for="confirm-password">Confirm New Password</label>
+            <input type="password" id="confirm-password" name="confirm_password" required minlength="8">
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Change Password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{{end}}

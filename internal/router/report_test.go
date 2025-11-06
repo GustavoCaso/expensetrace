@@ -9,29 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestHomeHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
-
-	// Create test categories
-	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
-	}
-
-	for _, c := range categories {
-		_, err := s.CreateCategory(context.Background(), c.Name(), c.Pattern())
-		if err != nil {
-			t.Fatalf("Failed to create category: %v", err)
-		}
-	}
-
-	matcher := matcher.New(categories)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	// Create test expenses
 	now := time.Now()
@@ -40,13 +24,13 @@ func TestHomeHandler(t *testing.T) {
 		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, nil),
 	}
 
-	_, err := s.InsertExpenses(context.Background(), expenses)
+	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
 	// Create router
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	tests := []struct {
 		name           string
@@ -78,6 +62,7 @@ func TestHomeHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, req)

@@ -1,10 +1,23 @@
 {{define "nav"}}
-<div id="main-navigation">
-  <nav class="tabs">
-    <a class="tab-link{{if eq .CurrentPage "reports"}} active{{end}}" href='/'>Reports</a>
-    <a class="tab-link{{if eq .CurrentPage "import"}} active{{end}}" href='/import'>Import</a>
-    <a class="tab-link{{if eq .CurrentPage "expenses"}} active{{end}}" href="/expenses">Expeses</a>
-    <a class="tab-link{{if eq .CurrentPage "categories"}} active{{end}}" href="/categories">Categories</a>
-  </nav>
-</div>
+{{if .LoggedIn }}
+  <div id="main-navigation">
+    <nav class="tabs">
+      <a class="tab-link{{if eq .CurrentPage "reports"}} active{{end}}" href='/'>Reports</a>
+      <a class="tab-link{{if eq .CurrentPage "import"}} active{{end}}" href='/import'>Import</a>
+      <a class="tab-link{{if eq .CurrentPage "expenses"}} active{{end}}" href="/expenses">Expeses</a>
+      <a class="tab-link{{if eq .CurrentPage "categories"}} active{{end}}" href="/categories">Categories</a>
+
+      <div class="profile-dropdown ml-auto mb-2 mt-2">
+        <button class="profile-avatar toggle" data-target="profile-menu" aria-label="User menu">
+          <span class="avatar-text">{{.UsernameInitials}}</span>
+        </button>
+        <div class="profile-menu" id="profile-menu">
+          <a href="/profile" class="profile-menu-item">Profile</a>
+          <button class="btn-danger not-rounded profile-menu-item" hx-post="/signout">Sign out</button>
+        </div>
+      </div>
+    </nav>
+  </div>
 {{end}}
+{{end}}
+  

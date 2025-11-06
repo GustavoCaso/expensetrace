@@ -12,14 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
 func TestExpensesHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	categories := []storage.Category{
 		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
@@ -27,14 +26,12 @@ func TestExpensesHandler(t *testing.T) {
 	}
 	categoryIDs := make([]int64, 2)
 	for i, c := range categories {
-		id, err := s.CreateCategory(context.Background(), c.Name(), c.Pattern())
+		id, err := s.CreateCategory(context.Background(), user.ID(), c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
 		categoryIDs[i] = id
 	}
-
-	matcher := matcher.New(categories)
 
 	now := time.Now()
 	expenses := []storage.Expense{
@@ -51,14 +48,15 @@ func TestExpensesHandler(t *testing.T) {
 		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, &categoryIDs[1]),
 	}
 
-	_, err := s.InsertExpenses(context.Background(), expenses)
+	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -73,7 +71,7 @@ func TestExpensesHandler(t *testing.T) {
 
 func TestExpensesGroupByYearAndMonth(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	cat1 := int64(1)
 	cat2 := int64(2)
@@ -84,7 +82,7 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, &cat2),
 	}
 
-	groupedExpenses, years, err := expensesGroupByYearAndMonth(context.Background(), expenses, s)
+	groupedExpenses, years, err := expensesGroupByYearAndMonth(context.Background(), user.ID(), expenses, s)
 
 	if err != nil {
 		t.Fatalf("Got error grouping expenses: %s", err.Error())
@@ -132,9 +130,9 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 
 func TestExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), "Test Category", "test")
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Test Category", "test")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -153,16 +151,16 @@ func TestExpenseHandler(t *testing.T) {
 		),
 	}
 
-	_, err = s.InsertExpenses(context.Background(), expenses)
+	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/1", nil)
 	req.SetPathValue("id", "1")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -182,13 +180,13 @@ func TestExpenseHandler(t *testing.T) {
 
 func TestExpenseHandlerNotFound(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/999", nil)
 	req.SetPathValue("id", "999")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -203,13 +201,13 @@ func TestExpenseHandlerNotFound(t *testing.T) {
 
 func TestExpenseHandlerInvalidID(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/invalid", nil)
 	req.SetPathValue("id", "invalid")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -224,9 +222,9 @@ func TestExpenseHandlerInvalidID(t *testing.T) {
 
 func TestUpdateExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), "Updated Category", "updated")
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Updated Category", "updated")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -236,13 +234,12 @@ func TestUpdateExpenseHandler(t *testing.T) {
 		storage.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, storage.ChargeType, nil),
 	}
 
-	_, err = s.InsertExpenses(context.Background(), expenses)
+	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	formData := url.Values{}
 	formData.Set("source", "Updated Source")
@@ -256,6 +253,7 @@ func TestUpdateExpenseHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/expense/1", strings.NewReader(formData.Encode()))
 	req.SetPathValue("id", "1")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -267,7 +265,7 @@ func TestUpdateExpenseHandler(t *testing.T) {
 
 	ensureNoErrorInTemplateResponse(t, "update expense", resp.Body)
 
-	updatedExpense, err := s.GetExpenseByID(context.Background(), 1)
+	updatedExpense, err := s.GetExpenseByID(context.Background(), user.ID(), 1)
 	if err != nil {
 		t.Fatalf("Failed to retrieve updated expense: %v", err)
 	}
@@ -294,20 +292,19 @@ func TestUpdateExpenseHandler(t *testing.T) {
 
 func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
 	expenses := []storage.Expense{
 		storage.NewExpense(0, "Test Source", "Test expense", "USD", -100000, now, storage.ChargeType, nil),
 	}
 
-	_, err := s.InsertExpenses(context.Background(), expenses)
+	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	tests := []struct {
 		name        string
@@ -372,6 +369,7 @@ func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPut, "/expense/1", strings.NewReader(formData.Encode()))
 			req.SetPathValue("id", "1")
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, req)
@@ -397,7 +395,7 @@ func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 
 func TestDeleteExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
 	expenses := []storage.Expense{
@@ -405,16 +403,16 @@ func TestDeleteExpenseHandler(t *testing.T) {
 		storage.NewExpense(0, "Test Source 2", "Test expense 2", "USD", -200000, now, storage.ChargeType, nil),
 	}
 
-	_, err := s.InsertExpenses(context.Background(), expenses)
+	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expense/1", nil)
 	req.SetPathValue("id", "1")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -426,7 +424,7 @@ func TestDeleteExpenseHandler(t *testing.T) {
 
 	ensureNoErrorInTemplateResponse(t, "delete expense", resp.Body)
 
-	allExpenses, err := s.GetAllExpenseTypes(context.Background())
+	allExpenses, err := s.GetAllExpenseTypes(context.Background(), user.ID())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -439,7 +437,7 @@ func TestDeleteExpenseHandler(t *testing.T) {
 		t.Errorf("Expected remaining expense 'Test expense 2', got '%s'", allExpenses[0].Description())
 	}
 
-	_, err = s.GetExpenseByID(context.Background(), 1)
+	_, err = s.GetExpenseByID(context.Background(), user.ID(), 1)
 	if err == nil {
 		t.Error("Expected error when getting deleted expense")
 	}
@@ -447,13 +445,13 @@ func TestDeleteExpenseHandler(t *testing.T) {
 
 func TestDeleteExpenseHandlerNotFound(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expense/999", nil)
 	req.SetPathValue("id", "999")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -469,17 +467,14 @@ func TestDeleteExpenseHandlerNotFound(t *testing.T) {
 
 func TestExpenseHandlersIntegration(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), "Integration Category", "integration")
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Integration Category", "integration")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	matcher := matcher.New([]storage.Category{
-		storage.NewCategory(categoryID, "Integration Category", "integration"),
-	})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	now := time.Now()
 	expenses := []storage.Expense{
@@ -495,13 +490,14 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		),
 	}
 
-	_, err = s.InsertExpenses(context.Background(), expenses)
+	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/1", nil)
 	req.SetPathValue("id", "1")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -521,6 +517,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPut, "/expense/1", strings.NewReader(formData.Encode()))
 	req.SetPathValue("id", "1")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w = httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -528,7 +525,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		t.Errorf("PUT /expense/1 failed with status %v", w.Result().Status)
 	}
 
-	updatedExpense, err := s.GetExpenseByID(context.Background(), 1)
+	updatedExpense, err := s.GetExpenseByID(context.Background(), user.ID(), 1)
 	if err != nil {
 		t.Fatalf("Failed to get updated expense: %v", err)
 	}
@@ -545,6 +542,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 
 	req = httptest.NewRequest(http.MethodGet, "/expense/1/delete", nil)
 	req.SetPathValue("id", "1")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w = httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -554,6 +552,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 
 	req = httptest.NewRequest(http.MethodDelete, "/expense/1", nil)
 	req.SetPathValue("id", "1")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w = httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -561,7 +560,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		t.Errorf("DELETE /expense/1 failed with status %v", w.Result().Status)
 	}
 
-	allExpenses, err := s.GetAllExpenseTypes(context.Background())
+	allExpenses, err := s.GetAllExpenseTypes(context.Background(), user.ID())
 	if err != nil {
 		t.Fatalf("Failed to get expenses after deletion: %v", err)
 	}
@@ -573,19 +572,13 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 
 func TestExpenseSearchHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categoryID, err := s.CreateCategory(context.Background(), "Food", "restaurant|food|grocery")
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery")
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
-
-	categories := []storage.Category{
-		storage.NewCategory(categoryID, "Food", "restaurant|food|grocery"),
-	}
-
-	matcher := matcher.New(categories)
 
 	// Create test expenses
 	expenses := []storage.Expense{
@@ -601,18 +594,19 @@ func TestExpenseSearchHandler(t *testing.T) {
 		),
 	}
 
-	_, err = s.InsertExpenses(context.Background(), expenses)
+	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
 	// Create router
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	// Create test request
 	body := strings.NewReader("keyword=restaurant")
 	req := httptest.NewRequest(http.MethodPost, "/expense/search", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	// Serve request
@@ -629,15 +623,14 @@ func TestExpenseSearchHandler(t *testing.T) {
 
 func TestCreateExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), "Test Category", "test")
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Test Category", "test")
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	now := time.Now()
 	formData := url.Values{}
@@ -651,6 +644,7 @@ func TestCreateExpenseHandler(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader(formData.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -667,7 +661,7 @@ func TestCreateExpenseHandler(t *testing.T) {
 		t.Error("Response should contain success banner")
 	}
 
-	allExpenses, err := s.GetAllExpenseTypes(context.Background())
+	allExpenses, err := s.GetAllExpenseTypes(context.Background(), user.ID())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -699,10 +693,9 @@ func TestCreateExpenseHandler(t *testing.T) {
 
 func TestCreateExpenseHandlerNilCategory(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	now := time.Now()
 	formData := url.Values{}
@@ -716,6 +709,7 @@ func TestCreateExpenseHandlerNilCategory(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader(formData.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -730,7 +724,7 @@ func TestCreateExpenseHandlerNilCategory(t *testing.T) {
 		t.Errorf("Expected success banner, got: %s", body)
 	}
 
-	allExpenses, err := s.GetAllExpenseTypes(context.Background())
+	allExpenses, err := s.GetAllExpenseTypes(context.Background(), user.ID())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -751,10 +745,9 @@ func TestCreateExpenseHandlerNilCategory(t *testing.T) {
 
 func TestCreateExpenseHandlerAmountSigning(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	now := time.Now()
 
@@ -808,6 +801,7 @@ func TestCreateExpenseHandlerAmountSigning(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, req)
@@ -822,7 +816,7 @@ func TestCreateExpenseHandlerAmountSigning(t *testing.T) {
 				t.Errorf("Expected success banner, got: %s", body)
 			}
 
-			allExpenses, err := s.GetAllExpenseTypes(context.Background())
+			allExpenses, err := s.GetAllExpenseTypes(context.Background(), user.ID())
 			if err != nil {
 				t.Fatalf("Failed to get expenses: %v", err)
 			}
@@ -841,10 +835,9 @@ func TestCreateExpenseHandlerAmountSigning(t *testing.T) {
 
 func TestCreateExpenseHandlerValidationErrors(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	now := time.Now()
 
@@ -943,6 +936,7 @@ func TestCreateExpenseHandlerValidationErrors(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, req)
@@ -961,7 +955,7 @@ func TestCreateExpenseHandlerValidationErrors(t *testing.T) {
 				t.Error("Should not show success banner when there are validation errors")
 			}
 
-			allExpenses, err := s.GetAllExpenseTypes(context.Background())
+			allExpenses, err := s.GetAllExpenseTypes(context.Background(), user.ID())
 			if err != nil {
 				t.Fatalf("Failed to get expenses: %v", err)
 			}
@@ -974,13 +968,13 @@ func TestCreateExpenseHandlerValidationErrors(t *testing.T) {
 }
 func TestCreateExpenseHandlerFormParseError(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
-	matcher := matcher.New([]storage.Category{})
-	handler, _ := New(s, matcher, logger)
+	handler, _ := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader("%zzzzz"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)

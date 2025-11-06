@@ -97,20 +97,23 @@ type expesesViewData struct {
 }
 
 func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWriter, banner *banner) {
-	data := expesesViewData{}
-	data.CurrentPage = pageExpenses
+	userID := userIDFromContext(ctx)
+	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+	data := expesesViewData{
+		viewBase: base,
+	}
 
 	defer func() {
 		c.templates.Render(w, "pages/expenses/index.html", data)
 	}()
 
-	expenses, err := c.storage.GetAllExpenseTypes(ctx)
+	expenses, err := c.storage.GetAllExpenseTypes(ctx, userID)
 	if err != nil {
 		data.Error = err.Error()
 		return
 	}
 
-	groupedExpenses, years, err := expensesGroupByYearAndMonth(ctx, expenses, c.storage)
+	groupedExpenses, years, err := expensesGroupByYearAndMonth(ctx, userID, expenses, c.storage)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error grouping expenses: %s", err.Error())
 		return
@@ -131,6 +134,7 @@ func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWri
 
 func expensesGroupByYearAndMonth(
 	ctx context.Context,
+	userID int64,
 	expenses []pkgStorage.Expense,
 	storage pkgStorage.Storage,
 ) (expensesByYear, []int, error) {
@@ -141,7 +145,7 @@ func expensesGroupByYearAndMonth(
 		var category pkgStorage.Category
 
 		if expense.CategoryID() != nil {
-			c, categoryErr := storage.GetCategory(ctx, *expense.CategoryID())
+			c, categoryErr := storage.GetCategory(ctx, userID, *expense.CategoryID())
 			if categoryErr != nil {
 				if !errors.Is(categoryErr, &pkgStorage.NotFoundError{}) {
 					return groupedExpenses, years, categoryErr
@@ -200,15 +204,18 @@ type expenseViewData struct {
 }
 
 func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseWriter) {
-	data := expenseViewData{}
-	data.CurrentPage = pageExpenses
+	userID := userIDFromContext(ctx)
+	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+	data := expenseViewData{
+		viewBase: base,
+	}
 	data.Action = "new"
 
 	defer func() {
 		c.templates.Render(w, "pages/expenses/new.html", data)
 	}()
 
-	categories, err := c.storage.GetCategories(ctx)
+	categories, err := c.storage.GetCategories(ctx, userID)
 	if err != nil {
 		c.logger.Error("Failed to get categories", "error", err)
 		data.Error = fmt.Sprintf("Failed to get categories: %s", err.Error())
@@ -223,9 +230,13 @@ func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseW
 }
 
 func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	data := expenseViewData{}
-	data.CurrentPage = pageExpenses
+	userID := userIDFromContext(ctx)
+	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+	data := expenseViewData{
+		viewBase: base,
+	}
 	data.Action = "new"
+	data.CurrentPage = pageExpenses
 	data.FormErrors = make(map[string]string)
 	data.Expense = &expenseView{
 		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
@@ -236,7 +247,7 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 		c.templates.Render(w, "pages/expenses/new.html", data)
 	}()
 
-	categories, categoriesErr := c.storage.GetCategories(ctx)
+	categories, categoriesErr := c.storage.GetCategories(ctx, userID)
 	if categoriesErr != nil {
 		c.logger.Error("Failed to fetch categories", "error", categoriesErr)
 		data.Error = categoriesErr.Error()
@@ -256,7 +267,7 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 		return
 	}
 
-	created, err := c.storage.InsertExpenses(ctx, []pkgStorage.Expense{newExpense})
+	created, err := c.storage.InsertExpenses(ctx, userID, []pkgStorage.Expense{newExpense})
 	if err != nil {
 		c.logger.Error("Failed to create expense", "error", err)
 		data.Error = err.Error()
@@ -280,8 +291,11 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 }
 
 func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	data := expenseViewData{}
-	data.CurrentPage = pageExpenses
+	userID := userIDFromContext(ctx)
+	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+	data := expenseViewData{
+		viewBase: base,
+	}
 	data.Action = "edit"
 	data.Expense = &expenseView{
 		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
@@ -299,13 +313,13 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 		return
 	}
 
-	expense, err := c.storage.GetExpenseByID(ctx, id)
+	expense, err := c.storage.GetExpenseByID(ctx, userID, id)
 	if err != nil {
 		data.Error = err.Error()
 		return
 	}
 
-	categories, err := c.storage.GetCategories(ctx)
+	categories, err := c.storage.GetCategories(ctx, userID)
 	if err != nil {
 		c.logger.Error("Failed to get categories", "error", err)
 		categories = []pkgStorage.Category{}
@@ -313,7 +327,7 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 
 	var category pkgStorage.Category
 	if expense.CategoryID() != nil {
-		cat, categoryErr := c.storage.GetCategory(ctx, *expense.CategoryID())
+		cat, categoryErr := c.storage.GetCategory(ctx, userID, *expense.CategoryID())
 		if categoryErr != nil {
 			c.logger.Error("Failed to get category", "error", categoryErr)
 		}
@@ -330,8 +344,11 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 }
 
 func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	data := expenseViewData{}
-	data.CurrentPage = pageExpenses
+	userID := userIDFromContext(ctx)
+	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+	data := expenseViewData{
+		viewBase: base,
+	}
 	data.FormErrors = make(map[string]string)
 	data.Action = "edit"
 	data.Expense = &expenseView{
@@ -351,14 +368,14 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		return
 	}
 
-	categories, categoriesErr := c.storage.GetCategories(ctx)
+	categories, categoriesErr := c.storage.GetCategories(ctx, userID)
 	if categoriesErr != nil {
 		data.Error = categoriesErr.Error()
 		return
 	}
 	data.Categories = categories
 
-	expense, expenseErr := c.storage.GetExpenseByID(ctx, id)
+	expense, expenseErr := c.storage.GetExpenseByID(ctx, userID, id)
 	if expenseErr != nil {
 		data.Error = expenseErr.Error()
 		return
@@ -366,7 +383,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 
 	var category pkgStorage.Category
 	if expense.CategoryID() != nil {
-		cat, categoryErr := c.storage.GetCategory(ctx, *expense.CategoryID())
+		cat, categoryErr := c.storage.GetCategory(ctx, userID, *expense.CategoryID())
 		if categoryErr != nil {
 			c.logger.Error("Failed to get category", "error", categoryErr)
 		}
@@ -390,7 +407,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		return
 	}
 
-	updated, err := c.storage.UpdateExpense(ctx, updatedExpense)
+	updated, err := c.storage.UpdateExpense(ctx, userID, updatedExpense)
 	if err != nil {
 		c.logger.Error("Failed to update expense", "error", err, "id", id)
 		data.FormErrors["failed to update expense"] = err.Error()
@@ -408,7 +425,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	c.resetCache()
 	var updatedCategory pkgStorage.Category
 	if updatedExpense.CategoryID() != nil {
-		cat, categoryErr := c.storage.GetCategory(ctx, *updatedExpense.CategoryID())
+		cat, categoryErr := c.storage.GetCategory(ctx, userID, *updatedExpense.CategoryID())
 		if categoryErr != nil {
 			c.logger.Error("Failed to get category", "error", categoryErr)
 		}
@@ -510,30 +527,28 @@ func parseExpenseForm(r *http.Request, id int64, formErrors map[string]string) (
 }
 
 func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	var errorData *expenseViewData
+	userID := userIDFromContext(ctx)
+	var err error
 
 	defer func() {
-		if errorData != nil {
-			c.templates.Render(w, "pages/expenses/edit.html", *errorData)
+		if err != nil {
+			base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+			base.Error = err.Error()
+			c.templates.Render(w, "pages/expenses/edit.html", base)
 		}
 	}()
 
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		errorData = &expenseViewData{}
-		errorData.CurrentPage = pageExpenses
-		errorData.Error = fmt.Sprintf("Invalid the ID. %s", err.Error())
+		err = fmt.Errorf("invalid the ID. %s", err.Error())
 		return
 	}
 
-	_, err = c.storage.DeleteExpense(ctx, id)
+	_, err = c.storage.DeleteExpense(ctx, userID, id)
 	if err != nil {
 		c.logger.Error("Failed to delete expense", "error", err, "id", id)
-
-		errorData = &expenseViewData{}
-		errorData.CurrentPage = pageExpenses
-		errorData.Error = fmt.Sprintf("Error deleting the expense. %s", err.Error())
+		err = fmt.Errorf("error deleting the expense. %s", err.Error())
 		return
 	}
 
@@ -548,8 +563,11 @@ func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.Respon
 }
 
 func (c *expenseHandler) expenseSearchHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	data := expesesViewData{}
-	data.CurrentPage = pageExpenses
+	userID := userIDFromContext(ctx)
+	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+	data := expesesViewData{
+		viewBase: base,
+	}
 
 	defer func() {
 		c.templates.Render(w, "pages/expenses/index.html", data)
@@ -567,13 +585,13 @@ func (c *expenseHandler) expenseSearchHandler(ctx context.Context, w http.Respon
 		return
 	}
 
-	expenses, err := c.storage.SearchExpenses(ctx, query)
+	expenses, err := c.storage.SearchExpenses(ctx, userID, query)
 	if err != nil {
 		data.Error = errSearchCriteria
 		return
 	}
 
-	groupedExpenses, years, err := expensesGroupByYearAndMonth(ctx, expenses, c.storage)
+	groupedExpenses, years, err := expensesGroupByYearAndMonth(ctx, userID, expenses, c.storage)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error grouping expenses: %s", err.Error())
 		return
@@ -590,8 +608,9 @@ func (c *expenseHandler) expenseSearchHandler(ctx context.Context, w http.Respon
 }
 
 func (c *expenseHandler) exportExpensesHandler(ctx context.Context, w http.ResponseWriter) {
+	userID := userIDFromContext(ctx)
 	// Get all expenses
-	expenses, err := c.storage.GetAllExpenseTypes(ctx)
+	expenses, err := c.storage.GetAllExpenseTypes(ctx, userID)
 	if err != nil {
 		c.logger.Error("Failed to get expenses for export", "error", err)
 		http.Error(w, fmt.Sprintf("Failed to get expenses: %s", err.Error()), http.StatusInternalServerError)
@@ -604,7 +623,7 @@ func (c *expenseHandler) exportExpensesHandler(ctx context.Context, w http.Respo
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 
 	// Export to CSV
-	if exportErr := export.CSV(ctx, w, expenses, c.storage); exportErr != nil {
+	if exportErr := export.CSV(ctx, userID, w, expenses, c.storage); exportErr != nil {
 		c.logger.Error("Failed to export expenses to CSV", "error", exportErr)
 		http.Error(w, fmt.Sprintf("Failed to export expenses: %s", exportErr.Error()), http.StatusInternalServerError)
 		return

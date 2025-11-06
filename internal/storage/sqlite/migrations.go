@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -35,7 +36,7 @@ func DropTables(db *sql.DB) error {
 		return fmt.Errorf("failed to begin transaction for dropping tables: %w", err)
 	}
 
-	// drop tables
+	// drop tables (in order to respect foreign keys)
 	_, err = tx.ExecContext(ctx, "DROP TABLE IF EXISTS expenses;")
 	if err != nil {
 		rErr := tx.Rollback()
@@ -46,6 +47,24 @@ func DropTables(db *sql.DB) error {
 	}
 
 	_, err = tx.ExecContext(ctx, "DROP TABLE IF EXISTS categories;")
+	if err != nil {
+		rErr := tx.Rollback()
+		if rErr != nil {
+			return rErr
+		}
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, "DROP TABLE IF EXISTS sessions;")
+	if err != nil {
+		rErr := tx.Rollback()
+		if rErr != nil {
+			return rErr
+		}
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, "DROP TABLE IF EXISTS users;")
 	if err != nil {
 		rErr := tx.Rollback()
 		if rErr != nil {
@@ -139,27 +158,73 @@ func (s *sqliteStorage) ApplyMigrations(ctx context.Context, logger *logger.Logg
 		{
 			name: "Set foreign key constraints expenses <-> categories",
 			up: func(tx *sql.Tx) error {
-				// Add foreign key constraint to expenses table
+				// Disable foreign keys temporarily
+				if _, err := tx.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+					return fmt.Errorf("failed to disable foreign keys: %w", err)
+				}
+
+				// Create new table with foreign key constraint
 				_, err := tx.ExecContext(ctx, `
-				PRAGMA foreign_keys=OFF;
-				CREATE TABLE expenses_new (
-					id INTEGER PRIMARY KEY,
-					source TEXT,
-					amount INTEGER NOT NULL,
-					description TEXT NOT NULL,
-					expense_type INTEGER NOT NULL,
-					date INTEGER NOT NULL,
-					currency TEXT NOT NULL,
-					category_id INTEGER,
-					UNIQUE(source, date, description, amount) ON CONFLICT FAIL,
-					FOREIGN KEY(category_id) REFERENCES categories(id)
-				) STRICT;
-				INSERT INTO expenses_new SELECT * FROM expenses;
-				DROP TABLE expenses;
-				ALTER TABLE expenses_new RENAME TO expenses;
-				PRAGMA foreign_key_check;
+					CREATE TABLE expenses_new (
+						id INTEGER PRIMARY KEY,
+						source TEXT,
+						amount INTEGER NOT NULL,
+						description TEXT NOT NULL,
+						expense_type INTEGER NOT NULL,
+						date INTEGER NOT NULL,
+						currency TEXT NOT NULL,
+						category_id INTEGER,
+						UNIQUE(source, date, description, amount) ON CONFLICT FAIL,
+						FOREIGN KEY(category_id) REFERENCES categories(id)
+					) STRICT;
 				`)
-				return err
+				if err != nil {
+					return fmt.Errorf("failed to create expenses_new table: %w", err)
+				}
+
+				// Copy data from old table
+				if _, err = tx.ExecContext(ctx, "INSERT INTO expenses_new SELECT * FROM expenses"); err != nil {
+					return fmt.Errorf("failed to copy data to expenses_new: %w", err)
+				}
+
+				// Drop old table
+				if _, err = tx.ExecContext(ctx, "DROP TABLE expenses"); err != nil {
+					return fmt.Errorf("failed to drop old expenses table: %w", err)
+				}
+
+				// Rename new table
+				if _, err = tx.ExecContext(ctx, "ALTER TABLE expenses_new RENAME TO expenses"); err != nil {
+					return fmt.Errorf("failed to rename expenses_new table: %w", err)
+				}
+
+				// Re-enable foreign keys
+				if _, err = tx.ExecContext(ctx, "PRAGMA foreign_keys=ON"); err != nil {
+					return fmt.Errorf("failed to re-enable foreign keys: %w", err)
+				}
+
+				// Check for foreign key violations
+				rows, err := tx.QueryContext(ctx, "PRAGMA foreign_key_check(expenses)")
+				if err != nil || rows.Err() != nil {
+					return fmt.Errorf("failed to check foreign keys: %w", errors.Join(err, rows.Err()))
+				}
+				defer rows.Close()
+
+				// If there are any violations, fail the migration
+				if rows.Next() {
+					var table, rowid, parent, fkid string
+					if scanErr := rows.Scan(&table, &rowid, &parent, &fkid); scanErr != nil {
+						return fmt.Errorf("failed to read foreign key violation: %w", scanErr)
+					}
+					return fmt.Errorf(
+						"foreign key constraint violation: table=%s, rowid=%s, parent=%s, fkid=%s",
+						table,
+						rowid,
+						parent,
+						fkid,
+					)
+				}
+
+				return nil
 			},
 		},
 		{
@@ -246,6 +311,233 @@ func (s *sqliteStorage) ApplyMigrations(ctx context.Context, logger *logger.Logg
 				`, storage.ExcludeCategory)
 				if alterErr != nil {
 					return alterErr
+				}
+
+				return nil
+			},
+		},
+		{
+			name: "Create users table",
+			up: func(tx *sql.Tx) error {
+				_, err := tx.ExecContext(ctx, `
+					CREATE TABLE IF NOT EXISTS users (
+						id INTEGER PRIMARY KEY,
+						username TEXT NOT NULL,
+						password_hash TEXT NOT NULL,
+						created_at INTEGER NOT NULL,
+						UNIQUE(username) ON CONFLICT FAIL
+					) STRICT;`)
+				if err != nil {
+					return err
+				}
+
+				// Create default admin user for existing data
+				// Password: "admin" (bcrypt hash)
+				// Users should change this on first login
+				_, err = tx.ExecContext(ctx, `
+					INSERT INTO users (id, username, password_hash, created_at)
+					VALUES (1, 'admin', '$2a$10$1DMMhCw0qMlNedcIxHpVjeJzGCjIN1JWyR.QLz7YzljbzEj4Jgsem', ?)
+				`, time.Now().Unix())
+				return err
+			},
+		},
+		{
+			name: "Create sessions table",
+			up: func(tx *sql.Tx) error {
+				_, err := tx.ExecContext(ctx, `
+					CREATE TABLE IF NOT EXISTS sessions (
+						id TEXT PRIMARY KEY,
+						user_id INTEGER NOT NULL,
+						expires_at INTEGER NOT NULL,
+						created_at INTEGER NOT NULL,
+						FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+					) STRICT;`)
+				return err
+			},
+		},
+		{
+			name: "Add user_id to expenses table",
+			up: func(tx *sql.Tx) error {
+				// Disable foreign keys temporarily
+				if _, err := tx.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+					return fmt.Errorf("failed to disable foreign keys: %w", err)
+				}
+
+				// Create new table with user_id column and foreign key constraints
+				_, err := tx.ExecContext(ctx, `
+					CREATE TABLE expenses_new (
+						id INTEGER PRIMARY KEY,
+						source TEXT,
+						amount INTEGER NOT NULL,
+						description TEXT NOT NULL,
+						expense_type INTEGER NOT NULL,
+						date INTEGER NOT NULL,
+						currency TEXT NOT NULL,
+						category_id INTEGER,
+						user_id INTEGER NOT NULL DEFAULT 1,
+						UNIQUE(source, date, description, amount, user_id) ON CONFLICT FAIL,
+						FOREIGN KEY(category_id) REFERENCES categories(id),
+						FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+					) STRICT;
+				`)
+				if err != nil {
+					return fmt.Errorf("failed to create expenses_new table: %w", err)
+				}
+
+				// Copy data from old table with default user_id=1
+				_, err = tx.ExecContext(ctx, `
+					INSERT INTO expenses_new (id, source, amount, description, expense_type, date, currency, category_id, user_id)
+					SELECT id, source, amount, description, expense_type, date, currency, category_id, 1 FROM expenses
+				`)
+				if err != nil {
+					return fmt.Errorf("failed to copy data to expenses_new: %w", err)
+				}
+
+				// Drop old table
+				if _, err = tx.ExecContext(ctx, "DROP TABLE expenses"); err != nil {
+					return fmt.Errorf("failed to drop old expenses table: %w", err)
+				}
+
+				// Rename new table
+				if _, err = tx.ExecContext(ctx, "ALTER TABLE expenses_new RENAME TO expenses"); err != nil {
+					return fmt.Errorf("failed to rename expenses_new table: %w", err)
+				}
+
+				// Re-enable foreign keys
+				if _, err = tx.ExecContext(ctx, "PRAGMA foreign_keys=ON"); err != nil {
+					return fmt.Errorf("failed to re-enable foreign keys: %w", err)
+				}
+
+				// Check for foreign key violations
+				rows, err := tx.QueryContext(ctx, "PRAGMA foreign_key_check(expenses)")
+				if err != nil || rows.Err() != nil {
+					return fmt.Errorf("failed to check foreign keys: %w", errors.Join(err, rows.Err()))
+				}
+				defer rows.Close()
+
+				// If there are any violations, fail the migration
+				if rows.Next() {
+					var table, rowid, parent, fkid string
+					if scanErr := rows.Scan(&table, &rowid, &parent, &fkid); scanErr != nil {
+						return fmt.Errorf("failed to read foreign key violation: %w", scanErr)
+					}
+					return fmt.Errorf(
+						"foreign key constraint violation: table=%s, rowid=%s, parent=%s, fkid=%s",
+						table,
+						rowid,
+						parent,
+						fkid,
+					)
+				}
+
+				return nil
+			},
+		},
+		{
+			name: "Add user_id to categories table",
+			up: func(tx *sql.Tx) error {
+				// Disable foreign keys temporarily
+				if _, err := tx.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+					return fmt.Errorf("failed to disable foreign keys: %w", err)
+				}
+
+				// Create new categories table with user_id column
+				_, err := tx.ExecContext(ctx, `
+					CREATE TABLE categories_new (
+						id INTEGER PRIMARY KEY,
+						name TEXT NOT NULL,
+						pattern TEXT NOT NULL,
+						user_id INTEGER NOT NULL,
+						UNIQUE(name, user_id) ON CONFLICT FAIL,
+						FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+					) STRICT;
+				`)
+				if err != nil {
+					return fmt.Errorf("failed to create categories_new table: %w", err)
+				}
+
+				// Copy data from old categories table with default user_id=1
+				_, err = tx.ExecContext(ctx, `
+					INSERT INTO categories_new (id, name, pattern, user_id)
+					SELECT id, name, pattern, 1 FROM categories
+				`)
+				if err != nil {
+					return fmt.Errorf("failed to copy data to categories_new: %w", err)
+				}
+
+				// Create temporary expenses table (needed because expenses has FK to categories)
+				// This is necessary because SQLite won't let us drop categories while expenses references it
+				_, err = tx.ExecContext(ctx, `
+					CREATE TABLE expenses_temp (
+						id INTEGER PRIMARY KEY,
+						source TEXT,
+						amount INTEGER NOT NULL,
+						description TEXT NOT NULL,
+						expense_type INTEGER NOT NULL,
+						date INTEGER NOT NULL,
+						currency TEXT NOT NULL,
+						category_id INTEGER,
+						user_id INTEGER NOT NULL DEFAULT 1,
+						UNIQUE(source, date, description, amount, user_id) ON CONFLICT FAIL,
+						FOREIGN KEY(category_id) REFERENCES categories_new(id),
+						FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+					) STRICT;
+				`)
+				if err != nil {
+					return fmt.Errorf("failed to create expenses_temp table: %w", err)
+				}
+
+				// Copy data from expenses
+				_, err = tx.ExecContext(ctx, `
+					INSERT INTO expenses_temp SELECT * FROM expenses
+				`)
+				if err != nil {
+					return fmt.Errorf("failed to copy data to expenses_temp: %w", err)
+				}
+
+				// Now we can drop both old tables
+				if _, err = tx.ExecContext(ctx, "DROP TABLE expenses"); err != nil {
+					return fmt.Errorf("failed to drop old expenses table: %w", err)
+				}
+
+				if _, err = tx.ExecContext(ctx, "DROP TABLE categories"); err != nil {
+					return fmt.Errorf("failed to drop old categories table: %w", err)
+				}
+
+				// Rename new tables
+				if _, err = tx.ExecContext(ctx, "ALTER TABLE categories_new RENAME TO categories"); err != nil {
+					return fmt.Errorf("failed to rename categories_new table: %w", err)
+				}
+
+				if _, err = tx.ExecContext(ctx, "ALTER TABLE expenses_temp RENAME TO expenses"); err != nil {
+					return fmt.Errorf("failed to rename expenses_temp table: %w", err)
+				}
+
+				// Re-enable foreign keys
+				if _, err = tx.ExecContext(ctx, "PRAGMA foreign_keys=ON"); err != nil {
+					return fmt.Errorf("failed to re-enable foreign keys: %w", err)
+				}
+
+				// Check for foreign key violations in both tables
+				rows, err := tx.QueryContext(ctx, "PRAGMA foreign_key_check")
+				if err != nil || rows.Err() != nil {
+					return fmt.Errorf("failed to check foreign keys: %w", errors.Join(err, rows.Err()))
+				}
+				defer rows.Close()
+
+				// If there are any violations, fail the migration
+				if rows.Next() {
+					var table, rowid, parent, fkid string
+					if scanErr := rows.Scan(&table, &rowid, &parent, &fkid); scanErr != nil {
+						return fmt.Errorf("failed to read foreign key violation: %w", scanErr)
+					}
+					return fmt.Errorf(
+						"foreign key constraint violation: table=%s, rowid=%s, parent=%s, fkid=%s",
+						table,
+						rowid,
+						parent,
+						fkid,
+					)
 				}
 
 				return nil

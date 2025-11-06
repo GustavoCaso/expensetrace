@@ -1,7 +1,7 @@
 {{range $idx, $expense := .Expenses}}
 {{- if $expense.CategoryID.Valid}}
-( {{$expense.ID}}, "{{$expense.Source}}", {{$expense.Amount}}, "{{$expense.Description}}", {{$expense.Type}}, {{$expense.Date.Unix}}, "{{$expense.Currency}}", {{$expense.CategoryID.Int64 }}){{if lt $idx $.Length}},{{end}}
+( {{$expense.ID}}, "{{$expense.Source}}", {{$expense.Amount}}, "{{$expense.Description}}", {{$expense.Type}}, {{$expense.Date.Unix}}, "{{$expense.Currency}}", {{$expense.CategoryID.Int64 }}, {{$expense.UserID}}){{if lt $idx $.Length}},{{end}}
 {{- else}}
-( {{$expense.ID}}, "{{$expense.Source}}", {{$expense.Amount}}, "{{$expense.Description}}", {{$expense.Type}}, {{$expense.Date.Unix}}, "{{$expense.Currency}}", NULL){{if lt $idx $.Length}},{{end}}
+( {{$expense.ID}}, "{{$expense.Source}}", {{$expense.Amount}}, "{{$expense.Description}}", {{$expense.Type}}, {{$expense.Date.Unix}}, "{{$expense.Currency}}", NULL, {{$expense.UserID}}){{if lt $idx $.Length}},{{end}}
 {{- end}}
 {{- end}}
