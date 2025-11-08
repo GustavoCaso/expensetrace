@@ -64,7 +64,7 @@ func executeCommand(command cli.Command) {
 
 	appLogger := logger.New(conf.Logger)
 
-	appLogger.Info("Using database", "path", conf.DB)
+	appLogger.Info("Using database", "path", conf.DB.Source)
 
 	storage, err := sqlite.New(conf.DB)
 	if err != nil {
@@ -100,15 +100,32 @@ func executeCommand(command cli.Command) {
 
 func printHelp() {
 	fmt.Printf("usage: expensetrace <subcommand>\n\n")
-	fmt.Printf("Configuration is managed through environment variables and config file.\n")
-	fmt.Printf("Use EXPENSETRACE_CONFIG to specify config file path (default: expensetrace.yml)\n")
-	fmt.Printf("Use EXPENSETRACE_DB to specify db file (default: expensetrace.db)\n")
-	fmt.Printf("Use EXPENSETRACE_LOG_LEVEL to specify log level (default: info)\n")
-	fmt.Printf("Use EXPENSETRACE_LOG_FORMAT to specify log format (default: text)\n")
-	fmt.Printf("Use EXPENSETRACE_LOG_OUTPUT to specify log output (default: stdout)\n\n")
+	fmt.Printf("Configuration is managed through environment variables and config file.\n\n")
 
+	fmt.Printf("General:\n")
+	fmt.Printf("  EXPENSETRACE_CONFIG              Config file path (default: expensetrace.yml)\n\n")
+
+	fmt.Printf("Database:\n")
+	fmt.Printf("  EXPENSETRACE_DB                  Database file path (default: expensetrace.db)\n")
+	fmt.Printf("  EXPENSETRACE_DB_MAX_OPEN_CONNS   Maximum open connections (default: unlimited)\n")
+	fmt.Printf("  EXPENSETRACE_DB_MAX_IDLE_CONNS   Maximum idle connections (default: 2)\n")
+	fmt.Printf("  EXPENSETRACE_DB_CONN_MAX_LIFETIME Connection max lifetime (e.g., 1h, 30m)\n")
+	fmt.Printf("  EXPENSETRACE_DB_CONN_MAX_IDLE_TIME Connection max idle time (e.g., 5m)\n")
+	fmt.Printf("  EXPENSETRACE_DB_JOURNAL_MODE     SQLite journal mode (e.g., WAL, DELETE)\n")
+	fmt.Printf("  EXPENSETRACE_DB_SYNCHRONOUS      SQLite synchronous mode (e.g., NORMAL, FULL)\n")
+	fmt.Printf("  EXPENSETRACE_DB_CACHE_SIZE       SQLite cache size in KB (e.g., -2000)\n")
+	fmt.Printf("  EXPENSETRACE_DB_BUSY_TIMEOUT     Busy timeout in milliseconds\n")
+	fmt.Printf("  EXPENSETRACE_DB_WAL_AUTOCHECKPOINT WAL autocheckpoint interval\n")
+	fmt.Printf("  EXPENSETRACE_DB_TEMP_STORE       Temp store location (MEMORY, FILE, DEFAULT)\n\n")
+
+	fmt.Printf("Logging:\n")
+	fmt.Printf("  EXPENSETRACE_LOG_LEVEL           Log level (default: info)\n")
+	fmt.Printf("  EXPENSETRACE_LOG_FORMAT          Log format (default: text)\n")
+	fmt.Printf("  EXPENSETRACE_LOG_OUTPUT          Log output (default: stdout)\n\n")
+
+	fmt.Printf("Subcommands:\n")
 	for commandName, cliCommand := range subcommands {
-		fmt.Printf("subcommmand <%s>: %s\n", commandName, cliCommand.Description())
+		fmt.Printf("  %-10s %s\n", commandName, cliCommand.Description())
 	}
 	fmt.Println()
 }

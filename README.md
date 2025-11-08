@@ -56,10 +56,23 @@ cd expensetrace
 CGO_ENABLED=1 go build
 ```
 
-3. Create a configuration file (`expense.yaml`):
+3. Create a configuration file (`expensetrace.yml`):
 
 ```yaml
-db: expenses.db
+db:
+  source: expenses.db
+  # Optional: Connection pool settings
+  # max_open_conns: 25
+  # max_idle_conns: 5
+  # conn_max_lifetime: 1h
+  # conn_max_idle_time: 5m
+
+  # Optional: SQLite PRAGMA settings for better performance
+  # journal_mode: WAL
+  # synchronous: NORMAL
+  # cache_size: -8000
+  # busy_timeout: 5000
+
 logger:
   level: info
   format: text
@@ -109,7 +122,27 @@ ExpenseTrace can be configured entirely through environment variables, which ove
 ### Configuration
 
 - `EXPENSETRACE_CONFIG`: Path to configuration file (default: `expensetrace.yml`)
+
+### Database Configuration
+
+#### Basic Configuration
 - `EXPENSETRACE_DB`: Path to SQLite database file (default: `expensetrace.db`)
+
+#### Connection Pool Settings
+- `EXPENSETRACE_DB_MAX_OPEN_CONNS`: Maximum number of open connections to the database (default: unlimited)
+- `EXPENSETRACE_DB_MAX_IDLE_CONNS`: Maximum number of idle connections (default: 2)
+- `EXPENSETRACE_DB_CONN_MAX_LIFETIME`: Maximum lifetime of a connection (e.g., `1h`, `30m`, `5s`)
+- `EXPENSETRACE_DB_CONN_MAX_IDLE_TIME`: Maximum idle time for a connection (e.g., `5m`, `10m`)
+
+#### SQLite PRAGMA Settings
+- `EXPENSETRACE_DB_JOURNAL_MODE`: SQLite journal mode - `DELETE`, `TRUNCATE`, `PERSIST`, `MEMORY`, `WAL`, `OFF` (default: `DELETE`)
+  - `WAL` (Write-Ahead Logging) is recommended for better concurrent access
+- `EXPENSETRACE_DB_SYNCHRONOUS`: SQLite synchronous mode - `OFF`, `NORMAL`, `FULL`, `EXTRA` (default: `FULL`)
+  - `NORMAL` provides better performance while maintaining good safety
+- `EXPENSETRACE_DB_CACHE_SIZE`: SQLite cache size in kilobytes (negative values) or pages (positive values) (e.g., `-2000` for 2MB)
+- `EXPENSETRACE_DB_BUSY_TIMEOUT`: Timeout in milliseconds when database is locked (e.g., `5000` for 5 seconds)
+- `EXPENSETRACE_DB_WAL_AUTOCHECKPOINT`: WAL auto-checkpoint interval in pages (default: 1000)
+- `EXPENSETRACE_DB_TEMP_STORE`: Temporary storage location - `DEFAULT`, `FILE`, `MEMORY`
 
 ### Web Server Configuration
 
@@ -122,6 +155,20 @@ ExpenseTrace can be configured entirely through environment variables, which ove
 - `EXPENSETRACE_LOG_LEVEL`: Log level - `debug`, `info`, `warn`, `error` (default: `info`)
 - `EXPENSETRACE_LOG_FORMAT`: Log format - `text` or `json` (default: `text`)
 - `EXPENSETRACE_LOG_OUTPUT`: Log output - `stdout`, `stderr`, or file path (default: `stdout`)
+
+### Recommended Production Settings
+
+For production deployments with better performance and concurrency, consider these settings:
+
+```bash
+EXPENSETRACE_DB_JOURNAL_MODE=WAL
+EXPENSETRACE_DB_SYNCHRONOUS=NORMAL
+EXPENSETRACE_DB_CACHE_SIZE=-8000
+EXPENSETRACE_DB_BUSY_TIMEOUT=5000
+EXPENSETRACE_DB_MAX_OPEN_CONNS=25
+EXPENSETRACE_DB_MAX_IDLE_CONNS=5
+EXPENSETRACE_DB_CONN_MAX_LIFETIME=1h
+```
 
 
 ### Importing Expenses
