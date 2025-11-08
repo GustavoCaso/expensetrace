@@ -64,9 +64,9 @@ func executeCommand(command cli.Command) {
 
 	appLogger := logger.New(conf.Logger)
 
-	appLogger.Info("Using database", "path", conf.DB.Source)
+	appLogger.Info("Using database", "path", conf.DB)
 
-	storage, err := sqlite.New(conf.DB)
+	storage, err := sqlite.New(conf.GetDBConfig())
 	if err != nil {
 		appLogger.Fatal("Unable to get DB", "error", err.Error())
 	}

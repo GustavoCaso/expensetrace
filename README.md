@@ -59,25 +59,14 @@ CGO_ENABLED=1 go build
 3. Create a configuration file (`expensetrace.yml`):
 
 ```yaml
-db:
-  source: expenses.db
-  # Optional: Connection pool settings
-  # max_open_conns: 25
-  # max_idle_conns: 5
-  # conn_max_lifetime: 1h
-  # conn_max_idle_time: 5m
-
-  # Optional: SQLite PRAGMA settings for better performance
-  # journal_mode: WAL
-  # synchronous: NORMAL
-  # cache_size: -8000
-  # busy_timeout: 5000
-
+db: expenses.db
 logger:
   level: info
   format: text
   output: stdout
 ```
+
+Note: Database connection pool and SQLite PRAGMA settings are configured via environment variables only (see Environment Variables section below).
 
 4. Start the web interface:
 
