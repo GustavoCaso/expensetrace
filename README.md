@@ -40,6 +40,26 @@ ExpenseTrace is designed with privacy in mind:
 - No bank account connections required
 - Full control over your financial data
 
+## Security
+
+#### Trusted Origins
+
+If you need to allow cross-origin requests from specific domains (e.g., when running ExpenseTrace behind a reverse proxy or accessing it from multiple domains), you can configure trusted origins using the `EXPENSETRACE_TRUSTED_ORIGINS` environment variable:
+
+```yaml
+services:
+  expensetrace:
+    image: gustavocaso/expensetrace:latest
+    environment:
+      EXPENSETRACE_TRUSTED_ORIGINS: "https://example.com,https://app.example.com"
+```
+
+**Note**: Only add trusted origins if you control those domains. Adding untrusted origins could expose your application to CSRF attacks.
+
+### Additional Security Headers
+
+- **X-Frame-Options**: Set to `DENY` by default to prevent clickjacking attacks. Can be disabled by setting `EXPENSETRACE_ALLOW_EMBEDDING=true` if you need to embed the interface in an iframe.
+
 ## Installation
 
 ### Building from Source
@@ -108,6 +128,10 @@ ExpenseTrace can be configured entirely through environment variables. This make
 - `EXPENSETRACE_PORT`: Web server port (default: `8080`)
 - `EXPENSETRACE_TIMEOUT`: Server timeout duration (default: `5s`)
 - `EXPENSETRACE_ALLOW_EMBEDDING`: Allow iframe embedding - set to `true` to enable (default: `false`)
+
+### Security Configuration
+
+- `EXPENSETRACE_TRUSTED_ORIGINS`: Comma-separated list of trusted origins for CSRF protection (e.g., `https://example.com,https://app.example.com`). Only needed if accessing the application from multiple domains.
 
 ### Logging Configuration
 
