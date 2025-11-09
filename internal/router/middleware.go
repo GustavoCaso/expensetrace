@@ -2,6 +2,8 @@ package router
 
 import (
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/logger"
@@ -60,4 +62,39 @@ func liveReloadMiddleware(router *router, handlder http.Handler) http.Handler {
 
 		handlder.ServeHTTP(w, r)
 	})
+}
+
+// csrfProtectionMiddleware provides CSRF protection using Go 1.25's http.CrossOriginProtection.
+// It protects against Cross-Site Request Forgery attacks by checking the Sec-Fetch-Site header
+// or comparing the Origin header with the Host header for non-safe HTTP methods.
+//
+// The middleware automatically rejects non-safe cross-origin browser requests.
+// Safe methods (GET, HEAD, OPTIONS) are always allowed.
+//
+// You can configure trusted origins via the EXPENSETRACE_TRUSTED_ORIGINS environment variable
+// (comma-separated list) if you need to allow cross-origin requests from specific domains.
+func csrfProtectionMiddleware(next http.Handler) http.Handler {
+	// Create CrossOriginProtection with default settings
+	// The zero value is valid and provides CSRF protection
+	csrf := &http.CrossOriginProtection{}
+
+	// Allow trusted origins from environment variable if specified
+	// This is useful if you have multiple domains serving the same app
+	if trustedOrigins := os.Getenv("EXPENSETRACE_TRUSTED_ORIGINS"); trustedOrigins != "" {
+		origins := strings.Split(trustedOrigins, ",")
+		for _, origin := range origins {
+			origin = strings.TrimSpace(origin)
+			if origin != "" {
+				err := csrf.AddTrustedOrigin(origin)
+				if err != nil {
+					// Log error but continue - don't fail the entire app
+					// In production, you might want to handle this differently
+					continue
+				}
+			}
+		}
+	}
+
+	// Return the handler that applies CSRF protection
+	return csrf.Handler(next)
 }

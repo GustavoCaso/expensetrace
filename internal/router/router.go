@@ -86,6 +86,10 @@ func New(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logge
 		wrappedMux = xFrameDenyHeaderMiddleware(wrappedMux)
 	}
 
+	// Apply CSRF protection middleware
+	// This should be one of the last middlewares in the chain
+	wrappedMux = csrfProtectionMiddleware(wrappedMux)
+
 	return wrappedMux, router
 }
 
