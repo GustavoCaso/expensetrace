@@ -10,30 +10,18 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/cli"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/router"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
-type webCommand struct {
-}
-
-func NewCommand() cli.Command {
-	return webCommand{}
-}
-
-func (c webCommand) Description() string {
-	return "Web interface"
-}
-
 const (
 	defaultPort    = "8080"
 	defaultTimeout = 5 * time.Second
 )
 
-func (c webCommand) Run(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logger) error {
+func Run(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logger) error {
 	// Initialize configuration from environment variables
 	port := os.Getenv("EXPENSETRACE_PORT")
 	if port == "" {

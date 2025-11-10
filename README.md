@@ -18,17 +18,18 @@ In an era where financial data privacy is increasingly important, ExpenseTrace o
 - Import your expenses from CSV or JSON files through the web interface
 - Automatically categorize transactions based on customizable regex patterns
 - Generate detailed reports and insights
-- Access your data through either a terminal interface (TUI) or web interface
+- Access your data through a user-friendly web interface
 - Keep all your financial data local and private
+- Multi-user support with authentication
 
 ## Features
 
-- 📊 Interactive TUI (Terminal User Interface) for easy navigation
 - 🌐 Web interface for visual data exploration with import functionality
 - 📈 Detailed financial reports and insights
 - 🔒 Local data storage with SQLite
-- 🎨 Beautiful terminal output with color coding
+- 👥 Multi-user support with authentication
 - 📝 Import expenses via web interface (CSV, JSON) with automatic or interactive mapping
+- 🏷️ Automatic expense categorization using regex patterns
 
 ## Data Privacy
 
@@ -66,10 +67,10 @@ logger:
   output: stdout
 ```
 
-4. Start the web interface:
+4. Start the web server:
 
 ```bash
-expensetrace web
+./expensetrace
 ```
 
 ### Using Docker Compose (Recommended)
