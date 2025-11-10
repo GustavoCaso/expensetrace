@@ -24,4 +24,4 @@ chmod +x /app/expensetrace
 
 # Drop privileges and execute application
 echo "Starting expensetrace as user expensetrace (UID=$PUID, GID=$PGID)"
-exec su-exec expensetrace /app/expensetrace "$@"
+exec su-exec expensetrace /app/expensetrace

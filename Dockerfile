@@ -58,5 +58,3 @@ WORKDIR /data
 
 # Use entrypoint script to handle PUID/PGID and drop privileges
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-# Default to web mode (can be overridden with: docker run ... expensetrace tui)
-CMD ["web"]
