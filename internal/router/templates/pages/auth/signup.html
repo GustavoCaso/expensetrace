@@ -1,0 +1,59 @@
+{{define "title"}}Sign Up - ExpenseTrace{{end}}
+{{define "css"}}/static/css/auth.css{{end}}
+
+{{define "main"}}
+  <div class="auth-container">
+    <div class="auth-card">
+      <img src="/static/logo.png" alt="ExpenseTrace Logo" class="auth-logo">
+
+      <h1>Get started</h1>
+      <h2>Create your account</h2>
+
+      {{if gt (len .Error) 0}}
+        {{template "error" .Error}}
+      {{end}}
+
+      <form method="POST" action="/signup" class="auth-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            placeholder="Choose a username"
+            required
+            autofocus>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Choose a strong password"
+            required
+            minlength="8">
+          <small>Minimum 8 characters</small>
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_password">Confirm Password</label>
+          <input
+            type="password"
+            id="confirm_password"
+            name="confirm_password"
+            placeholder="Re-enter your password"
+            required
+            minlength="8">
+        </div>
+
+        <button type="submit" class="btn-primary">Create Account</button>
+      </form>
+
+      <p class="auth-link">
+        Already have an account? <a href="/signin">Sign in instead</a>
+      </p>
+    </div>
+  </div>
+{{end}}

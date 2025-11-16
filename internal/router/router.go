@@ -26,10 +26,9 @@ type router struct {
 }
 
 //nolint:revive // We return the private router struct to allow testing some internal functions
-func New(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logger) (http.Handler, *router) {
+func New(storage storage.Storage, logger *logger.Logger) (http.Handler, *router) {
 	router := &router{
 		reload:      os.Getenv("EXPENSE_LIVERELOAD") == "true",
-		matcher:     matcher,
 		storage:     storage,
 		reportsOnce: &sync.Once{},
 		logger:      logger,
@@ -64,19 +63,32 @@ func New(storage storage.Storage, matcher *matcher.Matcher, logger *logger.Logge
 		sessionStore: nil, // Will be initialized in RegisterRoutes
 	}
 
+	auth := &authHandler{
+		router,
+	}
+
+	profile := &profileHandler{
+		router,
+	}
+
 	mux := &http.ServeMux{}
+
+	// Register auth routes first (these will be excluded from auth middleware)
+	auth.RegisterRoutes(mux)
 
 	reports.RegisterRoutes(mux)
 	importHanlder.RegisterRoutes(mux)
 	expenses.RegisterRoutes(mux)
 	categories.RegisterRoutes(mux)
+	profile.RegisterRoutes(mux)
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	allowEmbedding := os.Getenv("EXPENSETRACE_ALLOW_EMBEDDING") == "true"
 
 	// wrap entire mux with middlewares
-	wrappedMux := loggingMiddleware(logger, mux)
+	wrappedMux := authMiddleware(router, storage, logger, mux)
+	wrappedMux = loggingMiddleware(logger, wrappedMux)
 
 	if router.reload {
 		wrappedMux = liveReloadMiddleware(router, wrappedMux)

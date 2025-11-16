@@ -8,15 +8,10 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/cli/web"
 	"github.com/GustavoCaso/expensetrace/internal/config"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
-	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage/sqlite"
 )
 
 func main() {
-	executeWebService()
-}
-
-func executeWebService() {
 	configPath := os.Getenv("EXPENSETRACE_CONFIG")
 	if configPath == "" {
 		configPath = "expensetrace.yml"
@@ -42,13 +37,7 @@ func executeWebService() {
 		appLogger.Fatal("Unable to create schema", "error", err.Error())
 	}
 
-	categories, err := storage.GetCategories(context.Background())
-	if err != nil {
-		appLogger.Fatal("Unable to get categories", "error", err.Error())
-	}
-	matcher := matcher.New(categories)
-
-	err = web.Run(storage, matcher, appLogger)
+	err = web.Run(storage, appLogger)
 	if err != nil {
 		appLogger.Error("failed to run the expensetrace web service", "error", err)
 		os.Exit(1)

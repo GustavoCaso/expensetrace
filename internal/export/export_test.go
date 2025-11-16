@@ -16,16 +16,16 @@ import (
 
 func TestCSV(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
 	ctx := context.Background()
-	categoryID1, err := s.CreateCategory(ctx, "Food", "restaurant|food")
+	categoryID1, err := s.CreateCategory(ctx, user.ID(), "Food", "restaurant|food")
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
 
-	categoryID2, err := s.CreateCategory(ctx, "Transport", "uber|taxi")
+	categoryID2, err := s.CreateCategory(ctx, user.ID(), "Transport", "uber|taxi")
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -47,20 +47,20 @@ func TestCSV(t *testing.T) {
 		storage.NewExpense(0, "TestSource", "salary", "USD", 500000, testDate, storage.IncomeType, nil),
 	}
 
-	_, err = s.InsertExpenses(ctx, expenses)
+	_, err = s.InsertExpenses(ctx, user.ID(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert expenses: %v", err)
 	}
 
 	// Get all expenses for export
-	allExpenses, err := s.GetAllExpenseTypes(ctx)
+	allExpenses, err := s.GetAllExpenseTypes(ctx, user.ID())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
 
 	// Export to CSV
 	var buf bytes.Buffer
-	err = CSV(ctx, &buf, allExpenses, s)
+	err = CSV(ctx, user.ID(), &buf, allExpenses, s)
 	if err != nil {
 		t.Fatalf("CSV failed: %v", err)
 	}
@@ -151,19 +151,19 @@ func TestCSV(t *testing.T) {
 
 func TestCSVEmpty(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	ctx := context.Background()
 
 	// Get all expenses (should be empty)
-	allExpenses, err := s.GetAllExpenseTypes(ctx)
+	allExpenses, err := s.GetAllExpenseTypes(ctx, user.ID())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
 
 	// Export to CSV
 	var buf bytes.Buffer
-	err = CSV(ctx, &buf, allExpenses, s)
+	err = CSV(ctx, user.ID(), &buf, allExpenses, s)
 	if err != nil {
 		t.Fatalf("CSV failed: %v", err)
 	}
@@ -191,10 +191,10 @@ func TestCSVEmpty(t *testing.T) {
 
 func TestExpenseToCSVRecord(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	ctx := context.Background()
-	categoryID, err := s.CreateCategory(ctx, "Shopping", "amazon|store")
+	categoryID, err := s.CreateCategory(ctx, user.ID(), "Shopping", "amazon|store")
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -278,7 +278,7 @@ func TestExpenseToCSVRecord(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			row := expenseToCSVRecord(ctx, tt.expense, s)
+			row := expenseToCSVRecord(ctx, user.ID(), tt.expense, s)
 
 			if len(row) != 8 {
 				t.Fatalf("Expected 8 columns, got %d", len(row))
@@ -293,10 +293,10 @@ func TestCSVRoundTrip(t *testing.T) {
 	// This test verifies that we can export expenses and the format is compatible
 	// with potential future import functionality
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	ctx := context.Background()
-	categoryID, err := s.CreateCategory(ctx, "Groceries", "supermarket|grocery")
+	categoryID, err := s.CreateCategory(ctx, user.ID(), "Groceries", "supermarket|grocery")
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -316,19 +316,19 @@ func TestCSVRoundTrip(t *testing.T) {
 		),
 	}
 
-	_, err = s.InsertExpenses(ctx, expenses)
+	_, err = s.InsertExpenses(ctx, user.ID(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert expenses: %v", err)
 	}
 
 	// Export to CSV
-	allExpenses, err := s.GetAllExpenseTypes(ctx)
+	allExpenses, err := s.GetAllExpenseTypes(ctx, user.ID())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
 
 	var buf bytes.Buffer
-	err = CSV(ctx, &buf, allExpenses, s)
+	err = CSV(ctx, user.ID(), &buf, allExpenses, s)
 	if err != nil {
 		t.Fatalf("CSV failed: %v", err)
 	}

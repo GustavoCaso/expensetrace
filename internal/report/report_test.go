@@ -12,7 +12,7 @@ import (
 
 func TestGenerate(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 	// Create test expenses
 	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	endDate := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
@@ -42,7 +42,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Test monthly report
-	report, err := Generate(context.Background(), startDate, endDate, s, expenses, "monthly")
+	report, err := Generate(context.Background(), user.ID(), startDate, endDate, s, expenses, "monthly")
 
 	if err != nil {
 		t.Fatalf("Got error generating report: %s", err.Error())
@@ -82,7 +82,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Test yearly report
-	yearlyReport, err := Generate(context.Background(), startDate, endDate, s, expenses, "yearly")
+	yearlyReport, err := Generate(context.Background(), user.ID(), startDate, endDate, s, expenses, "yearly")
 	if err != nil {
 		t.Fatalf("Got error generating report: %s", err.Error())
 	}
@@ -94,11 +94,11 @@ func TestGenerate(t *testing.T) {
 
 func TestCategories(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	catID, catErr := s.CreateCategory(context.Background(), "Food", "restaurant|food|grocery")
+	catID, catErr := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery")
 	if catErr != nil {
 		t.Fatalf("Error creating category: %s", catErr.Error())
 	}
@@ -138,7 +138,7 @@ func TestCategories(t *testing.T) {
 		),
 	}
 
-	categories, duplicates, income, spending, err := Categories(context.Background(), s, expenses)
+	categories, duplicates, income, spending, err := Categories(context.Background(), user.ID(), s, expenses)
 
 	if err != nil {
 		t.Fatalf("Got error generating categories: %s", err.Error())

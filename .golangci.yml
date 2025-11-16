@@ -414,3 +414,12 @@ linters:
       - text: 'avoid meaningless package names'
         path: 'internal/util/'
         linters: [ revive ]
+      - path: 'internal/storage/sqlite/migrations\.go'
+        linters:
+          - gocyclo
+          - cyclop
+      - path: 'internal/util/rand\.go'
+        linters:
+          - gosec
+          - revive
+          - mnd

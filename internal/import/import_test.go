@@ -107,7 +107,7 @@ CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,ATM Withdrawal,100.00,2.5
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			logger := testutil.TestLogger(t)
-			s := testutil.SetupTestStorage(t, logger)
+			s, user := testutil.SetupTestStorage(t, logger)
 
 			// Create test categories
 			categories := []storage.Category{
@@ -118,7 +118,7 @@ CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,ATM Withdrawal,100.00,2.5
 			}
 
 			for _, c := range categories {
-				_, err := s.CreateCategory(context.Background(), c.Name(), c.Pattern())
+				_, err := s.CreateCategory(context.Background(), user.ID(), c.Name(), c.Pattern())
 				if err != nil {
 					t.Fatalf("Failed to create category: %v", err)
 				}
@@ -126,13 +126,13 @@ CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,ATM Withdrawal,100.00,2.5
 			matcher := matcher.New(categories)
 
 			reader := strings.NewReader(tt.csvData)
-			info := ImportCSV(context.Background(), tt.filename, reader, s, matcher)
+			info := ImportCSV(context.Background(), user.ID(), tt.filename, reader, s, matcher)
 			if info.Error != nil {
 				t.Errorf("Import failed with error: %v", info.Error)
 			}
 
 			// Verify imported expenses
-			expenses, err := s.GetAllExpenseTypes(context.Background())
+			expenses, err := s.GetAllExpenseTypes(context.Background(), user.ID())
 			if err != nil {
 				t.Fatalf("Failed to get expenses: %v", err)
 			}
@@ -178,7 +178,7 @@ CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,ATM Withdrawal,100.00,2.5
 
 func TestImportJSON(t *testing.T) {
 	logger := testutil.TestLogger(t)
-	s := testutil.SetupTestStorage(t, logger)
+	s, user := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
 	categories := []storage.Category{
@@ -187,7 +187,7 @@ func TestImportJSON(t *testing.T) {
 	}
 
 	for _, c := range categories {
-		_, err := s.CreateCategory(context.Background(), c.Name(), c.Pattern())
+		_, err := s.CreateCategory(context.Background(), user.ID(), c.Name(), c.Pattern())
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -226,14 +226,14 @@ func TestImportJSON(t *testing.T) {
 		t.Fatal("JSON expenses are invalid")
 	}
 
-	info := ImportJSON(context.Background(), jsonExpenses, s, matcher)
+	info := ImportJSON(context.Background(), user.ID(), jsonExpenses, s, matcher)
 
 	if info.Error != nil {
 		t.Errorf("Import failed with error: %v", info.Error)
 	}
 
 	// Verify imported expenses
-	expenses, err := s.GetAllExpenseTypes(context.Background())
+	expenses, err := s.GetAllExpenseTypes(context.Background(), user.ID())
 	if err != nil {
 		t.Fatalf("Failed to get expenses: %v", err)
 	}
@@ -311,7 +311,7 @@ CHARGE,Current,invalid-date,2024-01-01 10:01:00,Restaurant bill,1234.56,0.00,USD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			logger := testutil.TestLogger(t)
-			s := testutil.SetupTestStorage(t, logger)
+			s, user := testutil.SetupTestStorage(t, logger)
 
 			// Create test categories
 			categories := []storage.Category{
@@ -321,7 +321,7 @@ CHARGE,Current,invalid-date,2024-01-01 10:01:00,Restaurant bill,1234.56,0.00,USD
 			matcher := matcher.New(categories)
 
 			reader := strings.NewReader(tt.csvData)
-			info := ImportCSV(context.Background(), tt.filename, reader, s, matcher)
+			info := ImportCSV(context.Background(), user.ID(), tt.filename, reader, s, matcher)
 			if info.Error == nil {
 				t.Errorf("Expected error")
 			}

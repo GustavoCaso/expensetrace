@@ -31,9 +31,9 @@ func (i *importHandler) RegisterRoutes(mux *http.ServeMux) {
 	const sessionTTL = 30 * time.Minute
 	i.sessionStore = importUtil.NewSessionStore(sessionTTL)
 
-	mux.HandleFunc("GET /import", func(w http.ResponseWriter, _ *http.Request) {
-		data := viewBase{CurrentPage: pageImport}
-		i.templates.Render(w, "pages/import/index.html", data)
+	mux.HandleFunc("GET /import", func(w http.ResponseWriter, r *http.Request) {
+		base := newViewBase(r.Context(), i.storage, i.logger, pageImport)
+		i.templates.Render(w, "pages/import/index.html", base)
 	})
 
 	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
@@ -52,8 +52,8 @@ func (i *importHandler) RegisterRoutes(mux *http.ServeMux) {
 const bytesPerKB = 1024
 
 func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	data := viewBase{}
-	data.CurrentPage = pageImport
+	userID := userIDFromContext(ctx)
+	data := newViewBase(ctx, i.storage, i.logger, pageImport)
 	previewFlow := false
 
 	defer func() {
@@ -111,7 +111,7 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 			return
 		}
 
-		info = importUtil.ImportCSV(ctx, header.Filename, &buf, i.storage, i.matcher)
+		info = importUtil.ImportCSV(ctx, userID, header.Filename, &buf, i.storage, i.matcher)
 	}
 
 	if fileExtension == ".json" {
@@ -131,7 +131,7 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 			return
 		}
 
-		info = importUtil.ImportJSON(ctx, jsonExpenses, i.storage, i.matcher)
+		info = importUtil.ImportJSON(ctx, userID, jsonExpenses, i.storage, i.matcher)
 	}
 
 	if info.Error != nil && info.TotalImports == 0 {
@@ -175,7 +175,7 @@ func (i *importHandler) previewHandler(
 	fileHeader *multipart.FileHeader,
 	w http.ResponseWriter,
 ) {
-	data := previewData{viewBase: viewBase{CurrentPage: pageImport}}
+	data := previewData{viewBase: viewBase{CurrentPage: pageImport, LoggedIn: true}}
 
 	defer func() {
 		i.templates.Render(w, "partials/import/preview.html", data)
@@ -302,8 +302,10 @@ func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter,
 
 // executeImportHandler executes the final import with stored mapping.
 func (i *importHandler) executeImportHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	userID := userIDFromContext(ctx)
 	data := viewBase{}
 	data.CurrentPage = pageImport
+	data.LoggedIn = true
 
 	defer func() {
 		i.templates.Render(w, "partials/import/form.html", data)
@@ -341,7 +343,7 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 		}
 	}
 
-	inserted, err := i.storage.InsertExpenses(ctx, result.Expenses)
+	inserted, err := i.storage.InsertExpenses(ctx, userID, result.Expenses)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error inserting expenses: %s", err.Error())
 		return

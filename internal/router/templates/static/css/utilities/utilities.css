@@ -518,6 +518,10 @@
 }
 
 /* Border radius */
+.not-rounded {
+  border-radius: 0 !important;
+}
+
 .rounded {
   border-radius: var(--border-radius);
 }

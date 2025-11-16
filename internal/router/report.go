@@ -69,8 +69,10 @@ func (rh *reportHandler) generateChartData() []chartDataPoint {
 }
 
 func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) {
-	data := homeViewData{}
-	data.CurrentPage = pageReports
+	base := newViewBase(r.Context(), rh.storage, rh.logger, pageReports)
+	data := homeViewData{
+		viewBase: base,
+	}
 
 	now := time.Now()
 	var month int
@@ -133,11 +135,12 @@ func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func (rh *reportHandler) generateReports(ctx context.Context) {
+	userID := userIDFromContext(ctx)
 	now := time.Now()
 	month := now.Month()
 	year := now.Year()
 	skipYear := false
-	ex, err := rh.storage.GetFirstExpense(ctx)
+	ex, err := rh.storage.GetFirstExpense(ctx, userID)
 	if err != nil {
 		rh.logger.Warn("Failed to generate reports", "error", err)
 		return
@@ -155,14 +158,14 @@ func (rh *reportHandler) generateReports(ctx context.Context) {
 
 		firstDay, lastDay := util.GetMonthDates(int(month), year)
 
-		expenses, expenseErr := rh.storage.GetExpensesFromDateRange(ctx, firstDay, lastDay)
+		expenses, expenseErr := rh.storage.GetExpensesFromDateRange(ctx, userID, firstDay, lastDay)
 
 		if expenseErr != nil {
 			rh.logger.Warn("Failed to generate reports", "error", expenseErr)
 			return
 		}
 
-		result, reportErr := report.Generate(ctx, firstDay, lastDay, rh.storage, expenses, "monthly")
+		result, reportErr := report.Generate(ctx, userID, firstDay, lastDay, rh.storage, expenses, "monthly")
 
 		if reportErr != nil {
 			rh.logger.Warn("Failed to generate reports", "error", reportErr)
