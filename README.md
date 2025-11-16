@@ -57,17 +57,7 @@ cd expensetrace
 CGO_ENABLED=1 go build
 ```
 
-3. Create a configuration file (`expense.yaml`):
-
-```yaml
-db: expenses.db
-logger:
-  level: info
-  format: text
-  output: stdout
-```
-
-4. Start the web server:
+3. Start the web server:
 
 ```bash
 ./expensetrace
@@ -105,11 +95,12 @@ The service will be available at `http://localhost:8082`. The configuration file
 
 ## Environment Variables
 
-ExpenseTrace can be configured entirely through environment variables, which override values from the configuration file. This makes it ideal for containerized deployments.
+ExpenseTrace can be configured entirely through environment variables. This makes it ideal for containerized deployments.
 
 ### Configuration
 
-- `EXPENSETRACE_CONFIG`: Path to configuration file (default: `expensetrace.yml`)
+### DB File path
+
 - `EXPENSETRACE_DB`: Path to SQLite database file (default: `expensetrace.db`)
 
 ### Web Server Configuration

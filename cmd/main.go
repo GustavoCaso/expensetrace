@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/GustavoCaso/expensetrace/internal/cli/web"
@@ -12,22 +11,13 @@ import (
 )
 
 func main() {
-	configPath := os.Getenv("EXPENSETRACE_CONFIG")
-	if configPath == "" {
-		configPath = "expensetrace.yml"
-	}
-
-	conf, err := config.Parse(configPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to parse the configuration. %s", err.Error())
-		os.Exit(1)
-	}
+	conf := config.Parse()
 
 	appLogger := logger.New(conf.Logger)
 
-	appLogger.Info("Using database", "path", conf.DB)
+	appLogger.Info("Using database", "path", conf.DBFile)
 
-	storage, err := sqlite.New(conf.DB)
+	storage, err := sqlite.New(conf.DBFile)
 	if err != nil {
 		appLogger.Fatal("Unable to get DB", "error", err.Error())
 	}
