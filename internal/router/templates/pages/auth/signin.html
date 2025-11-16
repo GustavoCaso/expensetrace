@@ -10,9 +10,7 @@
       <h2>Sign in to your account</h2>
 
       {{if gt (len .Error) 0}}
-        <div class="auth-error">
-          {{.Error}}
-        </div>
+        {{template "error" .Error}}
       {{end}}
 
       <form method="POST" action="/signin" class="auth-form">
