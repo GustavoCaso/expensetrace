@@ -5,11 +5,9 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
-	"sync"
 
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
-	"github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
@@ -19,19 +17,15 @@ type router struct {
 	logger    *logger.Logger
 	templates *templates
 
-	reports          map[string]report.Report
-	sortedReportKeys []string
-	reportsOnce      *sync.Once
-	reload           bool
+	reload bool
 }
 
 //nolint:revive // We return the private router struct to allow testing some internal functions
 func New(storage storage.Storage, logger *logger.Logger) (http.Handler, *router) {
 	router := &router{
-		reload:      os.Getenv("EXPENSE_LIVERELOAD") == "true",
-		storage:     storage,
-		reportsOnce: &sync.Once{},
-		logger:      logger,
+		reload:  os.Getenv("EXPENSE_LIVERELOAD") == "true",
+		storage: storage,
+		logger:  logger,
 	}
 
 	staticFS, staticFSError := router.parserStaticFiles()
@@ -46,9 +40,7 @@ func New(storage storage.Storage, logger *logger.Logger) (http.Handler, *router)
 		logger.Fatal("error parsing templates", "error", parseError.Error())
 	}
 
-	reports := &reportHandler{
-		router,
-	}
+	reports := newReportsHandlder(router)
 
 	categories := &categoryHandler{
 		router,
@@ -99,10 +91,6 @@ func New(storage storage.Storage, logger *logger.Logger) (http.Handler, *router)
 	}
 
 	return wrappedMux, router
-}
-
-func (r *router) resetCache() {
-	r.reportsOnce = &sync.Once{}
 }
 
 func (r *router) parseTemplates() error {

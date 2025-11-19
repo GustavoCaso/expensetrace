@@ -282,8 +282,6 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 
 	c.logger.Info("Expense created successfully")
 
-	c.resetCache()
-
 	data.Banner = banner{
 		Icon:    "✅",
 		Message: "Expense Created",
@@ -422,7 +420,6 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 
 	c.logger.Info("Expense updated successfully", "id", id)
 
-	c.resetCache()
 	var updatedCategory pkgStorage.Category
 	if updatedExpense.CategoryID() != nil {
 		cat, categoryErr := c.storage.GetCategory(ctx, userID, *updatedExpense.CategoryID())
@@ -553,8 +550,6 @@ func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.Respon
 	}
 
 	c.logger.Info("Expense deleted successfully", "id", id)
-
-	c.resetCache()
 
 	c.expensesHandler(ctx, w, &banner{
 		Icon:    "🔥",

@@ -152,9 +152,6 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 		Message: b.String(),
 	}
 	data.Banner = banner
-
-	// Reset cache to refresh data after import
-	i.resetCache()
 }
 
 type previewData struct {
@@ -369,7 +366,4 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 	data.Banner = banner
 
 	i.sessionStore.Delete(sessionID)
-
-	// Reset cache to refresh data
-	i.resetCache()
 }

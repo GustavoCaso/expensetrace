@@ -540,16 +540,6 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		t.Errorf("Type not updated correctly")
 	}
 
-	req = httptest.NewRequest(http.MethodGet, "/expense/1/delete", nil)
-	req.SetPathValue("id", "1")
-	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
-	w = httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	if w.Result().StatusCode != http.StatusOK {
-		t.Errorf("GET /expense/1/delete failed with status %v", w.Result().Status)
-	}
-
 	req = httptest.NewRequest(http.MethodDelete, "/expense/1", nil)
 	req.SetPathValue("id", "1")
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)

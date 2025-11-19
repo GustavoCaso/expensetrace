@@ -58,7 +58,7 @@ func TestUncategorizedHandler(t *testing.T) {
 
 	handler, _ := New(s, logger)
 
-	req := httptest.NewRequest(http.MethodGet, "/uncategorized", nil)
+	req := httptest.NewRequest(http.MethodGet, "/category/uncategorized", nil)
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 
@@ -172,7 +172,6 @@ func TestCreateCategoryHandler(t *testing.T) {
 	handler, router := New(s, logger)
 
 	oldMatcher := router.matcher
-	oldSyncOnce := router.reportsOnce
 
 	body := strings.NewReader("name=Entertainment&pattern=cinema|movie|theater&type=0")
 	req := httptest.NewRequest(http.MethodPost, "/category", body)
@@ -224,10 +223,6 @@ func TestCreateCategoryHandler(t *testing.T) {
 
 	if oldMatcher == router.matcher {
 		t.Error("Category matcher was not re-created")
-	}
-
-	if oldSyncOnce == router.reportsOnce {
-		t.Error("Router cache was not reset")
 	}
 }
 
@@ -354,7 +349,6 @@ func TestUpdateHandler(t *testing.T) {
 
 			handler, router := New(s, logger)
 
-			oldSyncOnce := router.reportsOnce
 			oldMatcher := router.matcher
 
 			body := strings.NewReader(tt.body)
@@ -384,10 +378,6 @@ func TestUpdateHandler(t *testing.T) {
 			}
 
 			tt.assertion(t, categoryUpdated, updatedExpenses)
-
-			if oldSyncOnce == router.reportsOnce {
-				t.Error("Router cache was not reset")
-			}
 
 			if tt.updateMatcher {
 				if oldMatcher == router.matcher {
@@ -601,9 +591,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
-	handler, router := New(s, logger)
-
-	oldSyncOnce := router.reportsOnce
+	handler, _ := New(s, logger)
 
 	body := strings.NewReader(fmt.Sprintf("description=cinema. with friends&category_id=%d", categoryID))
 	req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/update", body)
@@ -649,10 +637,6 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 			*expensesUpdated[0].CategoryID(),
 		)
 	}
-
-	if oldSyncOnce == router.reportsOnce {
-		t.Error("Router cache was not reset")
-	}
 }
 
 func TestResetCategoryHandler(t *testing.T) {
@@ -689,7 +673,6 @@ func TestResetCategoryHandler(t *testing.T) {
 
 	handler, router := New(s, logger)
 
-	oldSyncOnce := router.reportsOnce
 	oldMatcher := router.matcher
 
 	req := httptest.NewRequest(http.MethodPost, "/category/reset", nil)
@@ -732,10 +715,6 @@ func TestResetCategoryHandler(t *testing.T) {
 		t.Error("Response should contain 'Total Categories' heading")
 	}
 
-	if oldSyncOnce == router.reportsOnce {
-		t.Error("Router cache was not reset")
-	}
-
 	if oldMatcher == router.matcher {
 		t.Error("Router matcher was not updated")
 	}
@@ -745,9 +724,7 @@ func TestResetCategoryHandlerEmptyDatabase(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, router := New(s, logger)
-
-	oldSyncOnce := router.reportsOnce
+	handler, _ := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodPost, "/category/reset", nil)
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
@@ -768,9 +745,5 @@ func TestResetCategoryHandlerEmptyDatabase(t *testing.T) {
 	}
 	if len(categories) != 1 {
 		t.Errorf("Expected one category (exclude) after reset, got %d", len(categories))
-	}
-
-	if oldSyncOnce == router.reportsOnce {
-		t.Error("Router cache was not reset")
 	}
 }
