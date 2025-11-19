@@ -3,18 +3,8 @@ name: Go Tests
 on:
   push:
     branches: [ main ]
-    paths:
-      - '**.go'
-      - 'internal/router/templates/**'
-      - 'go.mod'
-      - 'go.sum'
   pull_request:
     branches: [ main ]
-    paths:
-      - '**.go'
-      - 'internal/router/templates/**'
-      - 'go.mod'
-      - 'go.sum'
 
 jobs:
   test:

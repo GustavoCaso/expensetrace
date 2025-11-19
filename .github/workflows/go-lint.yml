@@ -3,19 +3,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - '**.go'
-      - 'internal/router/templates/**'
-      - 'go.mod'
-      - 'go.sum'
-      - '.golangci.yml'
   pull_request:
-    paths:
-      - '**.go'
-      - 'internal/router/templates/**'
-      - 'go.mod'
-      - 'go.sum'
-      - '.golangci.yml'
 
 permissions:
   contents: read
