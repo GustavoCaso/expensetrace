@@ -262,7 +262,6 @@ func (c *categoryHandler) updatecategoryHandler(
 	updatedCategory := storage.NewCategory(categoryIDInt64, name, pattern)
 
 	if !patternChanged {
-		c.resetCache()
 		updatedEnhancedCat := createEnhancedCategory(updatedCategory, currentCategoryExpenses)
 		categoryCardData = &updatedEnhancedCat
 		return
@@ -318,8 +317,6 @@ func (c *categoryHandler) updatecategoryHandler(
 		if int(updated) != len(toUpdated) {
 			c.logger.Warn("not all categories were updated")
 		}
-
-		c.resetCache()
 
 		updatedExpenses, updateExpensesErr := c.storage.GetExpensesByCategory(ctx, userID, categoryIDInt64)
 		if updateExpensesErr != nil {
@@ -548,8 +545,6 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 			data.Error = updateCategoryMatcherErr.Error()
 			return
 		}
-
-		c.resetCache()
 	}
 
 	c.uncategorizedHandler(ctx, w, "", &banner{
@@ -572,8 +567,6 @@ func (c *categoryHandler) resetcategoryHandler(ctx context.Context, w http.Respo
 		c.categoryIndexError(ctx, w, updateCategoryMatcherErr)
 		return
 	}
-
-	c.resetCache()
 
 	c.categoriesHandler(ctx, w, nil, &banner{
 		Icon:    "🔥",
@@ -599,8 +592,6 @@ func (c *categoryHandler) deletecategoryHandler(ctx context.Context, w http.Resp
 	}
 
 	c.logger.Info("Category deleted successfully", "id", id)
-
-	c.resetCache()
 
 	c.categoriesHandler(ctx, w, nil, &banner{
 		Icon:    "✅",
@@ -734,7 +725,6 @@ func (c *categoryHandler) createcategoryHandler(
 			return
 		}
 
-		c.resetCache()
 		data.Banner = banner{
 			Icon: "✅",
 			Message: fmt.Sprintf(

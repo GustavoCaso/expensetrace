@@ -44,7 +44,7 @@ func TestImport(t *testing.T) {
 	}
 
 	// Create router
-	handler, router := New(s, logger)
+	handler, _ := New(s, logger)
 
 	// Hit home to populate cache
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -57,9 +57,6 @@ func TestImport(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status %v; got %v", http.StatusOK, resp.Status)
 	}
-
-	// Check reports are populated
-	initialReportsKeys := router.sortedReportKeys
 
 	// Import new expenses
 	body := new(bytes.Buffer)
@@ -100,23 +97,6 @@ func TestImport(t *testing.T) {
 	}
 
 	ensureNoErrorInTemplateResponse(t, "import", resp.Body)
-
-	// Hit home again t valiadte the cache has been busted and the reports have being updated
-	req = httptest.NewRequest(http.MethodGet, "/", nil)
-	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
-	w = httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	resp = w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status %v; got %v", http.StatusOK, resp.Status)
-	}
-
-	// Check reports are populated
-	if len(router.sortedReportKeys) <= len(initialReportsKeys) {
-		t.Errorf("reports have not being repopulated after succesfull import")
-	}
 }
 
 func ensureNoErrorInTemplateResponse(t *testing.T, test string, body io.ReadCloser) {

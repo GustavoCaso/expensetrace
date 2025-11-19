@@ -32,31 +32,58 @@ type homeViewData struct {
 
 type reportHandler struct {
 	*router
+	reportsPerUser map[int64]map[string]report.Report
+}
+
+func newReportsHandlder(router *router) *reportHandler {
+	reportsPerUser := map[int64]map[string]report.Report{}
+
+	return &reportHandler{
+		router,
+		reportsPerUser,
+	}
 }
 
 func (rh *reportHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		rh.reportsOnce.Do(func() {
-			rh.generateReports(r.Context())
-		})
+		rh.generateReports(r.Context())
 		rh.reportsHandler(w, r)
 	})
 }
 
-func (rh *reportHandler) generateChartData() []chartDataPoint {
-	chartData := make([]chartDataPoint, 0, len(rh.sortedReportKeys))
+func (rh *reportHandler) generateChartData(userID int64) []chartDataPoint {
+	reports := rh.reportsPerUser[userID]
+	reportKeys := slices.Collect(maps.Keys(reports))
 
-	for _, key := range rh.sortedReportKeys {
+	sort.SliceStable(reportKeys, func(i, j int) bool {
+		s1 := strings.Split(reportKeys[i], "-")
+		s2 := strings.Split(reportKeys[j], "-")
+		year1, _ := strconv.Atoi(s1[0])
+		month1, _ := strconv.Atoi(s1[1])
+
+		year2, _ := strconv.Atoi(s2[0])
+		month2, _ := strconv.Atoi(s2[1])
+
+		if year1 == year2 {
+			return time.Month(month1) > time.Month(month2)
+		}
+
+		return year1 > year2
+	})
+
+	chartData := make([]chartDataPoint, 0, len(reports))
+
+	for _, key := range reportKeys {
 		parts := strings.Split(key, "-")
+		report := reports[key]
 
-		r := rh.reports[key]
 		chartData = append(chartData, chartDataPoint{
-			Month:             r.Title,
-			Income:            r.Income,
+			Month:             report.Title,
+			Income:            report.Income,
 			URL:               fmt.Sprintf("/?month=%s&year=%s", parts[1], parts[0]),
-			Spending:          r.Spending,
-			Savings:           r.Savings,
-			SavingsPercentage: r.SavingsPercentage,
+			Spending:          report.Spending,
+			Savings:           report.Savings,
+			SavingsPercentage: report.SavingsPercentage,
 		})
 	}
 
@@ -69,7 +96,9 @@ func (rh *reportHandler) generateChartData() []chartDataPoint {
 }
 
 func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) {
-	base := newViewBase(r.Context(), rh.storage, rh.logger, pageReports)
+	ctx := r.Context()
+	userID := userIDFromContext(ctx)
+	base := newViewBase(ctx, rh.storage, rh.logger, pageReports)
 	data := homeViewData{
 		viewBase: base,
 	}
@@ -103,14 +132,14 @@ func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) 
 
 	var chartData []chartDataPoint
 	if !useReportTemplate {
-		chartData = rh.generateChartData()
+		chartData = rh.generateChartData(userID)
 	}
 
 	if err != nil {
 		data.Error = err.Error()
 	} else {
 		reportKey := fmt.Sprintf("%d-%d", year, month)
-		report, ok := rh.reports[reportKey]
+		report, ok := rh.reportsPerUser[userID][reportKey]
 
 		if !ok {
 			data.Error = fmt.Sprintf("no report available. %s", reportKey)
@@ -188,24 +217,5 @@ func (rh *reportHandler) generateReports(ctx context.Context) {
 		month--
 	}
 
-	reportKeys := slices.Collect(maps.Keys(reports))
-
-	sort.SliceStable(reportKeys, func(i, j int) bool {
-		s1 := strings.Split(reportKeys[i], "-")
-		s2 := strings.Split(reportKeys[j], "-")
-		year1, _ := strconv.Atoi(s1[0])
-		month1, _ := strconv.Atoi(s1[1])
-
-		year2, _ := strconv.Atoi(s2[0])
-		month2, _ := strconv.Atoi(s2[1])
-
-		if year1 == year2 {
-			return time.Month(month1) > time.Month(month2)
-		}
-
-		return year1 > year2
-	})
-
-	rh.reports = reports
-	rh.sortedReportKeys = reportKeys
+	rh.reportsPerUser[userID] = reports
 }
