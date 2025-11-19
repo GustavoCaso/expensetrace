@@ -58,7 +58,7 @@ func TestUncategorizedHandler(t *testing.T) {
 
 	handler, _ := New(s, logger)
 
-	req := httptest.NewRequest(http.MethodGet, "/uncategorized", nil)
+	req := httptest.NewRequest(http.MethodGet, "/category/uncategorized", nil)
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
 	w := httptest.NewRecorder()
 

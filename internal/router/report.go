@@ -45,7 +45,7 @@ func newReportsHandlder(router *router) *reportHandler {
 }
 
 func (rh *reportHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		rh.generateReports(r.Context())
 		rh.reportsHandler(w, r)
 	})
@@ -139,14 +139,10 @@ func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) 
 		data.Error = err.Error()
 	} else {
 		reportKey := fmt.Sprintf("%d-%d", year, month)
-		report, ok := rh.reportsPerUser[userID][reportKey]
+		report := rh.reportsPerUser[userID][reportKey]
 
-		if !ok {
-			data.Error = fmt.Sprintf("no report available. %s", reportKey)
-		} else {
-			data.Report = report
-			data.ChartData = chartData
-		}
+		data.Report = report
+		data.ChartData = chartData
 	}
 
 	var template string
@@ -171,7 +167,7 @@ func (rh *reportHandler) generateReports(ctx context.Context) {
 	skipYear := false
 	ex, err := rh.storage.GetFirstExpense(ctx, userID)
 	if err != nil {
-		rh.logger.Warn("Failed to generate reports", "error", err)
+		rh.logger.Warn("Failed to generate reports", "error", err, "userID", userID)
 		return
 	}
 
@@ -190,14 +186,14 @@ func (rh *reportHandler) generateReports(ctx context.Context) {
 		expenses, expenseErr := rh.storage.GetExpensesFromDateRange(ctx, userID, firstDay, lastDay)
 
 		if expenseErr != nil {
-			rh.logger.Warn("Failed to generate reports", "error", expenseErr)
+			rh.logger.Warn("Failed to generate reports", "error", expenseErr, "userID", userID)
 			return
 		}
 
 		result, reportErr := report.Generate(ctx, userID, firstDay, lastDay, rh.storage, expenses, "monthly")
 
 		if reportErr != nil {
-			rh.logger.Warn("Failed to generate reports", "error", reportErr)
+			rh.logger.Warn("Failed to generate reports", "error", reportErr, "userID", userID)
 			return
 		}
 
