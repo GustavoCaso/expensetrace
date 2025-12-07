@@ -546,12 +546,19 @@ func (s *sqliteStorage) ApplyMigrations(ctx context.Context, logger *logger.Logg
 		{
 			name: "Add monthly_budget column to categories",
 			up: func(tx *sql.Tx) error {
-				// Disable foreign keys temporarily
 				_, alterErr := tx.ExecContext(ctx, `
 						ALTER TABLE categories ADD COLUMN monthly_budget INTEGER NOT NULL DEFAULT 0;
 				`)
 				if alterErr != nil {
 					return alterErr
+				}
+
+				_, updateErr := tx.ExecContext(ctx, `
+						UPDATE categories SET monthly_budget = 0;;
+				`)
+
+				if updateErr != nil {
+					return updateErr
 				}
 
 				return nil
