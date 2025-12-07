@@ -57,6 +57,10 @@
   color: var(--color-gray-900);
 }
 
+.bg-white {
+  background-color: white;
+}
+
 .bg-success {
   background-color: var(--color-success);
 }
@@ -199,6 +203,10 @@
   flex-wrap: wrap;
 }
 
+.flex-gw-1 {
+  flex-grow: 1;
+}
+
 .items-center {
   align-items: center;
 }
@@ -279,6 +287,10 @@
 }
 
 .m-2 {
+  margin: var(--spacing-2);
+}
+
+.m-3 {
   margin: var(--spacing-2);
 }
 
@@ -421,6 +433,10 @@
 
 .p-2 {
   padding: var(--spacing-2);
+}
+
+.p-3 {
+  padding: var(--spacing-3);
 }
 
 .p-4 {
@@ -606,17 +622,9 @@
 }
 
 /* Layout utilities */
-#main {
-  padding: var(--spacing-8);
-  background-color: white;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  margin: var(--spacing-4);
-}
-
 #page {
-  max-width: var(--container-max-width);
   margin: 0 auto;
+  display: flex;
 }
 
 /* Animation utilities */

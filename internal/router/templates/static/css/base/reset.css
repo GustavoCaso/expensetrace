@@ -15,7 +15,6 @@ body {
 }
 
 body {
-  max-width: var(--container-max-width);
   margin: 0 auto;
 }
 
@@ -44,8 +43,7 @@ textarea {
   margin: 0;
 }
 
-img,
-svg {
+img {
   display: block;
   max-width: 100%;
 }
