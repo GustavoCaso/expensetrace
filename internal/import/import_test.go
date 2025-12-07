@@ -111,14 +111,14 @@ CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,ATM Withdrawal,100.00,2.5
 
 			// Create test categories
 			categories := []storage.Category{
-				storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-				storage.NewCategory(2, "Transport", "uber|taxi|transit"),
-				storage.NewCategory(3, "Shopping", "amazon|purchase"),
-				storage.NewCategory(4, "Cash", "atm|withdrawal"),
+				storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+				storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
+				storage.NewCategory(3, "Shopping", "amazon|purchase", 0),
+				storage.NewCategory(4, "Cash", "atm|withdrawal", 0),
 			}
 
 			for _, c := range categories {
-				_, err := s.CreateCategory(context.Background(), user.ID(), c.Name(), c.Pattern())
+				_, err := s.CreateCategory(context.Background(), user.ID(), c.Name(), c.Pattern(), 0)
 				if err != nil {
 					t.Fatalf("Failed to create category: %v", err)
 				}
@@ -182,12 +182,12 @@ func TestImportJSON(t *testing.T) {
 
 	// Create test categories
 	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
+		storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
 	}
 
 	for _, c := range categories {
-		_, err := s.CreateCategory(context.Background(), user.ID(), c.Name(), c.Pattern())
+		_, err := s.CreateCategory(context.Background(), user.ID(), c.Name(), c.Pattern(), 0)
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -315,8 +315,8 @@ CHARGE,Current,invalid-date,2024-01-01 10:01:00,Restaurant bill,1234.56,0.00,USD
 
 			// Create test categories
 			categories := []storage.Category{
-				storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-				storage.NewCategory(2, "Transport", "uber|taxi|transit"),
+				storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+				storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
 			}
 			matcher := matcher.New(categories)
 

@@ -21,12 +21,12 @@ func TestExpensesHandler(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
+		storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
 	}
 	categoryIDs := make([]int64, 2)
 	for i, c := range categories {
-		id, err := s.CreateCategory(context.Background(), user.ID(), c.Name(), c.Pattern())
+		id, err := s.CreateCategory(context.Background(), user.ID(), c.Name(), c.Pattern(), 0)
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -132,7 +132,7 @@ func TestExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Test Category", "test")
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Test Category", "test", 0)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestUpdateExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Updated Category", "updated")
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Updated Category", "updated", 0)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -469,7 +469,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Integration Category", "integration")
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Integration Category", "integration", 0)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -565,7 +565,7 @@ func TestExpenseSearchHandler(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery")
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery", 0)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -615,7 +615,7 @@ func TestCreateExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Test Category", "test")
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Test Category", "test", 0)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}

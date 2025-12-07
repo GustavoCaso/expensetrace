@@ -21,7 +21,7 @@ func TestMigrations(t *testing.T) {
 	}
 
 	// Test that we can create data (which verifies schema)
-	_, err = stor.CreateCategory(context.Background(), user.ID(), "Test Category", "test.*")
+	_, err = stor.CreateCategory(context.Background(), user.ID(), "Test Category", "test.*", 0)
 	if err != nil {
 		t.Fatalf("Failed to create category after migrations: %v", err)
 	}

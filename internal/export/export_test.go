@@ -20,12 +20,12 @@ func TestCSV(t *testing.T) {
 
 	// Create test categories
 	ctx := context.Background()
-	categoryID1, err := s.CreateCategory(ctx, user.ID(), "Food", "restaurant|food")
+	categoryID1, err := s.CreateCategory(ctx, user.ID(), "Food", "restaurant|food", 0)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
 
-	categoryID2, err := s.CreateCategory(ctx, user.ID(), "Transport", "uber|taxi")
+	categoryID2, err := s.CreateCategory(ctx, user.ID(), "Transport", "uber|taxi", 0)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestExpenseToCSVRecord(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	ctx := context.Background()
-	categoryID, err := s.CreateCategory(ctx, user.ID(), "Shopping", "amazon|store")
+	categoryID, err := s.CreateCategory(ctx, user.ID(), "Shopping", "amazon|store", 0)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -296,7 +296,7 @@ func TestCSVRoundTrip(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	ctx := context.Background()
-	categoryID, err := s.CreateCategory(ctx, user.ID(), "Groceries", "supermarket|grocery")
+	categoryID, err := s.CreateCategory(ctx, user.ID(), "Groceries", "supermarket|grocery", 0)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}

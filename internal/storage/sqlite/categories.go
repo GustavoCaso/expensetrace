@@ -51,20 +51,37 @@ func (s *sqliteStorage) GetExcludeCategory(ctx context.Context, userID int64) (s
 	return categoryFromRow(row.Scan)
 }
 
-func (s *sqliteStorage) UpdateCategory(ctx context.Context, userID, categoryID int64, name, pattern string) error {
+func (s *sqliteStorage) UpdateCategory(
+	ctx context.Context,
+	userID, categoryID int64,
+	name, pattern string,
+	monthlyBudget int64,
+) error {
 	_, err := s.db.ExecContext(ctx,
-		"UPDATE categories SET name = ?, pattern = ? WHERE id = ? AND user_id = ?;",
+		"UPDATE categories SET name = ?, pattern = ?, monthly_budget = ? WHERE id = ? AND user_id = ?;",
 		name,
 		pattern,
+		monthlyBudget,
 		categoryID,
 		userID,
 	)
 	return err
 }
 
-func (s *sqliteStorage) CreateCategory(ctx context.Context, userID int64, name, pattern string) (int64, error) {
-	result, err := s.db.ExecContext(ctx,
-		"INSERT INTO categories(name, pattern, user_id) values(?, ?, ?)", name, pattern, userID)
+func (s *sqliteStorage) CreateCategory(
+	ctx context.Context,
+	userID int64,
+	name, pattern string,
+	monthlyBudget int64,
+) (int64, error) {
+	result, err := s.db.ExecContext(
+		ctx,
+		"INSERT INTO categories(name, pattern, user_id, monthly_budget) values(?, ?, ?, ?)",
+		name,
+		pattern,
+		userID,
+		monthlyBudget,
+	)
 
 	if err != nil {
 		return 0, err
@@ -153,17 +170,17 @@ func (s *sqliteStorage) DeleteCategory(ctx context.Context, userID, categoryID i
 }
 
 func categoryFromRow(scan func(dest ...any) error) (storage.Category, error) {
-	// Use the Category type from expenses.go
 	var id int64
 	var name, pattern string
 	var userID int64
+	var monthlyBudget int64
 
-	if err := scan(&id, &name, &pattern, &userID); err != nil {
+	if err := scan(&id, &name, &pattern, &userID, &monthlyBudget); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, &storage.NotFoundError{}
 		}
 		return nil, err
 	}
 
-	return storage.NewCategory(id, name, pattern), nil
+	return storage.NewCategory(id, name, pattern, monthlyBudget), nil
 }

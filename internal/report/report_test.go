@@ -98,7 +98,7 @@ func TestCategories(t *testing.T) {
 
 	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	catID, catErr := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery")
+	catID, catErr := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery", 0)
 	if catErr != nil {
 		t.Fatalf("Error creating category: %s", catErr.Error())
 	}

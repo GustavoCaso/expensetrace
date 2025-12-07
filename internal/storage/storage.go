@@ -17,12 +17,14 @@ type Category interface {
 	ID() int64
 	Name() string
 	Pattern() string
+	MonthlyBudget() int64
 }
 
 type category struct {
-	id      int64
-	name    string
-	pattern string
+	id            int64
+	name          string
+	pattern       string
+	monthlyBudget int64
 }
 
 func (c category) ID() int64 {
@@ -37,11 +39,16 @@ func (c category) Pattern() string {
 	return c.pattern
 }
 
-func NewCategory(id int64, name, pattern string) Category {
+func (c category) MonthlyBudget() int64 {
+	return c.monthlyBudget
+}
+
+func NewCategory(id int64, name, pattern string, monthlyBudget int64) Category {
 	return category{
-		id:      id,
-		name:    name,
-		pattern: pattern,
+		id:            id,
+		name:          name,
+		pattern:       pattern,
+		monthlyBudget: monthlyBudget,
 	}
 }
 
@@ -243,8 +250,8 @@ type Storage interface {
 	GetCategories(ctx context.Context, userID int64) ([]Category, error)
 	GetCategory(ctx context.Context, userID, categoryID int64) (Category, error)
 	DeleteCategory(ctx context.Context, userID, categoryID int64) (int64, error)
-	UpdateCategory(ctx context.Context, userID, categoryID int64, name, pattern string) error
-	CreateCategory(ctx context.Context, userID int64, name, pattern string) (int64, error)
+	UpdateCategory(ctx context.Context, userID, categoryID int64, name, pattern string, monthlyBudget int64) error
+	CreateCategory(ctx context.Context, userID int64, name, pattern string, monthlyBudget int64) (int64, error)
 	DeleteCategories(ctx context.Context, userID int64) (int64, error)
 	GetExcludeCategory(ctx context.Context, userID int64) (Category, error)
 

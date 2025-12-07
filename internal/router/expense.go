@@ -225,7 +225,7 @@ func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseW
 	data.Categories = categories
 	data.Expense = &expenseView{
 		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		category: pkgStorage.NewCategory(0, "", ""),
+		category: pkgStorage.NewCategory(0, "", "", 0),
 	}
 }
 
@@ -240,7 +240,7 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 	data.FormErrors = make(map[string]string)
 	data.Expense = &expenseView{
 		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		category: pkgStorage.NewCategory(0, "", ""),
+		category: pkgStorage.NewCategory(0, "", "", 0),
 	}
 
 	defer func() {
@@ -297,7 +297,7 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 	data.Action = "edit"
 	data.Expense = &expenseView{
 		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		category: pkgStorage.NewCategory(0, "", ""),
+		category: pkgStorage.NewCategory(0, "", "", 0),
 	}
 
 	defer func() {
@@ -351,7 +351,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	data.Action = "edit"
 	data.Expense = &expenseView{
 		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		category: pkgStorage.NewCategory(0, "", ""),
+		category: pkgStorage.NewCategory(0, "", "", 0),
 	}
 
 	defer func() {

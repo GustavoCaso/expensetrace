@@ -173,7 +173,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 
 	oldMatcher := router.matcher
 
-	body := strings.NewReader("name=Entertainment&pattern=cinema|movie|theater&type=0")
+	body := strings.NewReader("name=Entertainment&pattern=cinema|movie|theater&type=0&monthly_budget=100")
 	req := httptest.NewRequest(http.MethodPost, "/category", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
@@ -196,7 +196,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 	found := false
 	var categoryID int64
 	for _, c := range categories {
-		if c.Name() == "Entertainment" && c.Pattern() == "cinema|movie|theater" {
+		if c.Name() == "Entertainment" && c.Pattern() == "cinema|movie|theater" && c.MonthlyBudget() == 10000 {
 			found = true
 			categoryID = c.ID()
 			break
@@ -312,6 +312,19 @@ func TestUpdateHandler(t *testing.T) {
 				}
 			},
 		},
+		{
+			"modify budget",
+			"monthly_budget=150",
+			false,
+			func(t *testing.T, updatedCategory storage.Category, _ []storage.Expense) {
+				if updatedCategory.MonthlyBudget() != 15000 {
+					t.Fatalf(
+						"Category was not updated properly. Expected monthly budget to be 150 but was %d",
+						updatedCategory.MonthlyBudget(),
+					)
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -323,6 +336,7 @@ func TestUpdateHandler(t *testing.T) {
 				user.ID(),
 				"Entertainment",
 				"restaurant|bars|cinema",
+				0,
 			)
 			if err != nil {
 				t.Fatalf("Failed to create Category: %v", err)
@@ -392,7 +406,13 @@ func TestUpdateCategoryPatternDoesNotAffectExcludeCategory(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	entertainmentCategoryID, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "cinema|movie")
+	entertainmentCategoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Entertainment",
+		"cinema|movie",
+		0,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create Entertainment category: %v", err)
 	}
@@ -568,7 +588,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "restaurant|bars")
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "restaurant|bars", 0)
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
@@ -643,12 +663,12 @@ func TestResetCategoryHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	cat1ID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant")
+	cat1ID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant", 0)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	cat2ID, err := s.CreateCategory(context.Background(), user.ID(), "Transport", "uber|taxi")
+	cat2ID, err := s.CreateCategory(context.Background(), user.ID(), "Transport", "uber|taxi", 0)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}

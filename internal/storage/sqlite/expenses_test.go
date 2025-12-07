@@ -137,7 +137,7 @@ func TestExpenseWithCategories(t *testing.T) {
 	stor, user := setupTestStorage(t)
 
 	// Create a category first
-	categoryID, err := stor.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|coffee")
+	categoryID, err := stor.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|coffee", 0)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
