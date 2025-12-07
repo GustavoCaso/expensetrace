@@ -234,11 +234,11 @@ func addExpenseToCategory(categories map[string]Category, ex pkgStorage.Expense,
 }
 
 func expeseCategoryName(ex pkgStorage.Expense, categoryName string) string {
-	if categoryName == "" {
-		if ex.Type() == pkgStorage.IncomeType {
-			return "income"
-		}
+	if ex.Type() == pkgStorage.IncomeType {
+		return "income"
+	}
 
+	if categoryName == "" {
 		return "uncategorized charge"
 	}
 	return categoryName

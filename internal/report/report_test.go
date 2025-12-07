@@ -136,6 +136,16 @@ func TestCategories(t *testing.T) {
 			storage.ChargeType,
 			&catID,
 		),
+		storage.NewExpense(
+			0,
+			"Refund from restaurant",
+			"Income with same category as an expense",
+			"USD",
+			678,
+			startDate.Add(48*time.Hour),
+			storage.IncomeType,
+			&catID,
+		),
 	}
 
 	categories, duplicates, income, spending, err := Categories(context.Background(), user.ID(), s, expenses)
@@ -153,8 +163,8 @@ func TestCategories(t *testing.T) {
 	}
 
 	// Verify income and spending
-	if income != 5000000 {
-		t.Errorf("income = %v, want 5000000", income)
+	if income != 5000678 {
+		t.Errorf("income = %v, want 5000678", income)
 	}
 	if spending != -370368 {
 		t.Errorf("spending = %v, want -370368", spending)
@@ -166,6 +176,24 @@ func TestCategories(t *testing.T) {
 	// income
 	if len(categories) != 3 {
 		t.Errorf("len(categories) = %v, want 3", len(categories))
+	}
+
+	for _, expense := range categories["income"].Expenses {
+		if expense.Type() != storage.IncomeType {
+			t.Fatal("income category includes expense")
+		}
+	}
+
+	for _, expense := range categories["uncategorized charge"].Expenses {
+		if expense.Type() != storage.ChargeType {
+			t.Fatal("uncategorized charge category includes income")
+		}
+	}
+
+	for _, expense := range categories["Food"].Expenses {
+		if expense.Type() != storage.ChargeType {
+			t.Fatal("Food category includes income")
+		}
 	}
 }
 
