@@ -41,6 +41,13 @@ var templateFuncs = template.FuncMap{
 		}
 		return string(jsonBytes)
 	},
+	"divCents": func(cents int64) string {
+		if cents == 0 {
+			return ""
+		}
+		euros := float64(cents) / 100 //nolint:mnd // the value is obvious
+		return fmt.Sprintf("%.2f", euros)
+	},
 }
 
 type templates struct {

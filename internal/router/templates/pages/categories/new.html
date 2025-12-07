@@ -32,8 +32,17 @@
             </div>
             <div id="pattern-validation" class="validation-feedback"></div>
           </div>
-          
-          
+
+          <div class="form-group">
+            <label for="category-budget">Monthly Budget (Optional)</label>
+            <div class="input-help">
+              <span>Set a monthly spending limit for this category. Leave empty for no budget.</span>
+            </div>
+            <input id="category-budget" type="number" name="monthly_budget"
+                placeholder="e.g., 500.00" step="0.01" min="0">
+            <div id="budget-validation" class="validation-feedback"></div>
+          </div>
+
           <!-- Pattern Quick Reference (initially hidden) -->
           <div id="pattern-help" class="pattern-quick-reference hidden">
             <div class="reference-header">

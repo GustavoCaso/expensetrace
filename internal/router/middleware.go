@@ -118,6 +118,7 @@ func authMiddleware(router *router, s storage.Storage, logger *logger.Logger, ne
 		if router.matcher == nil {
 			categories, categoryErr := s.GetCategories(context.Background(), session.UserID())
 			if categoryErr != nil {
+				logger.Error("Failed to get categories", "error", categoryErr)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}

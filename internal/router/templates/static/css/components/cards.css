@@ -95,27 +95,6 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.category-bar {
-  height: 0.5rem;
-  background-color: var(--color-gray-200);
-  border-radius: var(--border-radius-sm);
-  margin-bottom: var(--spacing-3);
-  overflow: hidden;
-}
-
-.category-progress {
-  height: 100%;
-  border-radius: var(--border-radius-sm);
-}
-
-.category-progress.income {
-  background-color: var(--color-success);
-}
-
-.category-progress.expense {
-  background-color: var(--color-danger);
-}
-
 /* Category meta */
 .category-meta {
   margin-bottom: var(--spacing-4);

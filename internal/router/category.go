@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -53,8 +54,22 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 		categoryID := r.PathValue("id")
 		name := r.FormValue("name")
 		pattern := r.FormValue("pattern")
+		budgetStr := r.FormValue("monthly_budget")
 
-		c.updatecategoryHandler(r.Context(), categoryID, name, pattern, w)
+		monthlyBudget, budgetErr := validateBudget(budgetStr)
+		if budgetErr != nil {
+			c.logger.Error("Failed to validate budget", "error", budgetErr)
+
+			data := struct {
+				Error string
+			}{
+				Error: budgetErr.Error(),
+			}
+			c.templates.Render(w, "partials/categories/card.html", data)
+			return
+		}
+
+		c.updatecategoryHandler(r.Context(), categoryID, name, pattern, monthlyBudget, w)
 	})
 
 	mux.HandleFunc("DELETE /category/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -191,6 +206,7 @@ func (c *categoryHandler) categoriesHandler(
 func (c *categoryHandler) updatecategoryHandler(
 	ctx context.Context,
 	id, name, pattern string,
+	monthlyBudget int64,
 	w http.ResponseWriter,
 ) {
 	userID := userIDFromContext(ctx)
@@ -229,8 +245,9 @@ func (c *categoryHandler) updatecategoryHandler(
 
 	nameChanged := name != "" && categoryEntry.Name() != name
 	patternChanged := pattern != "" && categoryEntry.Pattern() != pattern
+	budgetChanged := !budgetsEqual(monthlyBudget, categoryEntry.MonthlyBudget())
 
-	if !nameChanged && !patternChanged {
+	if !nameChanged && !patternChanged && !budgetChanged {
 		categoryCardData = &existingEnhancedCategory
 		return
 	}
@@ -247,7 +264,7 @@ func (c *categoryHandler) updatecategoryHandler(
 		}
 	}
 
-	err = c.storage.UpdateCategory(ctx, userID, categoryIDInt64, name, pattern)
+	err = c.storage.UpdateCategory(ctx, userID, categoryIDInt64, name, pattern, monthlyBudget)
 	if err != nil {
 		existingEnhancedCategory.Errors = true
 		existingEnhancedCategory.ErrorStrings = map[string]string{
@@ -259,7 +276,7 @@ func (c *categoryHandler) updatecategoryHandler(
 
 	c.logger.Info("Category updated successfully", "id", categoryID)
 
-	updatedCategory := storage.NewCategory(categoryIDInt64, name, pattern)
+	updatedCategory := storage.NewCategory(categoryIDInt64, name, pattern, monthlyBudget)
 
 	if !patternChanged {
 		updatedEnhancedCat := createEnhancedCategory(updatedCategory, currentCategoryExpenses)
@@ -493,7 +510,7 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 		return
 	}
 
-	err = c.storage.UpdateCategory(ctx, userID, cat.ID(), cat.Name(), extendedRegex)
+	err = c.storage.UpdateCategory(ctx, userID, cat.ID(), cat.Name(), extendedRegex, cat.MonthlyBudget())
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("error UpdateCategory %s", err.Error()))
 		data.Error = err.Error()
@@ -645,6 +662,7 @@ func (c *categoryHandler) createcategoryHandler(
 
 	name := r.FormValue("name")
 	pattern := r.FormValue("pattern")
+	budgetStr := r.FormValue("monthly_budget")
 
 	data.Name = name
 	data.Pattern = pattern
@@ -652,6 +670,12 @@ func (c *categoryHandler) createcategoryHandler(
 	if name == "" || pattern == "" {
 		data.Error =
 			"category must include name and a valid regex pattern. Ensure that you populate the name and pattern input"
+		return
+	}
+
+	monthlyBudget, budgetErr := validateBudget(budgetStr)
+	if budgetErr != nil {
+		data.Error = budgetErr.Error()
 		return
 	}
 
@@ -680,7 +704,7 @@ func (c *categoryHandler) createcategoryHandler(
 	total := len(toUpdated)
 
 	if create && total > 0 {
-		categoryID, createErr := c.storage.CreateCategory(ctx, userID, name, pattern)
+		categoryID, createErr := c.storage.CreateCategory(ctx, userID, name, pattern, monthlyBudget)
 
 		if createErr != nil {
 			data.Error = createErr.Error()
@@ -796,4 +820,26 @@ func (c *categoryHandler) updateCategoryMatcher(userID int64) error {
 	matcher := matcher.New(categories)
 	c.matcher = matcher
 	return nil
+}
+
+func validateBudget(budgetStr string) (int64, error) {
+	if budgetStr == "" {
+		return 0, nil // No budget
+	}
+
+	budgetFloat, err := strconv.ParseFloat(budgetStr, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid budget format: %w", err)
+	}
+
+	if budgetFloat < 0 {
+		return 0, errors.New("budget cannot be negative")
+	}
+
+	budgetCents := int64(budgetFloat * 100) //nolint:mnd // the value is obvious
+	return budgetCents, nil
+}
+
+func budgetsEqual(a, b int64) bool {
+	return a == b
 }

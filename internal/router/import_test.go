@@ -21,12 +21,12 @@ func TestImport(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	_, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery")
+	_, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery", 0)
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	_, err = s.CreateCategory(context.Background(), user.ID(), "Transport", "uber|taxi|transit")
+	_, err = s.CreateCategory(context.Background(), user.ID(), "Transport", "uber|taxi|transit", 0)
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}

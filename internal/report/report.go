@@ -13,6 +13,28 @@ import (
 	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
+type BudgetStatus string
+
+const (
+	BudgetStatusUnder    BudgetStatus = "under"
+	BudgetStatusNear     BudgetStatus = "near"
+	BudgetStatusOver     BudgetStatus = "over"
+	BudgetStatusNoBudget BudgetStatus = "no_budget"
+)
+
+const (
+	budgetUnder = 80
+	budgetFull  = 100
+)
+
+type BudgetInfo struct {
+	Amount         int64        // Budget amount in cents (0 if no budget)
+	Spent          int64        // Amount spent (positive)
+	Remaining      int64        // Remaining budget (can be negative)
+	PercentageUsed float64      // Percentage of budget used
+	Status         BudgetStatus // Color coding status
+}
+
 type Category struct {
 	Name              string
 	Amount            int64
@@ -20,6 +42,7 @@ type Category struct {
 	PercentageOfTotal float64
 	LastTransaction   time.Time
 	AvgAmount         int64
+	Budget            BudgetInfo
 }
 
 type Report struct {
@@ -102,6 +125,8 @@ func Categories(
 	categories := make(map[string]Category)
 	seen := map[string]bool{}
 	duplicates := []string{}
+	// Track category budgets by category name
+	categoryBudgets := make(map[string]int64)
 
 	for _, ex := range expenses {
 		categoryName := ""
@@ -116,6 +141,8 @@ func Categories(
 				continue
 			}
 			categoryName = category.Name()
+			// Store budget for this category
+			categoryBudgets[categoryName] = category.MonthlyBudget()
 		}
 
 		_, ok := seen[ex.Description()]
@@ -158,6 +185,25 @@ func Categories(
 				}
 			}
 			category.AvgAmount = total / int64(len(category.Expenses))
+		}
+
+		// Calculate budget information for expense categories only
+		if category.Amount < 0 {
+			budget, hasBudget := categoryBudgets[key]
+			if hasBudget && budget > 0 {
+				category.Budget = calculateBudgetInfo(budget, category.Amount)
+			} else {
+				category.Budget = BudgetInfo{
+					Amount: 0,
+					Status: BudgetStatusNoBudget,
+				}
+			}
+		} else {
+			// Income categories don't have budgets
+			category.Budget = BudgetInfo{
+				Amount: 0,
+				Status: BudgetStatusNoBudget,
+			}
 		}
 
 		categories[key] = category
@@ -210,4 +256,36 @@ func calendarDays(t1, t2 time.Time) int {
 	u1 := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 	days := u2.Sub(u1) / (hoursInDay * time.Hour)
 	return int(days)
+}
+
+func calculateBudgetInfo(budgetAmount int64, spentAmount int64) BudgetInfo {
+	// spentAmount is negative for expenses, convert to positive
+	spent := spentAmount * -1
+
+	remaining := budgetAmount - spent
+
+	var percentageUsed float64
+	if budgetAmount > 0 {
+		percentageUsed = (float64(spent) / float64(budgetAmount)) * 100 //nolint:mnd // the value is obvious
+	} else {
+		percentageUsed = 0
+	}
+
+	var status BudgetStatus
+	switch {
+	case percentageUsed < budgetUnder:
+		status = BudgetStatusUnder
+	case percentageUsed <= budgetFull:
+		status = BudgetStatusNear
+	default:
+		status = BudgetStatusOver
+	}
+
+	return BudgetInfo{
+		Amount:         budgetAmount,
+		Spent:          spent,
+		Remaining:      remaining,
+		PercentageUsed: percentageUsed,
+		Status:         status,
+	}
 }

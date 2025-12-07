@@ -411,6 +411,7 @@ linters:
           - wrapcheck
           - cyclop
           - gocyclo
+          - staticcheck
       - text: 'avoid meaningless package names'
         path: 'internal/util/'
         linters: [ revive ]

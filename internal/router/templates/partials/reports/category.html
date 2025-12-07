@@ -8,10 +8,35 @@
       <span class="category-name">{{.Name}}</span>
       <span class="category-amount {{$cssClass}}">{{formatMoney .Amount "." ","}}€</span>
     </div>
-    <div class="category-bar">
-      <div class="category-progress {{$cssClass}}" style="width: {{.PercentageOfTotal}}%"></div>
-    </div>
-      
+
+    {{if and (lt .Amount 0) (gt .Budget.Amount 0)}}
+      <!-- Budget progress for expense categories with budgets -->
+      <div class="budget-container">
+        <div class="budget-info">
+          <span class="budget-spent">{{formatMoney .Budget.Spent "." ","}}€</span>
+          <span class="budget-separator">/</span>
+          <span class="budget-total">{{formatMoney .Budget.Amount "." ","}}€</span>
+          <span class="budget-percentage {{.Budget.Status}}">
+            ({{printf "%.0f" .Budget.PercentageUsed}}%)
+          </span>
+        </div>
+        <div class="budget-bar">
+          <div class="budget-progress budget-{{.Budget.Status}}"
+               style="width: {{if gt .Budget.PercentageUsed 100.0}}100{{else}}{{printf "%.0f" .Budget.PercentageUsed}}{{end}}%">
+          </div>
+        </div>
+        {{if lt .Budget.Remaining 0}}
+          <div class="budget-warning">
+            Over budget by {{formatMoney .Budget.Remaining "." ","}}€
+          </div>
+        {{else}}
+          <div class="budget-remaining">
+            {{formatMoney .Budget.Remaining "." ","}}€ remaining
+          </div>
+        {{end}}
+      </div>
+    {{end}}
+
     <button class="btn-small toggle-details" data-target="{{$cssClass}}-details-{{.Name}}">
       <span class="toggle-text">Show Details</span>
     </button>

@@ -478,6 +478,85 @@
   padding: 0;
 }
 
+/* Budget Container */
+.budget-container {
+  margin-top: 0.5rem;
+}
+
+.budget-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.budget-spent {
+  font-weight: 600;
+}
+
+.budget-separator {
+  color: #6b7280;
+}
+
+.budget-total {
+  color: #6b7280;
+}
+
+.budget-percentage {
+  font-weight: 500;
+}
+
+.budget-percentage.under {
+  color: #10b981; /* Green */
+}
+
+.budget-percentage.near {
+  color: #f59e0b; /* Yellow/Orange */
+}
+
+.budget-percentage.over {
+  color: #ef4444; /* Red */
+}
+
+/* Budget Progress Bar */
+.budget-bar {
+  height: 8px;
+  background-color: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.budget-progress {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.budget-under {
+  background-color: #10b981; /* Green */
+}
+
+.budget-near {
+  background-color: #f59e0b; /* Yellow/Orange */
+}
+
+.budget-over {
+  background-color: #ef4444; /* Red */
+}
+
+/* Budget Status Messages */
+.budget-warning {
+  font-size: 0.75rem;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.budget-remaining {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .report-details {

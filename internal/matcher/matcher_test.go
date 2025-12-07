@@ -8,8 +8,8 @@ import (
 
 func TestNew(t *testing.T) {
 	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
+		storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
 	}
 
 	matcher := New(categories)
@@ -29,9 +29,9 @@ func TestMatch(t *testing.T) {
 	entertaimentCategoryID := int64(1)
 
 	categories := []storage.Category{
-		storage.NewCategory(foodCategoryID, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(transportCategoryID, "Transport", "uber|taxi|transit"),
-		storage.NewCategory(entertaimentCategoryID, "Entertainment", "netflix|spotify|movie"),
+		storage.NewCategory(foodCategoryID, "Food", "restaurant|food|grocery", 0),
+		storage.NewCategory(transportCategoryID, "Transport", "uber|taxi|transit", 0),
+		storage.NewCategory(entertaimentCategoryID, "Entertainment", "netflix|spotify|movie", 0),
 	}
 
 	matcher := New(categories)
@@ -91,8 +91,8 @@ func TestMatch(t *testing.T) {
 
 func TestCategories(t *testing.T) {
 	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit"),
+		storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+		storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
 	}
 
 	matcher := New(categories)

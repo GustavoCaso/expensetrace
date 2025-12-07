@@ -93,8 +93,8 @@ func TestApplyMapping(t *testing.T) {
 	catFoodID := int64(1)
 	catTransportID := int64(2)
 	categories := []storage.Category{
-		storage.NewCategory(catFoodID, "Food", "restaurant|food|grocery"),
-		storage.NewCategory(catTransportID, "Transport", "uber|taxi|transit"),
+		storage.NewCategory(catFoodID, "Food", "restaurant|food|grocery", 0),
+		storage.NewCategory(catTransportID, "Transport", "uber|taxi|transit", 0),
 	}
 	categoryMatcher := matcher.New(categories)
 

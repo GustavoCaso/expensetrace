@@ -102,7 +102,7 @@ func (a *authHandler) signup(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Create default Exclude category for new user
-	_, err = a.router.storage.CreateCategory(r.Context(), user.ID(), storage.ExcludeCategory, "$a")
+	_, err = a.router.storage.CreateCategory(r.Context(), user.ID(), storage.ExcludeCategory, "$a", 0)
 	if err != nil {
 		a.router.logger.Error("Failed to create exclude category for new user", "error", err, "user_id", user.ID())
 	}
