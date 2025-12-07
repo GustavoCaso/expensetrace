@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
       tooltip: 'rgba(31, 41, 55, 0.9)'
     },
     animationDuration: 500,
-    visibleMonths: 8 // Number of months visible by default
+    visibleMonths: 17 // Number of months visible by default
   };
 
   // Derived values

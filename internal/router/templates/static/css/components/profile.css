@@ -1,8 +1,7 @@
 /* Profile dropdown */
 .profile-dropdown {
   position: relative;
-  display: flex;
-  align-items: center;
+  margin-top: auto;
 }
 
 .profile-avatar {

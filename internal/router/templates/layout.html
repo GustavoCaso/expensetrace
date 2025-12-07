@@ -1,23 +1,24 @@
 {{define "base"}}
 <!doctype html>
 <html lang='en'>
-    <head>
-        <title>{{template "title" .}}</title>
-        <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-        <link rel="stylesheet" href={{template "css" .}}>
-        <link rel="stylesheet" href=/static/css/layout.css>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <script src="/static/js/expenses.js"></script>
-    </head>
 
-    <body>
-        <div id="page">
-          {{template "nav" .}}
+  <head>
+    <title>{{template "title" .}}</title>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <link rel="stylesheet" href={{template "css" .}}>
+    <link rel="stylesheet" href=/static/css/layout.css>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/static/js/expenses.js"></script>
+  </head>
 
-          <div id="main">
-              {{template "main" .}}
-          </div>
-        </div>
-    </body>
+  <body>
+    <div id="page">
+      {{template "nav" .}}
+
+      <div class="bg-white rounded-lg shadow m-3 flex-gw-1 p-8">
+        {{template "main" .}}
+      </div>
+    </div>
+  </body>
 </html>
 {{end}}
