@@ -201,15 +201,17 @@ document.addEventListener('DOMContentLoaded', function () {
     barWidth: 30,
     barGap: 15,
     colors: {
-      income: '#10b981',
-      expense: '#ef4444',
+      income_stroke: '#10b981',
+      expense_stroke: '#ef4444',
+      income_fill: 'rgba(16, 185, 129, 0.5)',
+      expense_fill: 'rgba(239, 68, 68, 0.5)',
       savings: '#3b82f6',
       grid: '#e5e7eb',
       text: '#6b7280',
       tooltip: 'rgba(31, 41, 55, 0.9)'
     },
     animationDuration: 500,
-    visibleMonths: 17 // Number of months visible by default
+    visibleMonths: 7 // Number of months visible by default
   };
 
   // Derived values
@@ -313,24 +315,28 @@ document.addEventListener('DOMContentLoaded', function () {
       const spendingHeight = Math.abs(point.Spending) * yScale;
 
       // Draw income bar
-      ctx.fillStyle = config.colors.income;
+      ctx.beginPath();
+      ctx.fillStyle = config.colors.income_fill;
       const incomeBar = {
         x: x,
         y: config.padding.top + chartHeight - incomeHeight,
         width: config.barWidth,
         height: incomeHeight
       };
-      ctx.fillRect(incomeBar.x, incomeBar.y, incomeBar.width, incomeBar.height);
+      ctx.roundRect(incomeBar.x, incomeBar.y, incomeBar.width, incomeBar.height, [10, 10, 0, 0]);
+      ctx.fill();
 
       // Draw spending bar
-      ctx.fillStyle = config.colors.expense;
+      ctx.beginPath();
+      ctx.fillStyle = config.colors.expense_fill;
       const spendingBar = {
         x: x + config.barWidth + config.barGap,
         y: config.padding.top + chartHeight - spendingHeight,
         width: config.barWidth,
         height: spendingHeight
       };
-      ctx.fillRect(spendingBar.x, spendingBar.y, spendingBar.width, spendingBar.height);
+      ctx.roundRect(spendingBar.x, spendingBar.y, spendingBar.width, spendingBar.height, [10, 10, 0, 0]);
+      ctx.fill();
 
       // Store these for hit detection
       point.bars = {
@@ -374,7 +380,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = point.Savings >= 0 ? config.colors.income : config.colors.expense;
+      ctx.fillStyle = point.Savings >= 0 ? config.colors.income_stroke : config.colors.expense_stroke;
       ctx.fill();
       ctx.strokeStyle = 'white';
       ctx.lineWidth = 2;
@@ -386,19 +392,19 @@ document.addEventListener('DOMContentLoaded', function () {
       const point = hoverPoint.point;
       const type = hoverPoint.type;
 
+      ctx.beginPath();
       if (type === 'savings') {
         const { x, y, radius } = point.savingsPoint;
-        ctx.beginPath();
         ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
         ctx.strokeStyle = point.Savings >= 0 ? config.colors.income : config.colors.expense;
         ctx.lineWidth = 2;
-        ctx.stroke();
       } else {
         const bar = point.bars[type];
-        ctx.strokeStyle = type === 'income' ? config.colors.income : config.colors.expense;
+        ctx.strokeStyle = type === 'income' ? config.colors.income_stroke : config.colors.expense_stroke;
         ctx.lineWidth = 2;
-        ctx.strokeRect(bar.x - 2, bar.y - 2, bar.width + 4, bar.height + 4);
+        ctx.roundRect(bar.x, bar.y, bar.width, bar.height, [10, 10, 0, 0]);
       }
+      ctx.stroke();
     }
 
     // Update period display
