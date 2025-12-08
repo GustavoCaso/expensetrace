@@ -44,20 +44,38 @@
 
 /* Chart legend */
 .chart-legend {
+  display: flex;
   width: 100%;
+  justify-content: space-evenly;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  margin-bottom: var(--spacing-2);
+  gap: 0.5rem;
 }
 
 .legend-color {
   width: 1rem;
   height: 1rem;
   border-radius: var(--border-radius-sm);
-  margin-right: var(--spacing-2);
+}
+
+.income-color {
+  background-color: #10b981;
+}
+
+.expense-color {
+  background-color: #ef4444;
+}
+
+.savings-color {
+  background-color: #3b82f6;
+}
+
+.legend-label {
+  font-size: 0.875rem;
+  color: #4b5563;
 }
 
 /* Chart colors */
@@ -393,40 +411,6 @@
   padding-bottom: 0.25rem;
 }
 
-/* Chart Legend */
-.chart-legend {
-  margin-top: 1rem;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.legend-color {
-  width: 1rem;
-  height: 0.5rem;
-  border-radius: 2px;
-}
-
-.income-color {
-  background-color: #10b981;
-}
-
-.expense-color {
-  background-color: #ef4444;
-}
-
-.savings-color {
-  background-color: #3b82f6;
-}
-
-.legend-label {
-  font-size: 0.875rem;
-  color: #4b5563;
-}
-
 /* Touch Support */
 @media (pointer: coarse) {
   .canvas-container {
@@ -508,15 +492,15 @@
 }
 
 .budget-percentage.under {
-  color: #10b981; /* Green */
+  color: #10b981;
 }
 
 .budget-percentage.near {
-  color: #f59e0b; /* Yellow/Orange */
+  color: #f59e0b;
 }
 
 .budget-percentage.over {
-  color: #ef4444; /* Red */
+  color: #ef4444;
 }
 
 /* Budget Progress Bar */
@@ -534,15 +518,15 @@
 }
 
 .budget-under {
-  background-color: #10b981; /* Green */
+  background-color: #10b981;
 }
 
 .budget-near {
-  background-color: #f59e0b; /* Yellow/Orange */
+  background-color: #f59e0b;
 }
 
 .budget-over {
-  background-color: #ef4444; /* Red */
+  background-color: #ef4444;
 }
 
 /* Budget Status Messages */
