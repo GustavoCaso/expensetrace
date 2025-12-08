@@ -99,7 +99,7 @@
       <button class="btn-primary"
               hx-put="/expense/{{.Expense.ID}}" 
               hx-target="#page" 
-              hx-swap="outerHTML">
+              hx-swap="outerHTML show:window:top">
         Update
       </button>
     </div>
@@ -108,7 +108,7 @@
       <button class="btn-primary"
               hx-post="/expense" 
               hx-target="#page" 
-              hx-swap="outerHTML">
+              hx-swap="outerHTML show:window:top">
         Create
       </button>
     </div>        

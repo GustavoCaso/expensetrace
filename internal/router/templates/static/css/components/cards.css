@@ -64,11 +64,17 @@
 }
 
 .tab-content {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease, visibility 0.3s ease;
+  height: 0;
+  overflow: hidden;
 }
 
 .tab-content.active {
-  display: block;
+  opacity: 1;
+  visibility: visible;
+  height: auto;
 }
 
 /* Category items */
