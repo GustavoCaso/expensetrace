@@ -26,25 +26,7 @@
     </div>
   
     <div class="report-details">
-      <div class="chart-container">
-        <h3>Spending Breakdown</h3>
-        <div class="chart-placeholder">
-          <div class="chart-legend">
-            {{range $index, $category := .Categories}}
-              {{if lt $category.Amount 0}}
-                <div class="legend-item">
-                  <span class="legend-color color-{{$index}}"></span>
-                  <span class="legend-label">{{$category.Name}}</span>
-                  <span class="legend-value expense">{{formatMoney $category.Amount "." ","}}€</span>
-                </div>
-              {{end}}
-            {{end}}
-          </div>
-        </div>
-      </div>
-      
       <div class="categories-breakdown">
-        <h3>Categories</h3>
         <div class="categories-tabs">
           <button class="tab-btn active" data-tab="expenses">Expenses</button>
           <button class="tab-btn" data-tab="income">Income</button>
