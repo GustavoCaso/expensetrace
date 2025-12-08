@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -128,4 +129,24 @@ func authMiddleware(router *router, s storage.Storage, logger *logger.Logger, ne
 		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func csrfProtectionMiddleware(logger *logger.Logger, next http.Handler) http.Handler {
+	csrf := &http.CrossOriginProtection{}
+
+	if trustedOrigins := os.Getenv("EXPENSETRACE_TRUSTED_ORIGINS"); trustedOrigins != "" {
+		origins := strings.Split(trustedOrigins, ",")
+		for _, origin := range origins {
+			origin = strings.TrimSpace(origin)
+			if origin != "" {
+				err := csrf.AddTrustedOrigin(origin)
+				if err != nil {
+					logger.Error("error adding trusted origin", "err", err.Error())
+					continue
+				}
+			}
+		}
+	}
+
+	return csrf.Handler(next)
 }

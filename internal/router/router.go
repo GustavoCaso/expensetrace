@@ -90,6 +90,8 @@ func New(storage storage.Storage, logger *logger.Logger) (http.Handler, *router)
 		wrappedMux = xFrameDenyHeaderMiddleware(wrappedMux)
 	}
 
+	wrappedMux = csrfProtectionMiddleware(logger, wrappedMux)
+
 	return wrappedMux, router
 }
 
