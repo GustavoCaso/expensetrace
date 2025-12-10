@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/logger"
@@ -131,6 +132,19 @@ func (e *expense) Currency() string {
 
 func (e *expense) CategoryID() *int64 {
 	return e.categoryID
+}
+
+func (e *expense) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"id":           e.id,
+		"source":       e.source,
+		"date":         e.date,
+		"description":  e.description,
+		"amount":       e.amount,
+		"expense_type": e.expenseType,
+		"currency":     e.currency,
+		"category_id":  e.categoryID,
+	})
 }
 
 const ExcludeCategory = "🚫 Exclude"

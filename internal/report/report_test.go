@@ -148,51 +148,59 @@ func TestCategories(t *testing.T) {
 		),
 	}
 
-	categories, duplicates, income, spending, err := Categories(context.Background(), user.ID(), s, expenses)
+	expenseCategories, incomeCategories, totalIncome, totalSpending, err := splitByExpenseType(
+		context.Background(),
+		user.ID(),
+		s,
+		expenses,
+	)
 
 	if err != nil {
 		t.Fatalf("Got error generating categories: %s", err.Error())
 	}
 
-	// Verify duplicates
-	if len(duplicates) != 1 {
-		t.Errorf("len(duplicates) = %v, want 1", len(duplicates))
-	}
-	if duplicates[0] != "Restaurant bill" {
-		t.Errorf("duplicates[0] = %v, want Restaurant bill", duplicates[0])
-	}
-
 	// Verify income and spending
-	if income != 5000678 {
-		t.Errorf("income = %v, want 5000678", income)
+	if totalIncome != 5000678 {
+		t.Errorf("income = %v, want 5000678", totalIncome)
 	}
-	if spending != -370368 {
-		t.Errorf("spending = %v, want -370368", spending)
+	if totalSpending != -370368 {
+		t.Errorf("spending = %v, want -370368", totalSpending)
 	}
 
 	// Verify categories
 	// uncategorized charge
 	// Food
 	// income
-	if len(categories) != 3 {
-		t.Errorf("len(categories) = %v, want 3", len(categories))
+
+	if len(incomeCategories) != 1 {
+		t.Fatalf("income categories must be one. got: %d", len(incomeCategories))
 	}
 
-	for _, expense := range categories["income"].Expenses {
+	for _, expense := range incomeCategories[0].Expenses {
 		if expense.Type() != storage.IncomeType {
 			t.Fatal("income category includes expense")
 		}
 	}
 
-	for _, expense := range categories["uncategorized charge"].Expenses {
-		if expense.Type() != storage.ChargeType {
-			t.Fatal("uncategorized charge category includes income")
-		}
+	if len(expenseCategories) != 2 {
+		t.Fatalf("income categories must be two. got: %d", len(expenseCategories))
 	}
 
-	for _, expense := range categories["Food"].Expenses {
-		if expense.Type() != storage.ChargeType {
-			t.Fatal("Food category includes income")
+	validExpenseCategories := map[string]struct{}{
+		"uncategorized charge": {},
+		"Food":                 {},
+	}
+
+	for _, expenseCategory := range expenseCategories {
+		_, ok := validExpenseCategories[expenseCategory.Name]
+		if !ok {
+			t.Fatalf("unexpected expense category %s", expenseCategory.Name)
+		}
+
+		for _, expense := range expenseCategory.Expenses {
+			if expense.Type() != storage.ChargeType {
+				t.Fatal("uncategorized charge category includes income")
+			}
 		}
 	}
 }
