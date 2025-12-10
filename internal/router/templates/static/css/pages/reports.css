@@ -272,22 +272,6 @@
   color: #6b7280;
 }
 
-.budget-percentage {
-  font-weight: 500;
-}
-
-.budget-percentage.under {
-  color: #10b981;
-}
-
-.budget-percentage.near {
-  color: #f59e0b;
-}
-
-.budget-percentage.over {
-  color: #ef4444;
-}
-
 /* Budget Progress Bar */
 .budget-bar {
   height: 8px;
@@ -324,4 +308,192 @@
 .budget-remaining {
   font-size: 0.75rem;
   color: #6b7280;
+}
+
+/* Donut Chart Styles */
+.categories-donut {
+  margin-top: 2rem;
+}
+
+.categories-donut h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  color: #1f2937;
+}
+
+/* Grid container for two donut charts */
+.donut-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+/* Individual donut chart section */
+.donut-chart-section h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #1f2937;
+  text-align: center;
+}
+
+.donut-chart-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem;
+  background: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+#expensesDonutChart,
+#incomeDonutChart {
+  max-width: 500px;
+  max-height: 500px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+/* Donut Tooltip */
+.donut-tooltip {
+  position: absolute;
+  display: none;
+  background: #1f2937;
+  color: #ffffff;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 1000;
+  max-width: 250px;
+}
+
+.tooltip-color {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.tooltip-category {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.tooltip-amount {
+  font-size: 1.125rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.tooltip-percentage {
+  font-size: 0.75rem;
+  color: #d1d5db;
+  margin-bottom: 0.5rem;
+}
+
+.donut-tooltip .budget-status {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.donut-tooltip .budget-status.under {
+  background-color: #22c55e;
+  color: #ffffff;
+}
+
+.donut-tooltip .budget-status.near {
+  background-color: #eab308;
+  color: #ffffff;
+}
+
+.donut-tooltip .budget-status.over {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+/* Selected Category Details */
+.selected-category-details {
+  width: 100%;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.category-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.category-detail-header h3 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.close-details {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
+}
+
+.close-details:hover {
+  background-color: #e5e7eb;
+}
+
+.category-stats {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #ffffff;
+  border-radius: 0.375rem;
+  border: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+}
+
+.category-stats span {
+  color: #6b7280;
+}
+
+/* Responsive Design for Donut Chart */
+@media (max-width: 768px) {
+  .donut-charts-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .donut-chart-container {
+    padding: 1rem;
+  }
+
+  #expensesDonutChart,
+  #incomeDonutChart {
+    max-width: 300px;
+    max-height: 300px;
+  }
 }

@@ -1,4 +1,4 @@
-{{define "reports/card" }} 
+{{define "reports/card" }}
   <div id="report">
     <h2>{{.Title}} Summary</h2>
     <div class="card-grid">
@@ -6,16 +6,16 @@
         <h3 class="card-title">Income</h3>
         <div class="income">{{formatMoney .Income "." ","}}€</div>
       </div>
-      
+
       <div class="card ta-center">
         <h3 class="card-title">Spending</h3>
         <div class="expense">{{formatMoney .Spending "." ","}}€</div>
       </div>
-      
+
       <div class="card ta-center">
         <h3 class="card-title">Savings</h3>
         <div class="{{if gt .Savings 0}}income{{else}}expense{{end}}">{{formatMoney .Savings "." ","}}€</div>
-        <div> 
+        <div>
           {{if gt .Savings 0}}
             <span class="income">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
           {{else}}
@@ -24,34 +24,34 @@
         </div>
       </div>
     </div>
-  
-    <div class="report-details">
-      <div class="categories-breakdown">
-        <div class="categories-tabs">
-          <button class="tab-btn active" data-tab="expenses">Expenses</button>
-          <button class="tab-btn" data-tab="income">Income</button>
-        </div>
-        
-        <div id="expenses-tab" class="tab-content active">
-          <ul id="categories-list">
-            {{range $category := .Categories}}
-              {{if lt $category.Amount 0}}
-                {{template "reports/category" $category}}
-              {{end}}
+    
+    {{if or .ExpenseCategories .IncomeCategories}}
+      <div class="report-details">
+        <div class="categories-donut">
+          <h2>Categories Breakdown</h2>
+          <div class="donut-charts-grid">
+            {{if .ExpenseCategories}}
+              <div class="donut-chart-section">
+                <h3>Expenses</h3>
+                <div class="donut-chart-container">
+                  <canvas id="expensesDonutChart" data-categories="{{.ExpenseCategories | json}}" data-type="expense"></canvas>
+                </div>
+              </div>
             {{end}}
-          </ul>
-        </div>
-        
-        <div id="income-tab" class="tab-content">
-          <ul id="income-categories-list">
-            {{range $category := .Categories}}
-              {{if gt $category.Amount 0}}
-                {{template "reports/category" $category}}
-              {{end}}
+            {{if .IncomeCategories}}
+              <div class="donut-chart-section">
+                <h3>Income</h3>
+                <div class="donut-chart-container">
+                  <canvas id="incomeDonutChart" data-categories="{{.IncomeCategories | json}}" data-type="income"></canvas>
+                </div>
+              </div>
             {{end}}
-          </ul>
+          </div>
+          <div class="selected-category-details" id="categoryDetails" style="display: none;">
+            <!-- Category details will be injected here via JavaScript -->
+          </div>
         </div>
       </div>
-    </div>
+    {{end}}
   </div>
 {{end}}

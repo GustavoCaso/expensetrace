@@ -77,28 +77,9 @@
   height: auto;
 }
 
-/* Category items */
-.category-item {
-  background-color: var(--color-gray-50);
-  border-radius: var(--border-radius);
-  padding: var(--spacing-4);
-  margin-bottom: var(--spacing-4);
-}
-
-.category-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-2);
-}
-
 .category-name {
   font-weight: var(--font-weight-medium);
   color: var(--color-gray-800);
-}
-
-.category-amount {
-  font-weight: var(--font-weight-semibold);
 }
 
 /* Category meta */
