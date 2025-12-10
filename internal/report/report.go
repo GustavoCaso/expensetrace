@@ -3,10 +3,7 @@ package report
 import (
 	"context"
 	"fmt"
-	"maps"
 	"math"
-	"slices"
-	"sort"
 	"strconv"
 	"time"
 
@@ -28,36 +25,35 @@ const (
 )
 
 type BudgetInfo struct {
-	Amount         int64        // Budget amount in cents (0 if no budget)
-	Spent          int64        // Amount spent (positive)
-	Remaining      int64        // Remaining budget (can be negative)
-	PercentageUsed float64      // Percentage of budget used
-	Status         BudgetStatus // Color coding status
+	Amount         int64        `json:"amount"`          // Budget amount in cents (0 if no budget)
+	Spent          int64        `json:"spent"`           // Amount spent (positive)
+	Remaining      int64        `json:"remaining"`       // Remaining budget (can be negative)
+	PercentageUsed float64      `json:"percentage_used"` // Percentage of budget used
+	Status         BudgetStatus `json:"status"`          // Color coding status
 }
 
 type Category struct {
-	Name              string
-	Amount            int64
-	Expenses          []pkgStorage.Expense
-	PercentageOfTotal float64
-	LastTransaction   time.Time
-	AvgAmount         int64
-	Budget            BudgetInfo
+	Name              string               `json:"name"`
+	Amount            int64                `json:"amount"`
+	Expenses          []pkgStorage.Expense `json:"expenses"`
+	PercentageOfTotal float64              `json:"percentage_of_total"`
+	LastTransaction   time.Time            `json:"last_transaction"`
+	AvgAmount         int64                `json:"average_amount"`
+	Budget            BudgetInfo           `json:"budget"`
 }
 
 type Report struct {
-	Title                 string
-	Spending              int64
-	Income                int64
-	Savings               int64
-	StartDate             time.Time
-	EndDate               time.Time
-	SavingsPercentage     float32
-	EarningsPerDay        int64
-	AverageSpendingPerDay int64
-	Categories            []Category
-	Duplicates            []string
-	Verbose               bool
+	Title                 string     `json:"title"`
+	Spending              int64      `json:"spending"`
+	Income                int64      `json:"income"`
+	Savings               int64      `json:"savings"`
+	StartDate             time.Time  `json:"start_date"`
+	EndDate               time.Time  `json:"end_date"`
+	SavingsPercentage     float32    `json:"savings_percentage"`
+	EarningsPerDay        int64      `json:"earnings_per_day"`
+	AverageSpendingPerDay int64      `json:"average_spending_per_day"`
+	ExpenseCategories     []Category `json:"expense_categories"`
+	IncomeCategories      []Category `json:"income_categories"`
 }
 
 const (
@@ -74,36 +70,35 @@ func Generate(
 ) (Report, error) {
 	var report Report
 
-	categories, duplicates, income, spending, err := Categories(ctx, userID, storage, expenses)
+	expenseCategories, incomeCategories, totalIncome, totalSpending, err := splitByExpenseType(
+		ctx,
+		userID,
+		storage,
+		expenses,
+	)
 
 	if err != nil {
 		return report, err
 	}
 
-	report.Income = income
-	report.Spending = spending
+	report.Income = totalIncome
+	report.Spending = totalSpending
 	report.StartDate = startDate
 	report.EndDate = endDate
-	savings := income - (spending)*-1
+	savings := totalIncome - (totalSpending)*-1
 	report.Savings = savings
-	savingsPercentage := (float32(savings) / float32(income)) * percentageOfTotal
+	savingsPercentage := (float32(savings) / float32(totalIncome)) * percentageOfTotal
 	if math.IsNaN(float64(savingsPercentage)) || math.IsInf(float64(savingsPercentage), 0) {
 		report.SavingsPercentage = 0
 	} else {
 		report.SavingsPercentage = savingsPercentage
 	}
 	numberOfDaysPerMonth := calendarDays(startDate, endDate)
-	report.AverageSpendingPerDay = (spending) * -1 / int64(numberOfDaysPerMonth)
-	report.EarningsPerDay = income / int64(numberOfDaysPerMonth)
-	report.Duplicates = duplicates
+	report.AverageSpendingPerDay = (totalSpending) * -1 / int64(numberOfDaysPerMonth)
+	report.EarningsPerDay = totalIncome / int64(numberOfDaysPerMonth)
 
-	categoriesSlice := slices.Collect(maps.Values(categories))
-
-	sort.Slice(categoriesSlice, func(i, j int) bool {
-		return categoriesSlice[i].Amount > categoriesSlice[j].Amount
-	})
-
-	report.Categories = categoriesSlice
+	report.ExpenseCategories = expenseCategories
+	report.IncomeCategories = incomeCategories
 
 	if reportType == "monthly" {
 		report.Title = fmt.Sprintf("%s %d", startDate.Month().String(), startDate.Year())
@@ -114,19 +109,20 @@ func Generate(
 	return report, nil
 }
 
-func Categories(
+func splitByExpenseType(
 	ctx context.Context,
 	userID int64,
 	storage pkgStorage.Storage,
 	expenses []pkgStorage.Expense,
-) (map[string]Category, []string, int64, int64, error) {
-	var income int64
-	var spending int64
-	categories := make(map[string]Category)
-	seen := map[string]bool{}
-	duplicates := []string{}
+) ([]Category, []Category, int64, int64, error) {
+	var incomeTotal int64
+	var spendingTotal int64
 	// Track category budgets by category name
 	categoryBudgets := make(map[string]int64)
+	expenseCategories := []Category{}
+	incomeCategories := []Category{}
+	// internal map to keep track of expense categories
+	expenseCategoryMap := map[string]Category{}
 
 	for _, ex := range expenses {
 		categoryName := ""
@@ -134,42 +130,35 @@ func Categories(
 			category, categoryError := storage.GetCategory(ctx, userID, *ex.CategoryID())
 
 			if categoryError != nil {
-				return categories, duplicates, income, spending, categoryError
+				return expenseCategories, incomeCategories, incomeTotal, spendingTotal, categoryError
 			}
 
 			if category.Name() == pkgStorage.ExcludeCategory {
 				continue
 			}
+
 			categoryName = category.Name()
 			// Store budget for this category
 			categoryBudgets[categoryName] = category.MonthlyBudget()
 		}
 
-		_, ok := seen[ex.Description()]
-		if !ok {
-			seen[ex.Description()] = true
-		} else {
-			duplicates = append(duplicates, ex.Description())
-		}
-
 		switch ex.Type() {
 		case pkgStorage.ChargeType:
-			spending += ex.Amount()
+			spendingTotal += ex.Amount()
 		case pkgStorage.IncomeType:
-			income += ex.Amount()
+			incomeTotal += ex.Amount()
 		}
-
-		addExpenseToCategory(categories, ex, categoryName)
+		addExpenseToCategory(expenseCategoryMap, ex, categoryName)
 	}
 
-	for key, category := range categories {
+	for key, category := range expenseCategoryMap {
 		// Calculate percentage of total
-		if category.Amount < 0 && spending < 0 {
+		if category.Amount < 0 && spendingTotal < 0 {
 			// For expense categories
-			category.PercentageOfTotal = float64(category.Amount*-percentageOfTotal) / float64(spending*-1)
-		} else if category.Amount > 0 && income > 0 {
+			category.PercentageOfTotal = float64(category.Amount*-percentageOfTotal) / float64(spendingTotal*-1)
+		} else if category.Amount > 0 && incomeTotal > 0 {
 			// For income categories
-			category.PercentageOfTotal = float64(category.Amount*percentageOfTotal) / float64(income)
+			category.PercentageOfTotal = float64(category.Amount*percentageOfTotal) / float64(incomeTotal)
 		}
 
 		// Find most recent transaction
@@ -206,10 +195,14 @@ func Categories(
 			}
 		}
 
-		categories[key] = category
+		if category.Amount < 0 {
+			expenseCategories = append(expenseCategories, category)
+		} else {
+			incomeCategories = append(incomeCategories, category)
+		}
 	}
 
-	return categories, duplicates, income, spending, nil
+	return expenseCategories, incomeCategories, incomeTotal, spendingTotal, nil
 }
 
 func addExpenseToCategory(categories map[string]Category, ex pkgStorage.Expense, categoryString string) {
@@ -219,6 +212,7 @@ func addExpenseToCategory(categories map[string]Category, ex pkgStorage.Expense,
 	if ok {
 		c.Amount += ex.Amount()
 		c.Expenses = append(c.Expenses, ex)
+
 		categories[categoryName] = c
 	} else {
 		amount := ex.Amount()
