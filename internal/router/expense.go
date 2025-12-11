@@ -13,6 +13,9 @@ import (
 	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
+var newAction = "new"
+var editAction = "edit"
+
 type expenseView struct {
 	pkgStorage.Expense
 	category pkgStorage.Category
@@ -209,7 +212,7 @@ func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseW
 	data := expenseViewData{
 		viewBase: base,
 	}
-	data.Action = "new"
+	data.Action = newAction
 
 	defer func() {
 		c.templates.Render(w, "pages/expenses/new.html", data)
@@ -294,7 +297,7 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 	data := expenseViewData{
 		viewBase: base,
 	}
-	data.Action = "edit"
+	data.Action = editAction
 	data.Expense = &expenseView{
 		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
 		category: pkgStorage.NewCategory(0, "", "", 0),

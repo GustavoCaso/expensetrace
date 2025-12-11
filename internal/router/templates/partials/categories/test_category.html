@@ -7,7 +7,7 @@
       <div class="card no-matches">
         <div class="card-header">
           <h3>No Matching Transactions</h3>
-          <div class="pattern-badge">{{.Pattern}}</div>
+          <div class="pattern-badge">{{.Category.Pattern}}</div>
         </div>
         <div class="empty-state">
           <div class="empty-icon">🔍</div>
@@ -20,7 +20,7 @@
       <div class="card success">
         <div class="card-header">
           <h3>Pattern Matched <span class="match-count">{{.Total}}</span> Transactions</h3>
-          <div class="pattern-badge">{{.Pattern}}</div>
+          <div class="pattern-badge">{{.Category.Pattern}}</div>
         </div>
         <div class="matched-transactions">
           <table>
@@ -53,13 +53,6 @@
           {{if gt .Total $maxShown}}
             <div class="more-matches">And {{sub .Total $maxShown}} more transactions</div>
           {{end}}
-        </div>
-        
-        <div class="result-actions">
-          <button hx-post="/category" 
-                  hx-include="input[name='name'],input[name='pattern']" 
-                  hx-target="#page" hx-swap="outerHTML"
-                  class="btn-primary">Create "{{.Name}}" Category</button>
         </div>
       </div>
     {{end}}
