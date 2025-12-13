@@ -767,3 +767,160 @@ func TestResetCategoryHandlerEmptyDatabase(t *testing.T) {
 		t.Errorf("Expected one category (exclude) after reset, got %d", len(categories))
 	}
 }
+
+func TestParseCategoryForm(t *testing.T) {
+	tests := []struct {
+		name          string
+		formData      string
+		expectError   bool
+		expectedData  *categoryFormData
+		errorContains string
+	}{
+		{
+			name:        "valid form with budget",
+			formData:    "name=Entertainment&pattern=cinema|movie&monthly_budget=100.50",
+			expectError: false,
+			expectedData: &categoryFormData{
+				Name:          "Entertainment",
+				Pattern:       "cinema|movie",
+				MonthlyBudget: 10050, // cents
+			},
+		},
+		{
+			name:        "valid form without budget",
+			formData:    "name=Food&pattern=restaurant|cafe",
+			expectError: false,
+			expectedData: &categoryFormData{
+				Name:          "Food",
+				Pattern:       "restaurant|cafe",
+				MonthlyBudget: 0,
+			},
+		},
+		{
+			name:        "valid form with empty budget",
+			formData:    "name=Transport&pattern=uber|taxi&monthly_budget=",
+			expectError: false,
+			expectedData: &categoryFormData{
+				Name:          "Transport",
+				Pattern:       "uber|taxi",
+				MonthlyBudget: 0,
+			},
+		},
+		{
+			name:        "valid form with zero budget",
+			formData:    "name=Misc&pattern=misc&monthly_budget=0",
+			expectError: false,
+			expectedData: &categoryFormData{
+				Name:          "Misc",
+				Pattern:       "misc",
+				MonthlyBudget: 0,
+			},
+		},
+		{
+			name:          "missing name",
+			formData:      "pattern=test&monthly_budget=100",
+			expectError:   true,
+			errorContains: "name and a valid regex pattern",
+		},
+		{
+			name:          "missing pattern",
+			formData:      "name=Test&monthly_budget=100",
+			expectError:   true,
+			errorContains: "name and a valid regex pattern",
+		},
+		{
+			name:          "empty name",
+			formData:      "name=&pattern=test",
+			expectError:   true,
+			errorContains: "name and a valid regex pattern",
+		},
+		{
+			name:          "empty pattern",
+			formData:      "name=Test&pattern=",
+			expectError:   true,
+			errorContains: "name and a valid regex pattern",
+		},
+		{
+			name:          "invalid regex pattern - unclosed bracket",
+			formData:      "name=Test&pattern=[invalid",
+			expectError:   true,
+			errorContains: "invalid pattern",
+		},
+		{
+			name:          "invalid regex pattern - unclosed paren",
+			formData:      "name=Test&pattern=(invalid",
+			expectError:   true,
+			errorContains: "invalid pattern",
+		},
+		{
+			name:          "invalid budget format",
+			formData:      "name=Test&pattern=valid&monthly_budget=abc",
+			expectError:   true,
+			errorContains: "invalid budget format",
+		},
+		{
+			name:          "negative budget",
+			formData:      "name=Test&pattern=valid&monthly_budget=-100",
+			expectError:   true,
+			errorContains: "budget cannot be negative",
+		},
+		{
+			name:        "budget with decimal precision",
+			formData:    "name=Test&pattern=valid&monthly_budget=99.99",
+			expectError: false,
+			expectedData: &categoryFormData{
+				Name:          "Test",
+				Pattern:       "valid",
+				MonthlyBudget: 9999, // cents
+			},
+		},
+		{
+			name:        "complex regex pattern",
+			formData:    "name=Shopping&pattern=^(amazon|ebay|shop)",
+			expectError: false,
+			expectedData: &categoryFormData{
+				Name:          "Shopping",
+				Pattern:       "^(amazon|ebay|shop)",
+				MonthlyBudget: 0,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := strings.NewReader(tt.formData)
+			req := httptest.NewRequest(http.MethodPost, "/category", body)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			result, err := parseCategoryForm(req)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+					return
+				}
+				if tt.errorContains != "" && !strings.Contains(err.Error(), tt.errorContains) {
+					t.Errorf("Expected error to contain %q, got %q", tt.errorContains, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+					return
+				}
+				if result == nil {
+					t.Errorf("Expected result but got nil")
+					return
+				}
+				if result.Name != tt.expectedData.Name {
+					t.Errorf("Expected name %q, got %q", tt.expectedData.Name, result.Name)
+				}
+				if result.Pattern != tt.expectedData.Pattern {
+					t.Errorf("Expected pattern %q, got %q", tt.expectedData.Pattern, result.Pattern)
+				}
+				if result.MonthlyBudget != tt.expectedData.MonthlyBudget {
+					t.Errorf("Expected budget %d, got %d", tt.expectedData.MonthlyBudget, result.MonthlyBudget)
+				}
+			}
+		})
+	}
+}

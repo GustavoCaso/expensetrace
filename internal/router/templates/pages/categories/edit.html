@@ -1,8 +1,8 @@
-{{define "title"}}Create New Category{{end}}
+{{define "title"}}Edit Category{{end}}
 {{define "css"}}/static/css/categories.css{{end}}
 
 {{define "main"}}
-  {{template "categories/nav" "new"}}
+  {{template "categories/nav" ""}}
   
   {{if gt (len .Banner.Icon) 0}} 
     {{template "banner" .Banner}}

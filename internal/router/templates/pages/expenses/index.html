@@ -71,11 +71,7 @@
                             hx-confirm="Are you sure you want to delete the expense? This action cannot be undone.">
                             Delete
                           </a>
-                          <a 
-                            class="btn-secondary btn-small" 
-                            href="/expense/{{$expense.ID}}" 
-                            hx-target=".expenses-container" 
-                            hx-swap="innerHTML">
+                          <a class="btn-secondary btn-small" href="/expense/{{$expense.ID}}">
                             Edit
                           </a>
                         </div>
