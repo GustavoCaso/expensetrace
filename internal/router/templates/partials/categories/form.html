@@ -106,7 +106,7 @@
         </div>
         
         <div class="form-actions">
-          <button hx-post="/category/check" hx-target="#pattern-results" class="btn-secondary">Test Pattern</button>
+          <button hx-post="/category/test" hx-target="#pattern-results" class="btn-secondary">Test Pattern</button>
           {{if eq .Action "edit"}}
             <button hx-put="/category/{{.Category.ID}}" hx-target="#page" hx-swap="outerHTML" class="btn-primary">Update Category</button>
           {{else}}

@@ -48,69 +48,23 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID := userIDFromContext(ctx)
-		categoryID := r.PathValue("id")
-
-		// Get existing category for error rendering
-		categoryIDInt64, parseErr := strconv.ParseInt(categoryID, 10, 64)
-		if parseErr != nil {
-			c.logger.Error("Invalid category ID", "error", parseErr, "id", categoryID)
-			http.Error(w, "Invalid category ID", http.StatusBadRequest)
-			return
-		}
-
-		existingCategory, err := c.storage.GetCategory(ctx, userID, categoryIDInt64)
-		if err != nil {
-			c.logger.Error("Failed to get category", "error", err, "id", categoryID)
-			http.Error(w, "Category not found", http.StatusNotFound)
-			return
-		}
-
-		// Parse form
-		if formErr := r.ParseForm(); formErr != nil {
-			c.logger.Error("Failed to parse form", "error", formErr)
-			c.renderCategoryEditError(ctx, w, existingCategory, fmt.Errorf("invalid form data: %w", formErr))
-			return
-		}
-
-		name := r.FormValue("name")
-		pattern := r.FormValue("pattern")
-		budgetStr := r.FormValue("monthly_budget")
-
-		// Validate pattern if provided
-		if pattern != "" {
-			if _, compileErr := regexp.Compile(pattern); compileErr != nil {
-				c.logger.Error("Invalid pattern", "error", compileErr)
-				c.renderCategoryEditError(ctx, w, existingCategory, fmt.Errorf("invalid pattern: %w", compileErr))
-				return
-			}
-		}
-
-		// Validate budget
-		monthlyBudget, budgetErr := validateBudget(budgetStr)
-		if budgetErr != nil {
-			c.logger.Error("Failed to validate budget", "error", budgetErr)
-			c.renderCategoryEditError(ctx, w, existingCategory, budgetErr)
-			return
-		}
-
-		c.updatecategoryHandler(ctx, categoryID, name, pattern, monthlyBudget, w)
+		c.updateCategoryHandler(ctx, w, r)
 	})
 
 	mux.HandleFunc("DELETE /category/{id}", func(w http.ResponseWriter, r *http.Request) {
-		c.deletecategoryHandler(r.Context(), w, r)
+		c.deleteCategoryHandler(r.Context(), w, r)
 	})
 
-	mux.HandleFunc("POST /category/check", func(w http.ResponseWriter, r *http.Request) {
-		c.createcategoryHandler(r.Context(), false, w, r)
+	mux.HandleFunc("POST /category/test", func(w http.ResponseWriter, r *http.Request) {
+		c.testCategoryHandler(r.Context(), w, r)
 	})
 
 	mux.HandleFunc("POST /category", func(w http.ResponseWriter, r *http.Request) {
-		c.createcategoryHandler(r.Context(), true, w, r)
+		c.createCategoryHandler(r.Context(), w, r)
 	})
 
 	mux.HandleFunc("POST /category/reset", func(w http.ResponseWriter, r *http.Request) {
-		c.resetcategoryHandler(r.Context(), w)
+		c.resetCategoryHandler(r.Context(), w)
 	})
 
 	mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {
@@ -272,11 +226,10 @@ func (c *categoryHandler) categoryHandler(ctx context.Context, w http.ResponseWr
 	data.Category = categoryEntry
 }
 
-func (c *categoryHandler) updatecategoryHandler(
+func (c *categoryHandler) updateCategoryHandler(
 	ctx context.Context,
-	id, name, pattern string,
-	monthlyBudget int64,
 	w http.ResponseWriter,
+	r *http.Request,
 ) {
 	userID := userIDFromContext(ctx)
 	var err error
@@ -294,28 +247,31 @@ func (c *categoryHandler) updatecategoryHandler(
 		c.templates.Render(w, "pages/categories/edit.html", data)
 	}()
 
-	categoryID, err := strconv.Atoi(id)
-	if err != nil {
+	categoryID := r.PathValue("id")
+
+	categoryIDInt64, parseErr := strconv.ParseInt(categoryID, 10, 64)
+	if parseErr != nil {
+		c.logger.Error("Invalid category ID", "error", parseErr, "id", categoryID)
 		return
 	}
 
-	categoryIDInt64 := int64(categoryID)
-
-	categoryEntry, err := c.storage.GetCategory(ctx, userID, categoryIDInt64)
+	existingCategory, err := c.storage.GetCategory(ctx, userID, categoryIDInt64)
 	if err != nil {
-		return
-	}
-	data.Category = categoryEntry
-
-	// Get expenses that currently belong to this specific category
-	currentCategoryExpenses, err := c.storage.GetExpensesByCategory(ctx, userID, categoryIDInt64)
-	if err != nil {
+		c.logger.Error("Failed to get category", "error", err, "id", categoryID)
 		return
 	}
 
-	nameChanged := name != "" && categoryEntry.Name() != name
-	patternChanged := pattern != "" && categoryEntry.Pattern() != pattern
-	budgetChanged := !budgetsEqual(monthlyBudget, categoryEntry.MonthlyBudget())
+	// Parse form
+	formData, err := parseCategoryForm(r)
+	if err != nil {
+		c.logger.Error("Failed to parse category form", "error", err)
+		data.Error = err.Error()
+		return
+	}
+
+	nameChanged := existingCategory.Name() != formData.Name
+	patternChanged := existingCategory.Pattern() != formData.Pattern
+	budgetChanged := !budgetsEqual(formData.MonthlyBudget, existingCategory.MonthlyBudget())
 
 	if !nameChanged && !patternChanged && !budgetChanged {
 		data.Banner = banner{
@@ -324,16 +280,16 @@ func (c *categoryHandler) updatecategoryHandler(
 		return
 	}
 
-	if patternChanged {
-		_, err = regexp.Compile(pattern)
-		if err != nil {
-			err = fmt.Errorf("invalid pattern: %w", err)
-			return
-		}
-	}
-
-	err = c.storage.UpdateCategory(ctx, userID, categoryIDInt64, name, pattern, monthlyBudget)
+	err = c.storage.UpdateCategory(
+		ctx,
+		userID,
+		categoryIDInt64,
+		formData.Name,
+		formData.Pattern,
+		formData.MonthlyBudget,
+	)
 	if err != nil {
+		c.logger.Error("Failed to update category", "error", err)
 		err = fmt.Errorf("failed to update category: %w", err)
 		return
 	}
@@ -342,6 +298,7 @@ func (c *categoryHandler) updatecategoryHandler(
 
 	updatedCategory, err := c.storage.GetCategory(ctx, userID, categoryIDInt64)
 	if err != nil {
+		c.logger.Error("Failed to get updated category", "error", err)
 		err = fmt.Errorf("failed to get updated category: %w", err)
 		return
 	}
@@ -365,6 +322,13 @@ func (c *categoryHandler) updatecategoryHandler(
 	// Get uncategorized expenses to potentially categorize them
 	uncategorizedExpenses, err := c.storage.GetExpensesWithoutCategory(ctx, userID)
 	if err != nil {
+		c.logger.Error("Failed to get uncategorized expenses", "error", err)
+		return
+	}
+
+	currentCategoryExpenses, err := c.storage.GetExpensesByCategory(ctx, userID, categoryIDInt64)
+	if err != nil {
+		c.logger.Error("Failed to get cateory expenses", "error", err)
 		return
 	}
 
@@ -398,6 +362,7 @@ func (c *categoryHandler) updatecategoryHandler(
 	if len(toUpdated) > 0 {
 		updated, updatedErr := c.storage.UpdateExpenses(ctx, userID, toUpdated)
 		if updatedErr != nil {
+			c.logger.Error("Failed to get update expenses", "error", err)
 			err = updatedErr
 			return
 		}
@@ -630,7 +595,7 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 	})
 }
 
-func (c *categoryHandler) resetcategoryHandler(ctx context.Context, w http.ResponseWriter) {
+func (c *categoryHandler) resetCategoryHandler(ctx context.Context, w http.ResponseWriter) {
 	userID := userIDFromContext(ctx)
 	_, err := c.storage.DeleteCategories(ctx, userID)
 
@@ -651,7 +616,7 @@ func (c *categoryHandler) resetcategoryHandler(ctx context.Context, w http.Respo
 	})
 }
 
-func (c *categoryHandler) deletecategoryHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func (c *categoryHandler) deleteCategoryHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -693,9 +658,8 @@ type createCategoryViewData struct {
 	Action   string
 }
 
-func (c *categoryHandler) createcategoryHandler(
+func (c *categoryHandler) createCategoryHandler(
 	ctx context.Context,
-	create bool,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -704,13 +668,9 @@ func (c *categoryHandler) createcategoryHandler(
 	data.LoggedIn = true
 	data.CurrentPage = pageCategories
 	data.Action = "new"
-	template := "partials/categories/test_category.html"
-	if create {
-		template = "pages/categories/new.html"
-	}
 
 	defer func() {
-		c.templates.Render(w, template, data)
+		c.templates.Render(w, "pages/categories/new.html", data)
 	}()
 
 	// Initialize with empty category
@@ -727,14 +687,14 @@ func (c *categoryHandler) createcategoryHandler(
 	// Store parsed values in category for re-rendering
 	data.Category = storage.NewCategory(0, formData.Name, formData.Pattern, formData.MonthlyBudget)
 
-	re, err := regexp.Compile(formData.Pattern)
+	expenses, err := c.storage.GetExpensesWithoutCategory(ctx, userID)
 	if err != nil {
+		c.logger.Error("Failed to get expenses without category", "error", err)
 		data.Error = err.Error()
 		return
 	}
 
-	expenses, err := c.storage.GetExpensesWithoutCategory(ctx, userID)
-
+	re, err := regexp.Compile(formData.Pattern)
 	if err != nil {
 		data.Error = err.Error()
 		return
@@ -748,24 +708,32 @@ func (c *categoryHandler) createcategoryHandler(
 		}
 	}
 
-	total := len(toUpdated)
+	totalExpensesToUpdate := len(toUpdated)
 
-	if create && total > 0 {
-		categoryID, createErr := c.storage.CreateCategory(
-			ctx,
-			userID,
-			formData.Name,
-			formData.Pattern,
-			formData.MonthlyBudget,
-		)
+	categoryID, createErr := c.storage.CreateCategory(
+		ctx,
+		userID,
+		formData.Name,
+		formData.Pattern,
+		formData.MonthlyBudget,
+	)
 
-		if createErr != nil {
-			data.Error = createErr.Error()
-			return
-		}
+	if createErr != nil {
+		c.logger.Error("Failed to create category", "error", err)
+		data.Error = createErr.Error()
+		return
+	}
 
-		c.logger.Info("Category created", "name", formData.Name, "pattern", formData.Pattern)
+	c.logger.Info("Category created", "name", formData.Name, "pattern", formData.Pattern)
 
+	updateCategoryMatcherErr := c.updateCategoryMatcher(userID)
+	if updateCategoryMatcherErr != nil {
+		c.logger.Error("Failed to update category matcher", "error", err)
+		data.Error = updateCategoryMatcherErr.Error()
+		return
+	}
+
+	if totalExpensesToUpdate > 0 {
 		updatedExpenses := make([]storage.Expense, len(toUpdated))
 
 		for i, ex := range toUpdated {
@@ -784,36 +752,80 @@ func (c *categoryHandler) createcategoryHandler(
 
 		updated, updateErr := c.storage.UpdateExpenses(ctx, userID, updatedExpenses)
 		if updateErr != nil {
+			c.logger.Error("Failed to update expenses", "error", err)
 			data.Error = updateErr.Error()
 			return
 		}
 
 		c.logger.Info("Category expenses updated", "total", updated)
 
-		if int(updated) != total {
+		if int(updated) != totalExpensesToUpdate {
 			c.logger.Warn("not all categories were updated")
 
-			total = int(updated)
+			totalExpensesToUpdate = int(updated)
 		}
+	}
 
-		updateCategoryMatcherErr := c.updateCategoryMatcher(userID)
-		if updateCategoryMatcherErr != nil {
-			data.Error = updateCategoryMatcherErr.Error()
-			return
-		}
+	data.Banner = banner{
+		Icon: "✅",
+		Message: fmt.Sprintf(
+			"Category %s was created successfully and %d transactions were categorized!",
+			formData.Name,
+			totalExpensesToUpdate,
+		),
+	}
 
-		data.Banner = banner{
-			Icon: "✅",
-			Message: fmt.Sprintf(
-				"Category %s was created successfully and %d transactions were categorized!",
-				formData.Name,
-				total,
-			),
-		}
+	data.Total = totalExpensesToUpdate
+	data.Results = toUpdated
+}
+
+func (c *categoryHandler) testCategoryHandler(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	userID := userIDFromContext(ctx)
+	data := createCategoryViewData{}
+	data.LoggedIn = true
+	data.CurrentPage = pageCategories
+
+	defer func() {
+		c.templates.Render(w, "partials/categories/test_category.html", data)
+	}()
+
+	// Parse and validate form using helper
+	formData, err := parseCategoryForm(r)
+	if err != nil {
+		c.logger.Error("Failed to parse category form", "error", err)
+		data.Error = err.Error()
 		return
 	}
 
-	data.Total = total
+	// Store parsed values in category for re-rendering
+	data.Category = storage.NewCategory(0, formData.Name, formData.Pattern, formData.MonthlyBudget)
+
+	expenses, err := c.storage.GetExpensesWithoutCategory(ctx, userID)
+	if err != nil {
+		c.logger.Error("Failed to get expenses without category", "error", err)
+		data.Error = err.Error()
+		return
+	}
+
+	re, err := regexp.Compile(formData.Pattern)
+	if err != nil {
+		data.Error = err.Error()
+		return
+	}
+
+	toUpdated := []storage.Expense{}
+
+	for _, ex := range expenses {
+		if re.MatchString(ex.Description()) {
+			toUpdated = append(toUpdated, ex)
+		}
+	}
+
+	data.Total = len(toUpdated)
 	data.Results = toUpdated
 }
 
@@ -862,23 +874,6 @@ func (c *categoryHandler) categoryIndexError(ctx context.Context, w http.Respons
 	data := newViewBase(ctx, c.storage, c.logger, pageCategories)
 	data.Error = err.Error()
 	c.templates.Render(w, "pages/categories/index.html", data)
-}
-
-// renderCategoryEditError renders the edit page with an error message.
-func (c *categoryHandler) renderCategoryEditError(
-	ctx context.Context,
-	w http.ResponseWriter,
-	category storage.Category,
-	err error,
-) {
-	base := newViewBase(ctx, c.storage, c.logger, pageCategories)
-	data := categoryViewData{
-		viewBase: base,
-		Category: category,
-		Action:   "edit",
-	}
-	data.Error = err.Error()
-	c.templates.Render(w, "pages/categories/edit.html", data)
 }
 
 func (c *categoryHandler) updateCategoryMatcher(userID int64) error {
