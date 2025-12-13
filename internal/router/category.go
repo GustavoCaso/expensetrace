@@ -15,6 +15,7 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
+	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 const errSearchCriteria = "You must provide a search criteria"
@@ -28,9 +29,18 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 		c.categoriesHandler(r.Context(), w, nil, nil)
 	})
 
+	mux.HandleFunc("GET /category/{id}", func(w http.ResponseWriter, r *http.Request) {
+		c.categoryHandler(r.Context(), w, r)
+	})
+
 	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, r *http.Request) {
 		base := newViewBase(r.Context(), c.storage, c.logger, pageCategories)
-		c.templates.Render(w, "pages/categories/new.html", base)
+		data := categoryViewData{
+			viewBase: base,
+			Action:   "new",
+			Category: storage.EmptyCategory(),
+		}
+		c.templates.Render(w, "pages/categories/new.html", data)
 	})
 
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, r *http.Request) {
@@ -201,6 +211,45 @@ func (c *categoryHandler) categoriesHandler(
 	if banner != nil {
 		data.Banner = *banner
 	}
+}
+
+type categoryViewData struct {
+	viewBase
+	Category pkgStorage.Category
+	Action   string
+}
+
+func (c *categoryHandler) categoryHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	userID := userIDFromContext(ctx)
+	base := newViewBase(ctx, c.storage, c.logger, pageCategories)
+	data := categoryViewData{
+		viewBase: base,
+		Action:   "edit",
+	}
+	var err error
+	defer func() {
+		if err != nil {
+			data.Error = err.Error()
+			c.templates.Render(w, "pages/categories/edit.html", data)
+		} else {
+			c.templates.Render(w, "pages/categories/edit.html", data)
+		}
+	}()
+
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return
+	}
+
+	categoryIDInt64 := int64(id)
+
+	categoryEntry, err := c.storage.GetCategory(ctx, userID, categoryIDInt64)
+	if err != nil {
+		return
+	}
+
+	data.Category = categoryEntry
 }
 
 func (c *categoryHandler) updatecategoryHandler(
