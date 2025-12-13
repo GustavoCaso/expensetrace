@@ -206,10 +206,8 @@ func (c *categoryHandler) categoryHandler(ctx context.Context, w http.ResponseWr
 	defer func() {
 		if err != nil {
 			data.Error = err.Error()
-			c.templates.Render(w, "pages/categories/edit.html", data)
-		} else {
-			c.templates.Render(w, "pages/categories/edit.html", data)
 		}
+		c.templates.Render(w, "pages/categories/edit.html", data)
 	}()
 
 	idStr := r.PathValue("id")
@@ -261,17 +259,46 @@ func (c *categoryHandler) updateCategoryHandler(
 		return
 	}
 
-	// Parse form
-	formData, err := parseCategoryForm(r)
-	if err != nil {
-		c.logger.Error("Failed to parse category form", "error", err)
-		data.Error = err.Error()
+	// Parse form manually for partial updates
+	if formErr := r.ParseForm(); formErr != nil {
+		c.logger.Error("Failed to parse form", "error", formErr)
+		data.Error = fmt.Errorf("invalid form data: %w", formErr).Error()
 		return
 	}
 
-	nameChanged := existingCategory.Name() != formData.Name
-	patternChanged := existingCategory.Pattern() != formData.Pattern
-	budgetChanged := !budgetsEqual(formData.MonthlyBudget, existingCategory.MonthlyBudget())
+	// Get form values, defaulting to existing values if not provided
+	name := r.FormValue("name")
+	if name == "" {
+		name = existingCategory.Name()
+	}
+
+	pattern := r.FormValue("pattern")
+	if pattern == "" {
+		pattern = existingCategory.Pattern()
+	}
+
+	budgetStr := r.FormValue("monthly_budget")
+	monthlyBudget := existingCategory.MonthlyBudget()
+	if budgetStr != "" {
+		var budgetErr error
+		monthlyBudget, budgetErr = validateBudget(budgetStr)
+		if budgetErr != nil {
+			c.logger.Error("Failed to validate budget", "error", budgetErr)
+			data.Error = budgetErr.Error()
+			return
+		}
+	}
+
+	// Validate pattern
+	if _, compileErr := regexp.Compile(pattern); compileErr != nil {
+		c.logger.Error("Invalid pattern", "error", compileErr)
+		data.Error = fmt.Errorf("invalid pattern: %w", compileErr).Error()
+		return
+	}
+
+	nameChanged := existingCategory.Name() != name
+	patternChanged := existingCategory.Pattern() != pattern
+	budgetChanged := !budgetsEqual(monthlyBudget, existingCategory.MonthlyBudget())
 
 	if !nameChanged && !patternChanged && !budgetChanged {
 		data.Banner = banner{
@@ -284,9 +311,9 @@ func (c *categoryHandler) updateCategoryHandler(
 		ctx,
 		userID,
 		categoryIDInt64,
-		formData.Name,
-		formData.Pattern,
-		formData.MonthlyBudget,
+		name,
+		pattern,
+		monthlyBudget,
 	)
 	if err != nil {
 		c.logger.Error("Failed to update category", "error", err)
