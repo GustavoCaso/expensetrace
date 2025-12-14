@@ -15,7 +15,7 @@ const (
 	sessionCookieName = "session_id"
 	sessionDuration   = 7 * 24 * time.Hour // 7 days
 	minPasswordLength = 8
-	sessionIDLength   = 32
+	sessionIDBytes    = 16 // Results in 32 hex characters
 )
 
 type authHandler struct {
@@ -81,7 +81,7 @@ func (a *authHandler) signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create session
-	sessionID := generateSessionID()
+	sessionID := util.GenerateRandomID(sessionIDBytes)
 
 	expiresAt := time.Now().Add(sessionDuration)
 	_, err = a.router.storage.CreateSession(r.Context(), user.ID(), sessionID, expiresAt)
@@ -155,7 +155,7 @@ func (a *authHandler) signin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create session
-	sessionID := generateSessionID()
+	sessionID := util.GenerateRandomID(sessionIDBytes)
 
 	expiresAt := time.Now().Add(sessionDuration)
 	_, err = a.router.storage.CreateSession(r.Context(), user.ID(), sessionID, expiresAt)
@@ -218,8 +218,4 @@ func (a *authHandler) renderSigninError(w http.ResponseWriter, errorMsg string) 
 	}
 
 	a.router.templates.Render(w, "pages/auth/signin.html", data)
-}
-
-func generateSessionID() string {
-	return util.RandomString(sessionIDLength)
 }

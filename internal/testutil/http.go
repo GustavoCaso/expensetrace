@@ -9,8 +9,6 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
 
-const testSessionIDLength = 16
-
 func SetupAuthCookie(
 	t *testing.T,
 	s storage.Storage,
@@ -19,7 +17,8 @@ func SetupAuthCookie(
 	cookieKey string,
 	duration time.Duration,
 ) {
-	sessionID := util.RandomString(testSessionIDLength)
+	const idLength = 16
+	sessionID := util.GenerateRandomID(idLength)
 	expiresAt := time.Now().Add(duration)
 	_, err := s.CreateSession(t.Context(), user.ID(), sessionID, expiresAt)
 	if err != nil {

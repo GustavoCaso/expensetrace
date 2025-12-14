@@ -419,8 +419,3 @@ linters:
         linters:
           - gocyclo
           - cyclop
-      - path: 'internal/util/rand\.go'
-        linters:
-          - gosec
-          - revive
-          - mnd
