@@ -55,7 +55,7 @@
         <div class="card-grid">
           {{range $key := .Keys}}
             {{$uncategorized := index $.UncategorizeInfo $key}}
-            <div class="card" id="expense-group-{{$uncategorized.Slug}}">
+            <div class="card">
               <div class="card-header">
                 <h3 class="card-title">{{$key}}</h3>
                   {{if gt $uncategorized.Total 0}}
@@ -87,10 +87,10 @@
                 
                 {{range $index, $expense := $uncategorized.Expenses}}
                   {{if lt $index $maxShow}}
-                    <div class="transaction-item">
-                      <span class="transaction-date">{{$expense.Date.Format "2006-01-02"}}</span>
-                      <span class="transaction-source">{{$expense.Source}}</span>
-                      <span class="transaction-amount {{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
+                    <div>
+                      <span>{{$expense.Date.Format "2006-01-02"}}</span>
+                      <span>{{$expense.Source}}</span>
+                      <span class="{{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
                         {{formatMoney $expense.Amount "." ","}}€
                       </span>
                     </div>
@@ -99,8 +99,10 @@
                 
                 {{if gt $remaining 0}}
                   <div class="more-transactions">
-                    <button class="btn-small toggle-transactions" 
-                            data-target="transactions-{{$uncategorized.Slug}}">
+                    <button class="text-button"
+                            data-toggle
+                            data-toggle-target="transactions-{{$uncategorized.Slug}}"
+                            data-toggle-text="Hide transactions">
                       Show {{$remaining}} more transactions
                     </button>
                   </div>
@@ -110,10 +112,10 @@
               <div id="transactions-{{$uncategorized.Slug}}" class="all-transactions collapsed">
                 {{range $index, $expense := $uncategorized.Expenses}}
                   {{if ge $index $maxShow}}
-                    <div class="transaction-item">
-                      <span class="transaction-date">{{$expense.Date.Format "2006-01-02"}}</span>
-                      <span class="transaction-source">{{$expense.Source}}</span>
-                      <span class="transaction-amount {{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
+                    <div>
+                      <span>{{$expense.Date.Format "2006-01-02"}}</span>
+                      <span>{{$expense.Source}}</span>
+                      <span class="{{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
                         {{formatMoney $expense.Amount "." ","}}€
                       </span>
                     </div>

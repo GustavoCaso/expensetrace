@@ -161,11 +161,6 @@
   font-weight: var(--font-weight-bold);
 }
 
-/* Display utilities */
-.hidden {
-  display: none;
-}
-
 .block {
   display: block;
 }
@@ -664,17 +659,15 @@
   animation: errorShake var(--transition-fast) ease-in-out;
 }
 
+.collapsed {
+  display: none;
+}
+
 
 /* Responsive utilities */
 @media (max-width: 768px) {
   #main {
     padding: var(--spacing-4);
     margin: var(--spacing-2);
-  }
-}
-
-@media (max-width: 480px) {
-  .hidden-xs {
-    display: none;
   }
 }
