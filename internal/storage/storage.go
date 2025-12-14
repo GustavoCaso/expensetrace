@@ -53,6 +53,10 @@ func NewCategory(id int64, name, pattern string, monthlyBudget int64) Category {
 	}
 }
 
+func EmptyCategory() Category {
+	return NewCategory(0, "", "", 0)
+}
+
 type ExpenseType int
 
 const (

@@ -1,0 +1,124 @@
+{{define "categories/form"}}
+<div id="category-content">
+  {{if eq .Action "edit"}}
+  <h2 class="mb-4">Edit {{.Category.Name}}</h2>  
+  {{end}}
+  <div class="card-grid gap-8">
+    <div class="card">
+      <form id="category-new" class="category-form">
+        <div class="form-group">
+          <label for="category-name">Category Name</label>
+          <input id="category-name" type="text" name="name" required 
+            placeholder="e.g., Groceries" value="{{.Category.Name}}">
+          <div id="name-validation" class="validation-feedback"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="category-pattern">Pattern (Regular Expression)</label>
+          <input id="category-pattern" type="text" name="pattern" placeholder="e.g., grocery|supermarket|food" value="{{.Category.Pattern}}"required>
+          <div class="input-help">
+            <span>Patterns are used to automatically categorize your expenses.</span>
+            <button type="button" id="toggle-pattern-help" class="text-button">Need help with patterns?</button>
+          </div>
+          <div id="pattern-validation" class="validation-feedback"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="category-budget">Monthly Budget (Optional)</label>
+          <div class="input-help">
+            <span>Set a monthly spending limit for this category. Leave empty for no budget.</span>
+          </div>
+          <input id="category-budget" type="number" name="monthly_budget"
+              placeholder="e.g., 500.00" step="0.01" min="0" value="{{.Category.MonthlyBudget}}">
+          <div id="budget-validation" class="validation-feedback"></div>
+        </div>
+
+        <!-- Pattern Quick Reference (initially hidden) -->
+        <div id="pattern-help" class="pattern-quick-reference hidden">
+          <div class="reference-header">
+            <h3>Pattern Quick Reference</h3>
+            <div class="flex">
+              <button type="button" class="tab-btn active" data-tab="basics">Basics</button>
+              <button type="button" class="tab-btn" data-tab="examples">Examples</button>
+            </div>
+          </div>
+          
+          <!-- Tab content for basics -->
+          <div id="basics-tab" class="tab-content active">
+            <table>
+              <tr>
+                <th>Pattern</th>
+                <th>Example</th>
+                <th>Matches</th>
+              </tr>
+              <tr>
+                <td>word1|word2</td>
+                <td>grocery|market</td>
+                <td>Transactions containing either "grocery" or "market"</td>
+              </tr>
+              <tr>
+                <td>^word</td>
+                <td>^amazon</td>
+                <td>Transactions starting with "amazon"</td>
+              </tr>
+              <tr>
+                <td>word$</td>
+                <td>subscription$</td>
+                <td>Transactions ending with "subscription"</td>
+              </tr>
+              <tr>
+                <td>.*word.*</td>
+                <td>.*food.*</td>
+                <td>Transactions containing "food" anywhere</td>
+              </tr>
+            </table>
+          </div>
+          
+          <!-- Tab content for examples -->
+          <div id="examples-tab" class="tab-content">
+            <div class="example-categories">
+              <div class="example-category">
+                <h4>Food & Dining</h4>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='restaurant|cafe|dining'; document.getElementById('category-name').value='Restaurant/Cafe'">Restaurant/Cafe</div>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='grocery|supermarket'; document.getElementById('category-name').value='Groceries'">Groceries</div>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='^starbucks'; document.getElementById('category-name').value='Starbucks'">Starbucks</div>
+              </div>
+              <div class="example-category">
+                <h4>Shopping</h4>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='^amzn|^amazon'; document.getElementById('category-name').value='Amazon'">Amazon</div>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='walmart|target|store'; document.getElementById('category-name').value='Retail'">Retail</div>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='clothing|apparel|fashion'; document.getElementById('category-name').value='Clothing'">Clothing</div>
+              </div>
+              <div class="example-category">
+                <h4>Bills & Utilities</h4>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='electric|water|gas|utility'; document.getElementById('category-name').value='Utilities'">Utilities</div>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='internet|cable|phone'; document.getElementById('category-name').value='Telecom'">Telecom</div>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='insurance'; document.getElementById('category-name').value='Insurance'">Insurance</div>
+              </div>
+              <div class="example-category">
+                <h4>Entertainment</h4>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='netflix|hulu|disney|spotify|subscriptions; document.getElementById('category-name').value='Subscriptions''">Subscriptions</div>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='movie|theater|cinema'; document.getElementById('category-name').value='Movies'">Movies</div>
+                <div class="pattern-chip" hx-on:click="document.getElementById('category-pattern').value ='game|playstation|xbox|nintendo'; document.getElementById('category-name').value='Gaming'">Gaming</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button hx-post="/category/test" hx-target="#pattern-results" class="btn-secondary">Test Pattern</button>
+          {{if eq .Action "edit"}}
+            <button hx-put="/category/{{.Category.ID}}" hx-target="#page" hx-swap="outerHTML" class="btn-primary">Update Category</button>
+          {{else}}
+            <button hx-post="/category" hx-target="#page" hx-swap="outerHTML" class="btn-primary">Create Category</button>
+          {{end}}
+        </div>
+      </form>
+    </div>
+    
+    <div id="pattern-results" class="card">
+      <h3>Pattern Test Results</h3>
+    </div>
+  </div>
+</div>
+{{end}}

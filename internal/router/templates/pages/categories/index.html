@@ -28,8 +28,8 @@
           <div class="text-lg font-bold">{{.UncategorizedCount}}</div>
         </div>
       </div>
-    
-      <div class="card-grid">
+
+      <div class="card-list">
         {{range $category := .Categories}}
           {{template "categories/card" $category}}
         {{end}}

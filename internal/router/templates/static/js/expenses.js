@@ -98,29 +98,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // Toggle details swap function
-  document.addEventListener('click', function (e) {
-    if (e.target.closest('.toggle-details-swap')) {
-      const button = e.target.closest('.toggle-details-swap');
-      const targetId = button.getAttribute('data-target');
-      const contentId = button.getAttribute('data-content');
-      const targetContent = document.getElementById(targetId);
-      const contentContent = document.getElementById(contentId);
-
-      if (targetContent && contentContent) {
-        const isCollapsed = targetContent.classList.contains('collapsed');
-
-        if (isCollapsed) {
-          targetContent.classList.remove('collapsed');
-          contentContent.classList.add('collapsed')
-        } else {
-          targetContent.classList.add('collapsed');
-          contentContent.classList.remove('collapsed')
-        }
-      }
-    }
-  });
-
   document.addEventListener('click', function (event) {
     // Handle toggle pattern help button
     if (event.target.id === 'toggle-pattern-help' || event.target.closest('#toggle-pattern-help')) {
