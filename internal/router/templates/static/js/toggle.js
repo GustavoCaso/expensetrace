@@ -23,11 +23,6 @@ export function initializeToggleSystem() {
     const toggleBtn = e.target.closest('[data-toggle]');
     if (!toggleBtn) return;
 
-    // Don't interfere with form submissions or other button behaviors
-    if (toggleBtn.tagName === 'BUTTON' && toggleBtn.type !== 'button') {
-      return;
-    }
-
     e.preventDefault();
     e.stopPropagation();
 

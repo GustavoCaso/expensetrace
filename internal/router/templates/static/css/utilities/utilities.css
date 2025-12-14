@@ -161,11 +161,6 @@
   font-weight: var(--font-weight-bold);
 }
 
-/* Display utilities */
-.hidden {
-  display: none;
-}
-
 .block {
   display: block;
 }
@@ -674,11 +669,5 @@
   #main {
     padding: var(--spacing-4);
     margin: var(--spacing-2);
-  }
-}
-
-@media (max-width: 480px) {
-  .hidden-xs {
-    display: none;
   }
 }
