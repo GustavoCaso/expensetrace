@@ -8,10 +8,6 @@
   padding: var(--spacing-4);
 }
 
-.card .collapsed {
-  display: none;
-}
-
 .card.success {
   border-left: 3px solid var(--color-success);
 }

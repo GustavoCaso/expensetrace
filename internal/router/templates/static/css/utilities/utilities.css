@@ -664,6 +664,10 @@
   animation: errorShake var(--transition-fast) ease-in-out;
 }
 
+.collapsed {
+  display: none;
+}
+
 
 /* Responsive utilities */
 @media (max-width: 768px) {

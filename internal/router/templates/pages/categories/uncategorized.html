@@ -99,8 +99,10 @@
                 
                 {{if gt $remaining 0}}
                   <div class="more-transactions">
-                    <button class="btn-small toggle-transactions" 
-                            data-target="transactions-{{$uncategorized.Slug}}">
+                    <button class="text-button"
+                            data-toggle
+                            data-toggle-target="transactions-{{$uncategorized.Slug}}"
+                            data-toggle-text="Hide transactions">
                       Show {{$remaining}} more transactions
                     </button>
                   </div>

@@ -31,7 +31,7 @@
           {{$currentYear := (eq $year $.CurrentYear)}}
         
           <div class="expense-year">
-            <div class="year-header">
+            <div class="year-header" data-toggle>
               <h2>{{$year}}</h2>
             </div>
             
@@ -40,7 +40,7 @@
                 {{$currentMonth := (and (eq $month $.CurrentMonth) $currentYear)}}
                 {{$expenses := index $.Expenses $year $month}}
                 {{if gt (len $expenses) 0}}
-                  <div class="month-header">
+                  <div class="month-header" data-toggle>
                     <h3>{{$month}}</h3>
                   </div>
                 
