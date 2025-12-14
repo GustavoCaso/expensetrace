@@ -127,52 +127,12 @@
   text-align: center;
 }
 
-.toggle-transactions {
-  color: var(--color-primary-dark);
-  background: none;
-  border: none;
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  padding: 0;
-}
-
-.toggle-transactions:hover {
-  text-decoration: underline;
-}
-
 .all-transactions {
   margin-top: var(--spacing-3);
   padding-top: var(--spacing-2);
   border-top: 1px dashed var(--color-gray-200);
   max-height: 400px;
   overflow-y: auto;
-}
-
-/* Help suggestions */
-.help-suggestions {
-  padding: var(--spacing-4) var(--spacing-5) var(--spacing-6);
-  background-color: var(--color-gray-50);
-  border-top: 1px solid var(--color-gray-200);
-  margin-top: var(--spacing-2);
-}
-
-.help-suggestions h4 {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-gray-600);
-  margin: 0 0 var(--spacing-3) 0;
-}
-
-.help-suggestions ul {
-  margin: 0;
-  padding-left: var(--spacing-6);
-  font-size: var(--font-size-sm);
-  color: var(--color-gray-600);
-}
-
-.help-suggestions li {
-  margin-bottom: var(--spacing-2);
-  line-height: 1.4;
 }
 
 /* Responsive adjustments */
