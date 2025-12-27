@@ -12,6 +12,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/filter"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
@@ -262,6 +263,57 @@ func (s *sqliteStorage) GetExpensesByCategory(
 	)
 	if err != nil {
 		return []storage.Expense{}, err
+	}
+
+	return extractExpensesFromRows(rows)
+}
+
+func (s *sqliteStorage) GetExpensesFiltered(
+	ctx context.Context,
+	userID int64,
+	expFilter *filter.ExpenseFilter,
+	sort *filter.SortOptions,
+) ([]storage.Expense, error) {
+	query := "SELECT * FROM expenses WHERE user_id = ?"
+	args := []interface{}{userID}
+
+	// Add filters dynamically
+	if expFilter.Description != nil {
+		query += " AND description LIKE ?"
+		args = append(args, "%"+*expFilter.Description+"%")
+	}
+
+	if expFilter.Source != nil {
+		query += " AND source LIKE ?"
+		args = append(args, "%"+*expFilter.Source+"%")
+	}
+
+	if expFilter.AmountMin != nil {
+		query += " AND amount >= ?"
+		args = append(args, *expFilter.AmountMin)
+	}
+
+	if expFilter.AmountMax != nil {
+		query += " AND amount <= ?"
+		args = append(args, *expFilter.AmountMax)
+	}
+
+	if expFilter.DateFrom != nil {
+		query += " AND date >= ?"
+		args = append(args, expFilter.DateFrom.Unix())
+	}
+
+	if expFilter.DateTo != nil {
+		query += " AND date <= ?"
+		args = append(args, expFilter.DateTo.Unix())
+	}
+
+	// Add sorting
+	query += fmt.Sprintf(" ORDER BY %s %s", sort.Field, sort.Direction)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
 	}
 
 	return extractExpensesFromRows(rows)

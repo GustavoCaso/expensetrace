@@ -560,57 +560,6 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 	}
 }
 
-func TestExpenseSearchHandler(t *testing.T) {
-	logger := testutil.TestLogger(t)
-	s, user := testutil.SetupTestStorage(t, logger)
-
-	// Create test categories
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery", 0)
-	if err != nil {
-		t.Fatalf("Failed to create category: %v", err)
-	}
-
-	// Create test expenses
-	expenses := []storage.Expense{
-		storage.NewExpense(
-			0,
-			"Test Source",
-			"Restaurant bill",
-			"USD",
-			-123456,
-			time.Now(),
-			storage.ChargeType,
-			&categoryID,
-		),
-	}
-
-	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)
-	if err != nil {
-		t.Fatalf("Failed to insert test expenses: %v", err)
-	}
-
-	// Create router
-	handler, _ := New(s, logger)
-
-	// Create test request
-	body := strings.NewReader("keyword=restaurant")
-	req := httptest.NewRequest(http.MethodPost, "/expense/search", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
-	w := httptest.NewRecorder()
-
-	// Serve request
-	handler.ServeHTTP(w, req)
-
-	// Check response
-	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status OK; got %v", resp.Status)
-	}
-
-	ensureNoErrorInTemplateResponse(t, "search expenses", resp.Body)
-}
-
 func TestCreateExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
@@ -975,4 +924,187 @@ func TestCreateExpenseHandlerFormParseError(t *testing.T) {
 	}
 
 	ensureNoErrorInTemplateResponse(t, "create expense form parse error", resp.Body)
+}
+
+func TestExpensesHandlerWithFilters(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	// Insert test expenses with varied data for comprehensive testing
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "visa", "morning coffee", "USD", -500, time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC), storage.ChargeType, nil),
+		storage.NewExpense(0, "mastercard", "lunch", "USD", -1200, time.Date(2024, 1, 16, 0, 0, 0, 0, time.UTC), storage.ChargeType, nil),
+		storage.NewExpense(0, "visa", "afternoon coffee", "USD", -450, time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC), storage.ChargeType, nil),
+		storage.NewExpense(0, "visa", "grocery shopping", "USD", -8000, time.Date(2024, 2, 5, 0, 0, 0, 0, time.UTC), storage.ChargeType, nil),
+		storage.NewExpense(0, "employer", "salary", "USD", 500000, time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC), storage.IncomeType, nil),
+	}
+	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
+	if err != nil {
+		t.Fatalf("failed to insert expenses: %v", err)
+	}
+
+	handler, _ := New(s, logger)
+
+	tests := []struct {
+		name       string
+		url        string
+		wantStatus int
+		checkBody  func(t *testing.T, body string)
+	}{
+		{
+			name:       "no filters returns all expenses",
+			url:        "/expenses",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, "morning coffee") {
+					t.Error("expected to find 'morning coffee'")
+				}
+				if !strings.Contains(body, "lunch") {
+					t.Error("expected to find 'lunch'")
+				}
+				if !strings.Contains(body, "salary") {
+					t.Error("expected to find 'salary'")
+				}
+			},
+		},
+		{
+			name:       "filter by description",
+			url:        "/expenses?description=coffee",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, "morning coffee") {
+					t.Error("expected to find 'morning coffee'")
+				}
+				if !strings.Contains(body, "afternoon coffee") {
+					t.Error("expected to find 'afternoon coffee'")
+				}
+				if strings.Contains(body, "lunch") {
+					t.Error("did not expect to find 'lunch'")
+				}
+			},
+		},
+		{
+			name:       "filter by source",
+			url:        "/expenses?source=visa",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, "morning coffee") {
+					t.Error("expected to find 'morning coffee'")
+				}
+				if strings.Contains(body, "lunch") {
+					t.Error("did not expect to find 'lunch'")
+				}
+			},
+		},
+		{
+			name:       "filter by amount range",
+			url:        "/expenses?amount_min=-12.00&amount_max=-4.00",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body string) {
+				// Amounts stored as negative for expenses
+				// morning coffee: -500 cents (-$5.00), should be included
+				// lunch: -1200 cents (-$12.00), should be included
+				// afternoon coffee: -450 cents (-$4.50), should be included
+				// grocery: -8000 cents (-$80.00), should NOT be included
+				if !strings.Contains(body, "morning coffee") {
+					t.Error("expected to find 'morning coffee' (-5.00)")
+				}
+				if !strings.Contains(body, "lunch") {
+					t.Error("expected to find 'lunch' (-12.00)")
+				}
+				if strings.Contains(body, "grocery shopping") {
+					t.Error("did not expect to find 'grocery shopping' (-80.00)")
+				}
+			},
+		},
+		{
+			name:       "filter by date range",
+			url:        "/expenses?date_from=2024-01-15&date_to=2024-01-17",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, "morning coffee") {
+					t.Error("expected to find 'morning coffee' (Jan 15)")
+				}
+				if !strings.Contains(body, "lunch") {
+					t.Error("expected to find 'lunch' (Jan 16)")
+				}
+				if !strings.Contains(body, "afternoon coffee") {
+					t.Error("expected to find 'afternoon coffee' (Jan 17)")
+				}
+				if strings.Contains(body, "grocery shopping") {
+					t.Error("did not expect to find 'grocery shopping' (Feb 5)")
+				}
+			},
+		},
+		{
+			name:       "combined filters - description and source",
+			url:        "/expenses?description=coffee&source=visa",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, "morning coffee") {
+					t.Error("expected to find 'morning coffee' (visa + coffee)")
+				}
+				if !strings.Contains(body, "afternoon coffee") {
+					t.Error("expected to find 'afternoon coffee' (visa + coffee)")
+				}
+				if strings.Contains(body, "lunch") {
+					t.Error("did not expect to find 'lunch' (mastercard)")
+				}
+			},
+		},
+		{
+			name:       "sort by amount descending",
+			url:        "/expenses?sort=amount:desc",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body string) {
+				// Just verify the page renders with all expenses
+				if !strings.Contains(body, "salary") {
+					t.Error("expected to find 'salary' (highest amount)")
+				}
+			},
+		},
+		{
+			name:       "sort by date ascending",
+			url:        "/expenses?sort=date:asc",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body string) {
+				// Just verify the page renders with all expenses
+				if !strings.Contains(body, "salary") {
+					t.Error("expected to find 'salary' (earliest date)")
+				}
+			},
+		},
+		{
+			name:       "invalid filter returns error",
+			url:        "/expenses?amount_min=invalid",
+			wantStatus: http.StatusOK, // Still renders page
+			checkBody: func(t *testing.T, body string) {
+				// The page should render with an error message about invalid filters
+				// Looking for either "Invalid filters" or just "error" in the rendered page
+				hasInvalidFilters := strings.Contains(body, "Invalid filters")
+				hasError := strings.Contains(body, "error") || strings.Contains(body, "Error")
+				if !hasInvalidFilters && !hasError {
+					t.Errorf("expected error message about invalid filters, got body length: %d", len(body))
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+
+			if w.Code != tt.wantStatus {
+				t.Errorf("expected status %d, got %d", tt.wantStatus, w.Code)
+			}
+
+			if tt.checkBody != nil {
+				tt.checkBody(t, w.Body.String())
+			}
+		})
+	}
 }

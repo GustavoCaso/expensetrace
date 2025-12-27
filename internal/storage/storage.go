@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/filter"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 )
 
@@ -263,6 +264,7 @@ type Storage interface {
 	SearchExpensesByDescription(ctx context.Context, userID int64, description string) ([]Expense, error)
 	GetFirstExpense(ctx context.Context, userID int64) (Expense, error)
 	GetExpensesByCategory(ctx context.Context, userID, categoryID int64) ([]Expense, error)
+	GetExpensesFiltered(ctx context.Context, userID int64, expFilter *filter.ExpenseFilter, sort *filter.SortOptions) ([]Expense, error)
 
 	// Categories
 	GetCategories(ctx context.Context, userID int64) ([]Category, error)

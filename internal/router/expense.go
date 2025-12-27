@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/export"
+	"github.com/GustavoCaso/expensetrace/internal/filter"
 	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
@@ -77,11 +78,7 @@ func (c *expenseHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /expenses", func(w http.ResponseWriter, r *http.Request) {
-		c.expensesHandler(r.Context(), w, nil)
-	})
-
-	mux.HandleFunc("POST /expense/search", func(w http.ResponseWriter, r *http.Request) {
-		c.expenseSearchHandler(r.Context(), w, r)
+		c.expensesHandler(r.Context(), w, r, nil)
 	})
 
 	mux.HandleFunc("GET /expenses/export", func(w http.ResponseWriter, r *http.Request) {
@@ -97,9 +94,11 @@ type expesesViewData struct {
 	Months       []string
 	CurrentYear  int
 	CurrentMonth string
+	Filter       *filter.ExpenseFilter
+	Sort         *filter.SortOptions
 }
 
-func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWriter, banner *banner) {
+func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, banner *banner) {
 	userID := userIDFromContext(ctx)
 	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
 	data := expesesViewData{
@@ -110,12 +109,21 @@ func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWri
 		c.templates.Render(w, "pages/expenses/index.html", data)
 	}()
 
-	expenses, err := c.storage.GetAllExpenseTypes(ctx, userID)
+	// Parse filters from URL
+	expenseFilter, sortOptions, err := filter.ParseExpenseFilters(r.URL.Query())
+	if err != nil {
+		data.Error = fmt.Sprintf("Invalid filters: %s", err.Error())
+		return
+	}
+
+	// Get filtered expenses
+	expenses, err := c.storage.GetExpensesFiltered(ctx, userID, expenseFilter, sortOptions)
 	if err != nil {
 		data.Error = err.Error()
 		return
 	}
 
+	// Group by year and month (existing logic)
 	groupedExpenses, years, err := expensesGroupByYearAndMonth(ctx, userID, expenses, c.storage)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error grouping expenses: %s", err.Error())
@@ -123,12 +131,15 @@ func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWri
 	}
 
 	today := time.Now()
-
 	data.Expenses = groupedExpenses
 	data.Years = years
 	data.Months = months
 	data.CurrentYear = today.Year()
 	data.CurrentMonth = today.Month().String()
+
+	// Pass filter state to template for rendering filter bar
+	data.Filter = expenseFilter
+	data.Sort = sortOptions
 
 	if banner != nil {
 		data.Banner = *banner
@@ -554,55 +565,10 @@ func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.Respon
 
 	c.logger.Info("Expense deleted successfully", "id", id)
 
-	c.expensesHandler(ctx, w, &banner{
+	c.expensesHandler(ctx, w, r, &banner{
 		Icon:    "🔥",
 		Message: "Expense deleted",
 	})
-}
-
-func (c *expenseHandler) expenseSearchHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	userID := userIDFromContext(ctx)
-	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
-	data := expesesViewData{
-		viewBase: base,
-	}
-
-	defer func() {
-		c.templates.Render(w, "pages/expenses/index.html", data)
-	}()
-
-	err := r.ParseForm()
-	if err != nil {
-		data.Error = err.Error()
-		return
-	}
-
-	query := r.FormValue("q")
-	if query == "" {
-		data.Error = errSearchCriteria
-		return
-	}
-
-	expenses, err := c.storage.SearchExpenses(ctx, userID, query)
-	if err != nil {
-		data.Error = errSearchCriteria
-		return
-	}
-
-	groupedExpenses, years, err := expensesGroupByYearAndMonth(ctx, userID, expenses, c.storage)
-	if err != nil {
-		data.Error = fmt.Sprintf("Error grouping expenses: %s", err.Error())
-		return
-	}
-
-	today := time.Now()
-
-	data.Expenses = groupedExpenses
-	data.Years = years
-	data.Months = months
-	data.CurrentYear = today.Year()
-	data.CurrentMonth = today.Month().String()
-	data.Query = query
 }
 
 func (c *expenseHandler) exportExpensesHandler(ctx context.Context, w http.ResponseWriter) {
