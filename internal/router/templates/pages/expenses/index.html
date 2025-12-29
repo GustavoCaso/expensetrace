@@ -3,19 +3,107 @@
 
 {{define "main"}}
   {{ template "expenses/nav" "index" }}
-  
-  {{if gt (len .Banner.Icon) 0}} 
+
+  {{if gt (len .Banner.Icon) 0}}
     {{template "banner" .Banner}}
   {{end}}
+
+  <!-- Filter Bar - Always visible at top -->
+  <form method="GET" action="/expenses" class="filter-bar" style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+          <!-- Description filter -->
+          <div>
+              <label for="description" style="display: block; margin-bottom: 0.25rem; font-weight: bold;">Description</label>
+              <input type="text"
+                     name="description"
+                     id="description"
+                     placeholder="Search..."
+                     style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"
+                     value="{{if .Filter.Description}}{{.Filter.Description}}{{end}}">
+          </div>
+
+          <!-- Source filter -->
+          <div>
+              <label for="source" style="display: block; margin-bottom: 0.25rem; font-weight: bold;">Source</label>
+              <input type="text"
+                     name="source"
+                     id="source"
+                     placeholder="Search..."
+                     style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"
+                     value="{{if .Filter.Source}}{{.Filter.Source}}{{end}}">
+          </div>
+
+          <!-- Amount min filter -->
+          <div>
+              <label for="amount_min" style="display: block; margin-bottom: 0.25rem; font-weight: bold;">Amount Min</label>
+              <input type="number"
+                     name="amount_min"
+                     id="amount_min"
+                     step="0.01"
+                     placeholder="0.00"
+                     style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"
+                     value="{{if .Filter.AmountMin}}{{amountToDollars .Filter.AmountMin}}{{end}}">
+          </div>
+
+          <!-- Amount max filter -->
+          <div>
+              <label for="amount_max" style="display: block; margin-bottom: 0.25rem; font-weight: bold;">Amount Max</label>
+              <input type="number"
+                     name="amount_max"
+                     id="amount_max"
+                     step="0.01"
+                     placeholder="0.00"
+                     style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"
+                     value="{{if .Filter.AmountMax}}{{amountToDollars .Filter.AmountMax}}{{end}}">
+          </div>
+
+          <!-- Date from filter -->
+          <div>
+              <label for="date_from" style="display: block; margin-bottom: 0.25rem; font-weight: bold;">Date From</label>
+              <input type="date"
+                     name="date_from"
+                     id="date_from"
+                     style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"
+                     value="{{if .Filter.DateFrom}}{{formatDate .Filter.DateFrom}}{{end}}">
+          </div>
+
+          <!-- Date to filter -->
+          <div>
+              <label for="date_to" style="display: block; margin-bottom: 0.25rem; font-weight: bold;">Date To</label>
+              <input type="date"
+                     name="date_to"
+                     id="date_to"
+                     style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"
+                     value="{{if .Filter.DateTo}}{{formatDate .Filter.DateTo}}{{end}}">
+          </div>
+
+          <!-- Sort options -->
+          <div>
+              <label for="sort" style="display: block; margin-bottom: 0.25rem; font-weight: bold;">Sort By</label>
+              <select name="sort" id="sort" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                  <option value="date:desc" {{if eq .Sort.String "date:desc"}}selected{{end}}>Date (Newest)</option>
+                  <option value="date:asc" {{if eq .Sort.String "date:asc"}}selected{{end}}>Date (Oldest)</option>
+                  <option value="amount:desc" {{if eq .Sort.String "amount:desc"}}selected{{end}}>Amount (High to Low)</option>
+                  <option value="amount:asc" {{if eq .Sort.String "amount:asc"}}selected{{end}}>Amount (Low to High)</option>
+              </select>
+          </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+          <button type="submit" style="padding: 0.5rem 1rem; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply Filters</button>
+          <a href="/expenses" style="padding: 0.5rem 1rem; background-color: #6c757d; color: white; border-radius: 4px; text-decoration: none; display: inline-block;">Clear All</a>
+      </div>
+  </form>
 
   <form class='search-form'>
     <div class="form-group">
       <input type='search' name='q' required>
     </div>
-    <button 
+    <button
       class="btn-primary"
-      hx-post="/expense/search" 
-      hx-target="#page" 
+      hx-post="/expense/search"
+      hx-target="#page"
       hx-swap="outerHTML"
       type="submit">
       Search
