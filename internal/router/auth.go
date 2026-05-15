@@ -15,7 +15,8 @@ const (
 	sessionCookieName = "session_id"
 	sessionDuration   = 7 * 24 * time.Hour // 7 days
 	minPasswordLength = 8
-	sessionIDBytes    = 16 // Results in 32 hex characters
+	sessionIDBytes    = 16      // Results in 32 hex characters
+	maxFormSize       = 1 << 20 // 1MB
 )
 
 type authHandler struct {
@@ -39,6 +40,7 @@ func (a *authHandler) signupPage(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (a *authHandler) signup(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
@@ -92,11 +94,12 @@ func (a *authHandler) signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set session cookie
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{ //nolint:gosec // Secure flag controlled by EXPENSETRACE_SECURE_COOKIES
 		Name:     sessionCookieName,
 		Value:    sessionID,
 		Expires:  expiresAt,
 		HttpOnly: true,
+		Secure:   a.router.secureCookie,
 		Path:     "/",
 		SameSite: http.SameSiteStrictMode,
 	})
@@ -120,6 +123,7 @@ func (a *authHandler) signinPage(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (a *authHandler) signin(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
@@ -166,11 +170,12 @@ func (a *authHandler) signin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set session cookie
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{ //nolint:gosec // Secure flag controlled by EXPENSETRACE_SECURE_COOKIES
 		Name:     sessionCookieName,
 		Value:    sessionID,
 		Expires:  expiresAt,
 		HttpOnly: true,
+		Secure:   a.router.secureCookie,
 		Path:     "/",
 		SameSite: http.SameSiteStrictMode,
 	})
@@ -190,11 +195,12 @@ func (a *authHandler) signout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Clear cookie
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{ //nolint:gosec // Secure flag controlled by EXPENSETRACE_SECURE_COOKIES
 		Name:     sessionCookieName,
 		Value:    "",
 		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
+		Secure:   a.router.secureCookie,
 		Path:     "/",
 		SameSite: http.SameSiteStrictMode,
 	})

@@ -73,6 +73,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("POST /category/uncategorized/search", func(w http.ResponseWriter, r *http.Request) {
 		data := viewBase{}
+		r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
 		err := r.ParseForm()
 
 		if err != nil {
@@ -260,6 +261,7 @@ func (c *categoryHandler) updateCategoryHandler(
 	}
 
 	// Parse form manually for partial updates
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
 	if formErr := r.ParseForm(); formErr != nil {
 		c.logger.Error("Failed to parse form", "error", formErr)
 		data.Error = fmt.Errorf("invalid form data: %w", formErr).Error()
@@ -525,6 +527,7 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 		}
 	}()
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
 	err := r.ParseForm()
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("error r.ParseForm() %s", err.Error()))
@@ -703,6 +706,7 @@ func (c *categoryHandler) createCategoryHandler(
 	// Initialize with empty category
 	data.Category = storage.EmptyCategory()
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
 	// Parse and validate form using helper
 	formData, err := parseCategoryForm(r)
 	if err != nil {
@@ -820,6 +824,7 @@ func (c *categoryHandler) testCategoryHandler(
 		c.templates.Render(w, "partials/categories/test_category.html", data)
 	}()
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
 	// Parse and validate form using helper
 	formData, err := parseCategoryForm(r)
 	if err != nil {

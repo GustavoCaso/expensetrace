@@ -12,20 +12,21 @@ import (
 )
 
 type router struct {
-	matcher   *matcher.Matcher
-	storage   storage.Storage
-	logger    *logger.Logger
-	templates *templates
-
-	reload bool
+	matcher      *matcher.Matcher
+	storage      storage.Storage
+	logger       *logger.Logger
+	templates    *templates
+	secureCookie bool
+	reload       bool
 }
 
 //nolint:revive // We return the private router struct to allow testing some internal functions
 func New(storage storage.Storage, logger *logger.Logger) (http.Handler, *router) {
 	router := &router{
-		reload:  os.Getenv("EXPENSE_LIVERELOAD") == "true",
-		storage: storage,
-		logger:  logger,
+		reload:       os.Getenv("EXPENSE_LIVERELOAD") == "true",
+		secureCookie: os.Getenv("EXPENSETRACE_SECURE_COOKIES") == "true",
+		storage:      storage,
+		logger:       logger,
 	}
 
 	staticFS, staticFSError := router.parserStaticFiles()

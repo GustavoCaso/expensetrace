@@ -24,7 +24,7 @@ func SetupAuthCookie(
 	if err != nil {
 		t.Fatal("failed to create session")
 	}
-	cookie := &http.Cookie{
+	cookie := &http.Cookie{ //nolint:gosec // test-only cookie, Secure not needed
 		Name:     cookieKey,
 		Value:    sessionID,
 		Expires:  expiresAt,

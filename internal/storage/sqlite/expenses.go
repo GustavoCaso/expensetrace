@@ -114,7 +114,11 @@ func (s *sqliteStorage) InsertExpenses(ctx context.Context, userID int64, expens
 		return 0, err
 	}
 
-	formattedQuery := fmt.Sprintf(query, buffer.String())
+	//nolint:gosec // SQL built from internal template, not user input
+	formattedQuery := fmt.Sprintf(
+		query,
+		buffer.String(),
+	)
 
 	result, err := s.db.ExecContext(ctx, formattedQuery)
 	if err != nil {
@@ -167,7 +171,11 @@ func (s *sqliteStorage) UpdateExpenses(ctx context.Context, userID int64, expens
 		return 0, err
 	}
 
-	formattedQuery := fmt.Sprintf(query, buffer.String())
+	//nolint:gosec // SQL built from internal template, not user input
+	formattedQuery := fmt.Sprintf(
+		query,
+		buffer.String(),
+	)
 
 	result, err := s.db.ExecContext(ctx, formattedQuery)
 	if err != nil {

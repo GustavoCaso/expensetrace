@@ -794,7 +794,7 @@ func TestCreateExpenseHandlerValidationErrors(t *testing.T) {
 				"date":        now.Format("2006-01-02"),
 				"type":        "0",
 			},
-			expectedError: "Source is required",
+			expectedError: sourceIsRequired,
 		},
 		{
 			name: "missing description",
@@ -805,7 +805,7 @@ func TestCreateExpenseHandlerValidationErrors(t *testing.T) {
 				"date":     now.Format("2006-01-02"),
 				"type":     "0",
 			},
-			expectedError: "Description is required",
+			expectedError: descriptionIsRequired,
 		},
 		{
 			name: "missing currency",
@@ -816,7 +816,7 @@ func TestCreateExpenseHandlerValidationErrors(t *testing.T) {
 				"date":        now.Format("2006-01-02"),
 				"type":        "0",
 			},
-			expectedError: "Currency is required",
+			expectedError: currencyIsRequired,
 		},
 		{
 			name: "missing amount",
@@ -827,7 +827,7 @@ func TestCreateExpenseHandlerValidationErrors(t *testing.T) {
 				"date":        now.Format("2006-01-02"),
 				"type":        "0",
 			},
-			expectedError: "Amount is required",
+			expectedError: amountIsRequired,
 		},
 		{
 			name: "invalid amount",

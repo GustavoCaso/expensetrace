@@ -267,7 +267,8 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 	}
 
 	data.Categories = categories
-	newExpense, err := parseExpenseForm(r, 0, data.FormErrors)
+	newExpense, err := parseExpenseForm(r, w, 0, data.FormErrors)
+	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
 
 	if err != nil {
 		c.logger.Error("Failed to parse form", "error", err)
@@ -405,7 +406,8 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		category: category,
 	}
 
-	updatedExpense, err := parseExpenseForm(r, id, data.FormErrors)
+	updatedExpense, err := parseExpenseForm(r, w, id, data.FormErrors)
+	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
 
 	if err != nil {
 		c.logger.Error("Failed to parse form", "error", err)
@@ -452,7 +454,13 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	}
 }
 
-func parseExpenseForm(r *http.Request, id int64, formErrors map[string]string) (pkgStorage.Expense, error) {
+func parseExpenseForm(
+	r *http.Request,
+	w http.ResponseWriter,
+	id int64,
+	formErrors map[string]string,
+) (pkgStorage.Expense, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
 	err := r.ParseForm()
 	if err != nil {
 		return nil, err
@@ -467,24 +475,24 @@ func parseExpenseForm(r *http.Request, id int64, formErrors map[string]string) (
 	categoryIDStr := r.FormValue("category_id")
 
 	if source == "" {
-		formErrors["source"] = "Source is required"
+		formErrors["source"] = sourceIsRequired
 	}
 	if description == "" {
-		formErrors["description"] = "Description is required"
+		formErrors["description"] = descriptionIsRequired
 	}
 	if currency == "" {
-		formErrors["currency"] = "Currency is required"
+		formErrors["currency"] = currencyIsRequired
 	}
 
 	var amount int64
 	var expenseType pkgStorage.ExpenseType
 
 	if amountStr == "" {
-		formErrors["amount"] = "Amount is required"
+		formErrors["amount"] = amountIsRequired
 	} else {
 		amountFloat, parseErr := strconv.ParseFloat(amountStr, 64)
 		if parseErr != nil {
-			formErrors["amount"] = "Invalid amount format"
+			formErrors["amount"] = amountInvalidFormat
 		} else {
 			amount = int64(amountFloat * centsMultiplier)
 		}
@@ -492,20 +500,20 @@ func parseExpenseForm(r *http.Request, id int64, formErrors map[string]string) (
 
 	var date time.Time
 	if dateStr == "" {
-		formErrors["date"] = "Date is required"
+		formErrors["date"] = dateIsRequired
 	} else {
 		date, err = time.Parse("2006-01-02", dateStr)
 		if err != nil {
-			formErrors["date"] = "Invalid date format"
+			formErrors["date"] = dateInvalidFormat
 		}
 	}
 
 	if typeStr == "" {
-		formErrors["type"] = "Type is required"
+		formErrors["type"] = typeIsRequired
 	} else {
 		typeInt, parseErr := strconv.Atoi(typeStr)
 		if parseErr != nil {
-			formErrors["type"] = "Invalid type"
+			formErrors["type"] = typeInvalid
 		} else {
 			expenseType = pkgStorage.ExpenseType(typeInt)
 		}
@@ -523,7 +531,7 @@ func parseExpenseForm(r *http.Request, id int64, formErrors map[string]string) (
 	if categoryIDStr != "" {
 		catID, parseErr := strconv.ParseInt(categoryIDStr, 10, 64)
 		if parseErr != nil {
-			formErrors["category_id"] = "Invalid category"
+			formErrors["category_id"] = categoryInvalid
 			categoryID = nil
 		} else {
 			categoryID = &catID

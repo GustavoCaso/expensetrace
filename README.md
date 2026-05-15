@@ -132,6 +132,7 @@ ExpenseTrace can be configured entirely through environment variables. This make
 ### Security Configuration
 
 - `EXPENSETRACE_TRUSTED_ORIGINS`: Comma-separated list of trusted origins for CSRF protection (e.g., `https://example.com,https://app.example.com`). Only needed if accessing the application from multiple domains.
+- `EXPENSETRACE_SECURE_COOKIES`: Set to `true` to mark session cookies as `Secure` (HTTPS-only). Enable this when running behind HTTPS. Leave unset or `false` for plain HTTP deployments (e.g., local network or Raspberry Pi). (default: `false`)
 
 ### Logging Configuration
 
