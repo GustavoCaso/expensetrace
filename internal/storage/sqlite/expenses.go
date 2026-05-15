@@ -56,6 +56,15 @@ type templateExpense struct {
 //go:embed templates/*
 var content embed.FS
 
+// Add sorting — use hardcoded strings to avoid SQL injection (gosec G202).
+// sort.Field and sort.Direction are validated by filter.parseSort before reaching here.
+var orderClauses = map[string]string{
+	"date:asc":    " ORDER BY date ASC",
+	"date:desc":   " ORDER BY date DESC",
+	"amount:asc":  " ORDER BY amount ASC",
+	"amount:desc": " ORDER BY amount DESC",
+}
+
 func (s *sqliteStorage) GetExpenseByID(ctx context.Context, userID, id int64) (storage.Expense, error) {
 	row := s.db.QueryRowContext(ctx, "SELECT * FROM expenses WHERE id = ? AND user_id = ?", id, userID)
 	return expenseFromRow(row.Scan)
@@ -316,14 +325,6 @@ func (s *sqliteStorage) GetExpensesFiltered(
 		args = append(args, expFilter.DateTo.Unix())
 	}
 
-	// Add sorting — use hardcoded strings to avoid SQL injection (gosec G202).
-	// sort.Field and sort.Direction are validated by filter.parseSort before reaching here.
-	orderClauses := map[string]string{
-		"date:asc":    " ORDER BY date ASC",
-		"date:desc":   " ORDER BY date DESC",
-		"amount:asc":  " ORDER BY amount ASC",
-		"amount:desc": " ORDER BY amount DESC",
-	}
 	key := string(sort.Field) + ":" + string(sort.Direction)
 	if clause, ok := orderClauses[key]; ok {
 		query += clause
