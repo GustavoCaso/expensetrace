@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/util"
@@ -47,6 +48,25 @@ var templateFuncs = template.FuncMap{
 		}
 		euros := float64(cents) / 100 //nolint:mnd // the value is obvious
 		return fmt.Sprintf("%.2f", euros)
+	},
+	"amountToDollars": func(cents *int64) string {
+		if cents == nil {
+			return ""
+		}
+		dollars := float64(*cents) / 100.0 //nolint:mnd // the value is obvious
+		return fmt.Sprintf("%.2f", dollars)
+	},
+	"formatDate": func(t *time.Time) string {
+		if t == nil {
+			return ""
+		}
+		return t.Format("2006-01-02")
+	},
+	"deref": func(s *string) string {
+		if s == nil {
+			return ""
+		}
+		return *s
 	},
 }
 

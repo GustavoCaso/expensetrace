@@ -39,6 +39,7 @@ func (p *profileHandler) updateUsername(w http.ResponseWriter, r *http.Request) 
 	ctx := r.Context()
 	userID := userIDFromContext(ctx)
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
 	if err := r.ParseForm(); err != nil {
 		p.renderError(w, r, err)
 		return
@@ -82,6 +83,7 @@ func (p *profileHandler) updatePassword(w http.ResponseWriter, r *http.Request) 
 	ctx := r.Context()
 	userID := userIDFromContext(ctx)
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
 	if err := r.ParseForm(); err != nil {
 		p.renderError(w, r, errors.New("invalid form data"))
 		return

@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	maxMemory = 32 << 20 // 32MB
+	maxMemory = 5 << 20 // 5MB
 )
 
 type importHandler struct {
@@ -62,7 +62,8 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 		}
 	}()
 
-	err := r.ParseMultipartForm(maxMemory)
+	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
+	err := r.ParseMultipartForm(maxMemory) //nolint:gosec // MaxBytesReader applied above
 	if err != nil {
 		data.Error = fmt.Sprintf("Error parsing form: %s", err.Error())
 		return
@@ -210,6 +211,12 @@ func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter,
 		i.templates.Render(w, "partials/import/mapping-preview.html", data)
 	}()
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
+	if err := r.ParseForm(); err != nil {
+		data.Error = fmt.Sprintf("Error parsing form: %s", err.Error())
+		return
+	}
+
 	sessionID := r.FormValue("import_session_id")
 	if sessionID == "" {
 		data.Error = "Session ID is required"
@@ -224,7 +231,7 @@ func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter,
 
 	source := r.FormValue("source")
 	if source == "" {
-		data.Error = "Source is required"
+		data.Error = sourceIsRequired
 		return
 	}
 
@@ -307,6 +314,12 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 	defer func() {
 		i.templates.Render(w, "partials/import/form.html", data)
 	}()
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
+	if err := r.ParseForm(); err != nil {
+		data.Error = fmt.Sprintf("Error parsing form: %s", err.Error())
+		return
+	}
 
 	sessionID := r.FormValue("import_session_id")
 	if sessionID == "" {

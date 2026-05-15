@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/export"
+	"github.com/GustavoCaso/expensetrace/internal/filter"
 	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
@@ -77,11 +78,7 @@ func (c *expenseHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /expenses", func(w http.ResponseWriter, r *http.Request) {
-		c.expensesHandler(r.Context(), w, nil)
-	})
-
-	mux.HandleFunc("POST /expense/search", func(w http.ResponseWriter, r *http.Request) {
-		c.expenseSearchHandler(r.Context(), w, r)
+		c.expensesHandler(r.Context(), w, r, nil)
 	})
 
 	mux.HandleFunc("GET /expenses/export", func(w http.ResponseWriter, r *http.Request) {
@@ -91,15 +88,16 @@ func (c *expenseHandler) RegisterRoutes(mux *http.ServeMux) {
 
 type expesesViewData struct {
 	viewBase
-	Query        string
 	Expenses     expensesByYear
 	Years        []int
 	Months       []string
 	CurrentYear  int
 	CurrentMonth string
+	Filter       *filter.ExpenseFilter
+	Sort         *filter.SortOptions
 }
 
-func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWriter, banner *banner) {
+func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, banner *banner) {
 	userID := userIDFromContext(ctx)
 	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
 	data := expesesViewData{
@@ -110,12 +108,21 @@ func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWri
 		c.templates.Render(w, "pages/expenses/index.html", data)
 	}()
 
-	expenses, err := c.storage.GetAllExpenseTypes(ctx, userID)
+	// Parse filters from URL
+	expenseFilter, sortOptions, err := filter.ParseExpenseFilters(r.URL.Query())
+	if err != nil {
+		data.Error = fmt.Sprintf("Invalid filters: %s", err.Error())
+		return
+	}
+
+	// Get filtered expenses
+	expenses, err := c.storage.GetExpensesFiltered(ctx, userID, expenseFilter, sortOptions)
 	if err != nil {
 		data.Error = err.Error()
 		return
 	}
 
+	// Group by year and month (existing logic)
 	groupedExpenses, years, err := expensesGroupByYearAndMonth(ctx, userID, expenses, c.storage)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error grouping expenses: %s", err.Error())
@@ -123,12 +130,14 @@ func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWri
 	}
 
 	today := time.Now()
-
 	data.Expenses = groupedExpenses
 	data.Years = years
 	data.Months = months
 	data.CurrentYear = today.Year()
 	data.CurrentMonth = today.Month().String()
+
+	data.Filter = expenseFilter
+	data.Sort = sortOptions
 
 	if banner != nil {
 		data.Banner = *banner
@@ -258,7 +267,8 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 	}
 
 	data.Categories = categories
-	newExpense, err := parseExpenseForm(r, 0, data.FormErrors)
+	newExpense, err := parseExpenseForm(r, w, 0, data.FormErrors)
+	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
 
 	if err != nil {
 		c.logger.Error("Failed to parse form", "error", err)
@@ -396,7 +406,8 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		category: category,
 	}
 
-	updatedExpense, err := parseExpenseForm(r, id, data.FormErrors)
+	updatedExpense, err := parseExpenseForm(r, w, id, data.FormErrors)
+	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
 
 	if err != nil {
 		c.logger.Error("Failed to parse form", "error", err)
@@ -443,7 +454,13 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	}
 }
 
-func parseExpenseForm(r *http.Request, id int64, formErrors map[string]string) (pkgStorage.Expense, error) {
+func parseExpenseForm(
+	r *http.Request,
+	w http.ResponseWriter,
+	id int64,
+	formErrors map[string]string,
+) (pkgStorage.Expense, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
 	err := r.ParseForm()
 	if err != nil {
 		return nil, err
@@ -458,24 +475,24 @@ func parseExpenseForm(r *http.Request, id int64, formErrors map[string]string) (
 	categoryIDStr := r.FormValue("category_id")
 
 	if source == "" {
-		formErrors["source"] = "Source is required"
+		formErrors["source"] = sourceIsRequired
 	}
 	if description == "" {
-		formErrors["description"] = "Description is required"
+		formErrors["description"] = descriptionIsRequired
 	}
 	if currency == "" {
-		formErrors["currency"] = "Currency is required"
+		formErrors["currency"] = currencyIsRequired
 	}
 
 	var amount int64
 	var expenseType pkgStorage.ExpenseType
 
 	if amountStr == "" {
-		formErrors["amount"] = "Amount is required"
+		formErrors["amount"] = amountIsRequired
 	} else {
 		amountFloat, parseErr := strconv.ParseFloat(amountStr, 64)
 		if parseErr != nil {
-			formErrors["amount"] = "Invalid amount format"
+			formErrors["amount"] = amountInvalidFormat
 		} else {
 			amount = int64(amountFloat * centsMultiplier)
 		}
@@ -483,20 +500,20 @@ func parseExpenseForm(r *http.Request, id int64, formErrors map[string]string) (
 
 	var date time.Time
 	if dateStr == "" {
-		formErrors["date"] = "Date is required"
+		formErrors["date"] = dateIsRequired
 	} else {
 		date, err = time.Parse("2006-01-02", dateStr)
 		if err != nil {
-			formErrors["date"] = "Invalid date format"
+			formErrors["date"] = dateInvalidFormat
 		}
 	}
 
 	if typeStr == "" {
-		formErrors["type"] = "Type is required"
+		formErrors["type"] = typeIsRequired
 	} else {
 		typeInt, parseErr := strconv.Atoi(typeStr)
 		if parseErr != nil {
-			formErrors["type"] = "Invalid type"
+			formErrors["type"] = typeInvalid
 		} else {
 			expenseType = pkgStorage.ExpenseType(typeInt)
 		}
@@ -514,7 +531,7 @@ func parseExpenseForm(r *http.Request, id int64, formErrors map[string]string) (
 	if categoryIDStr != "" {
 		catID, parseErr := strconv.ParseInt(categoryIDStr, 10, 64)
 		if parseErr != nil {
-			formErrors["category_id"] = "Invalid category"
+			formErrors["category_id"] = categoryInvalid
 			categoryID = nil
 		} else {
 			categoryID = &catID
@@ -554,55 +571,10 @@ func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.Respon
 
 	c.logger.Info("Expense deleted successfully", "id", id)
 
-	c.expensesHandler(ctx, w, &banner{
+	c.expensesHandler(ctx, w, r, &banner{
 		Icon:    "🔥",
 		Message: "Expense deleted",
 	})
-}
-
-func (c *expenseHandler) expenseSearchHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	userID := userIDFromContext(ctx)
-	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
-	data := expesesViewData{
-		viewBase: base,
-	}
-
-	defer func() {
-		c.templates.Render(w, "pages/expenses/index.html", data)
-	}()
-
-	err := r.ParseForm()
-	if err != nil {
-		data.Error = err.Error()
-		return
-	}
-
-	query := r.FormValue("q")
-	if query == "" {
-		data.Error = errSearchCriteria
-		return
-	}
-
-	expenses, err := c.storage.SearchExpenses(ctx, userID, query)
-	if err != nil {
-		data.Error = errSearchCriteria
-		return
-	}
-
-	groupedExpenses, years, err := expensesGroupByYearAndMonth(ctx, userID, expenses, c.storage)
-	if err != nil {
-		data.Error = fmt.Sprintf("Error grouping expenses: %s", err.Error())
-		return
-	}
-
-	today := time.Now()
-
-	data.Expenses = groupedExpenses
-	data.Years = years
-	data.Months = months
-	data.CurrentYear = today.Year()
-	data.CurrentMonth = today.Month().String()
-	data.Query = query
 }
 
 func (c *expenseHandler) exportExpensesHandler(ctx context.Context, w http.ResponseWriter) {

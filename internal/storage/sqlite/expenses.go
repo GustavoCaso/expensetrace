@@ -12,6 +12,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/filter"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
@@ -54,6 +55,15 @@ type templateExpense struct {
 //
 //go:embed templates/*
 var content embed.FS
+
+// Add sorting — use hardcoded strings to avoid SQL injection (gosec G202).
+// sort.Field and sort.Direction are validated by filter.parseSort before reaching here.
+var orderClauses = map[string]string{
+	"date:asc":    " ORDER BY date ASC",
+	"date:desc":   " ORDER BY date DESC",
+	"amount:asc":  " ORDER BY amount ASC",
+	"amount:desc": " ORDER BY amount DESC",
+}
 
 func (s *sqliteStorage) GetExpenseByID(ctx context.Context, userID, id int64) (storage.Expense, error) {
 	row := s.db.QueryRowContext(ctx, "SELECT * FROM expenses WHERE id = ? AND user_id = ?", id, userID)
@@ -113,7 +123,11 @@ func (s *sqliteStorage) InsertExpenses(ctx context.Context, userID int64, expens
 		return 0, err
 	}
 
-	formattedQuery := fmt.Sprintf(query, buffer.String())
+	//nolint:gosec // SQL built from internal template, not user input
+	formattedQuery := fmt.Sprintf(
+		query,
+		buffer.String(),
+	)
 
 	result, err := s.db.ExecContext(ctx, formattedQuery)
 	if err != nil {
@@ -166,7 +180,11 @@ func (s *sqliteStorage) UpdateExpenses(ctx context.Context, userID int64, expens
 		return 0, err
 	}
 
-	formattedQuery := fmt.Sprintf(query, buffer.String())
+	//nolint:gosec // SQL built from internal template, not user input
+	formattedQuery := fmt.Sprintf(
+		query,
+		buffer.String(),
+	)
 
 	result, err := s.db.ExecContext(ctx, formattedQuery)
 	if err != nil {
@@ -267,6 +285,61 @@ func (s *sqliteStorage) GetExpensesByCategory(
 	return extractExpensesFromRows(rows)
 }
 
+func (s *sqliteStorage) GetExpensesFiltered(
+	ctx context.Context,
+	userID int64,
+	expFilter *filter.ExpenseFilter,
+	sort *filter.SortOptions,
+) ([]storage.Expense, error) {
+	query := "SELECT * FROM expenses WHERE user_id = ?"
+	args := []any{userID}
+
+	// Add filters dynamically
+	if expFilter.Description != nil {
+		query += " AND description LIKE ?"
+		args = append(args, "%"+*expFilter.Description+"%")
+	}
+
+	if expFilter.Source != nil {
+		query += " AND source LIKE ?"
+		args = append(args, "%"+*expFilter.Source+"%")
+	}
+
+	if expFilter.AmountMin != nil {
+		query += " AND amount >= ?"
+		args = append(args, *expFilter.AmountMin)
+	}
+
+	if expFilter.AmountMax != nil {
+		query += " AND amount <= ?"
+		args = append(args, *expFilter.AmountMax)
+	}
+
+	if expFilter.DateFrom != nil {
+		query += " AND date >= ?"
+		args = append(args, expFilter.DateFrom.Unix())
+	}
+
+	if expFilter.DateTo != nil {
+		query += " AND date <= ?"
+		args = append(args, expFilter.DateTo.Unix())
+	}
+
+	key := string(sort.Field) + ":" + string(sort.Direction)
+	if clause, ok := orderClauses[key]; ok {
+		query += clause
+	} else {
+		query += " ORDER BY date DESC"
+	}
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return extractExpensesFromRows(rows)
+}
+
 func (s *sqliteStorage) renderTemplate(out io.Writer, templateName string, value any) error {
 	tmpl, err := content.ReadFile(path.Join("templates", templateName))
 	if err != nil {
@@ -314,7 +387,17 @@ func expenseFromRow(scan func(dest ...any) error) (storage.Expense, error) {
 	var categoryID sql.NullInt64
 	var userID int64
 
-	if err := scan(&id, &source, &amount, &description, &expenseType, &date, &currency, &categoryID, &userID); err != nil {
+	if err := scan(
+		&id,
+		&source,
+		&amount,
+		&description,
+		&expenseType,
+		&date,
+		&currency,
+		&categoryID,
+		&userID,
+	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, &storage.NotFoundError{}
 		}
