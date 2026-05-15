@@ -12,7 +12,7 @@ run_web:
 	EXPENSE_LIVERELOAD=true go run cmd/main.go web
 
 lint:
-	golangci-lint run
+	golangci-lint run --fix
 
 format:
 	golangci-lint fmt .

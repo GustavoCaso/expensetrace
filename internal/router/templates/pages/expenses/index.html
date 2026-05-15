@@ -3,29 +3,64 @@
 
 {{define "main"}}
   {{ template "expenses/nav" "index" }}
-  
-  {{if gt (len .Banner.Icon) 0}} 
+
+  {{if gt (len .Banner.Icon) 0}}
     {{template "banner" .Banner}}
   {{end}}
 
-  <form class='search-form'>
-    <div class="form-group">
-      <input type='search' name='q' required>
+  <form method="GET" action="/expenses" class="filter-bar">
+    <div class="filter-grid">
+      <div class="filter-row filter-row-main">
+        <div>
+          <label for="description">Description</label>
+          <input type="text" name="description" id="description" placeholder="Search..."
+                 value="{{if .Filter.Description}}{{deref .Filter.Description}}{{end}}">
+        </div>
+        <div>
+          <label for="source">Source</label>
+          <input type="text" name="source" id="source" placeholder="Search..."
+                 value="{{if .Filter.Source}}{{deref .Filter.Source}}{{end}}">
+        </div>
+        <div>
+          <label for="amount_min">Amount Min</label>
+          <input type="number" name="amount_min" id="amount_min" step="0.01" placeholder="0.00"
+                 value="{{if .Filter.AmountMin}}{{amountToDollars .Filter.AmountMin}}{{end}}">
+        </div>
+        <div>
+          <label for="amount_max">Amount Max</label>
+          <input type="number" name="amount_max" id="amount_max" step="0.01" placeholder="0.00"
+                 value="{{if .Filter.AmountMax}}{{amountToDollars .Filter.AmountMax}}{{end}}">
+        </div>
+      </div>
+      <div class="filter-row filter-row-dates">
+        <div>
+          <label for="date_from">Date From</label>
+          <input type="date" name="date_from" id="date_from"
+                 value="{{if .Filter.DateFrom}}{{formatDate .Filter.DateFrom}}{{end}}">
+        </div>
+        <div>
+          <label for="date_to">Date To</label>
+          <input type="date" name="date_to" id="date_to"
+                 value="{{if .Filter.DateTo}}{{formatDate .Filter.DateTo}}{{end}}">
+        </div>
+        <div>
+          <label for="sort">Sort By</label>
+          <select name="sort" id="sort">
+            <option value="date:desc" {{if eq .Sort.String "date:desc"}}selected{{end}}>Date (Newest)</option>
+            <option value="date:asc" {{if eq .Sort.String "date:asc"}}selected{{end}}>Date (Oldest)</option>
+            <option value="amount:desc" {{if eq .Sort.String "amount:desc"}}selected{{end}}>Amount (High to Low)</option>
+            <option value="amount:asc" {{if eq .Sort.String "amount:asc"}}selected{{end}}>Amount (Low to High)</option>
+          </select>
+        </div>
+      </div>
     </div>
-    <button 
-      class="btn-primary"
-      hx-post="/expense/search" 
-      hx-target="#page" 
-      hx-swap="outerHTML"
-      type="submit">
-      Search
-    </button>
+    <div class="filter-actions">
+      <button type="submit" class="btn-primary">Apply Filters</button>
+      <a href="/expenses" class="btn-secondary">Clear All</a>
+    </div>
   </form>
 
   {{ if eq (len .Error) 0 }}
-    {{ if gt (len .Query) 0 }}
-    <h2> Results for {{.Query}} </h2>
-    {{ end }}
     <div class="expenses-container">
         {{range $year := .Years}}
           {{$currentYear := (eq $year $.CurrentYear)}}
