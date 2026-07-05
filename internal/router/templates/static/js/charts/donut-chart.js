@@ -69,6 +69,23 @@ export function initializeDonutChart() {
         }
       }
     }
+
+    // Auto-open category if specified via data-open-category
+    const openCategory = expensesCanvas?.getAttribute('data-open-category') || incomeCanvas?.getAttribute('data-open-category');
+    if (openCategory) {
+      if (expensesDonutChart) {
+        const idx = expensesDonutChart.segments.findIndex(s => s.category.name === openCategory);
+        if (idx !== -1) {
+          expensesDonutChart.selectSegment(idx);
+        }
+      }
+      if (incomeDonutChart) {
+        const idx = incomeDonutChart.segments.findIndex(s => s.category.name === openCategory);
+        if (idx !== -1) {
+          incomeDonutChart.selectSegment(idx);
+        }
+      }
+    }
   }
 
   initializeDonutCharts();
@@ -539,8 +556,19 @@ class DonutChart {
         ${this.renderBudgetRemaining(category.budget.remaining)}
         </div >` : '';
 
+    let redirectTo = '';
+    const openMonth = this.canvas?.getAttribute('data-open-month');
+    const openYear = this.canvas?.getAttribute('data-open-year');
+    if (openMonth && openYear) {
+      const rp = new URLSearchParams();
+      rp.set('open_month', openMonth);
+      rp.set('open_year', openYear);
+      rp.set('open_category', category.name);
+      redirectTo = encodeURIComponent('/?' + rp.toString());
+    }
+
     const expensesHtml = category.expenses.map(expense => `
-      <a href="/expense/${expense.id}" class="table-row" >
+      <a href="/expense/${expense.id}${redirectTo ? '?redirect_to=' + redirectTo : ''}" class="table-row" >
         <div class="table-cell">${formatDate(expense.date)}</div>
         <div class="table-cell">${expense.description}</div>
         <div class="table-cell source-column">${expense.source}</div>

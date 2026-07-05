@@ -381,7 +381,8 @@ func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 
 			ensureNoErrorInTemplateResponse(t, fmt.Sprintf("update expense: %s", tt.name), resp.Body)
 
-			if w.Header().Get("Hx-Redirect") != "" {
+			//nolint:canonicalheader //HTMX header
+			if w.Header().Get("HX-Redirect") != "" {
 				t.Error("Should not redirect when there are validation errors")
 			}
 
@@ -905,6 +906,153 @@ func TestCreateExpenseHandlerValidationErrors(t *testing.T) {
 		})
 	}
 }
+func TestIsValidRedirectTarget(t *testing.T) {
+	tests := []struct {
+		input string
+		valid bool
+	}{
+		{"", false},
+		{"/", true},
+		{"/?open_month=1&open_year=2024&open_category=Food", true},
+		{"//evil.com", false},
+		{"//evil.com/path", false},
+		{"http://evil.com", false},
+		{"https://evil.com", false},
+		{"/expenses", true},
+		{"/expense/1", true},
+		{"/%2Fevil.com", false},
+		{"/%2F%2Fevil.com", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := isValidRedirectTarget(tt.input)
+			if got != tt.valid {
+				t.Errorf("isValidRedirectTarget(%q) = %v, want %v", tt.input, got, tt.valid)
+			}
+		})
+	}
+}
+
+func TestExpenseHandlerPassesRedirectTo(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	now := time.Now()
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Test Source", "Test expense", "USD", -123456, now, storage.ChargeType, nil),
+	}
+	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
+	if err != nil {
+		t.Fatalf("Failed to insert expense: %v", err)
+	}
+
+	handler, _ := New(s, logger)
+
+	redirectTo := "/?open_month=1&open_year=2024&open_category=Food"
+	req := httptest.NewRequest(http.MethodGet, "/expense/1?redirect_to="+url.QueryEscape(redirectTo), nil)
+	req.SetPathValue("id", "1")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK; got %v", resp.Status)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "redirect_to") {
+		t.Error("Response should contain redirect_to hidden input")
+	}
+}
+
+func TestUpdateExpenseHandlerRedirectsWithHXRedirect(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	now := time.Now()
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, storage.ChargeType, nil),
+	}
+	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
+	if err != nil {
+		t.Fatalf("Failed to insert expense: %v", err)
+	}
+
+	handler, _ := New(s, logger)
+
+	redirectTo := "/?open_month=1&open_year=2024&open_category=Food"
+	formData := url.Values{}
+	formData.Set("source", "Updated Source")
+	formData.Set("description", "Updated description")
+	formData.Set("amount", "10.00")
+	formData.Set("currency", "EUR")
+	formData.Set("date", now.Format("2006-01-02"))
+	formData.Set("type", "0")
+	formData.Set("redirect_to", redirectTo)
+
+	req := httptest.NewRequest(http.MethodPut, "/expense/1", strings.NewReader(formData.Encode()))
+	req.SetPathValue("id", "1")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Errorf("Expected status 204 NoContent when redirect_to set; got %v", resp.Status)
+	}
+	//nolint:canonicalheader //HTMX header
+	if got := w.Header().Get("HX-Redirect"); got != redirectTo {
+		t.Errorf("Expected HX-Redirect header %q, got %q", redirectTo, got)
+	}
+}
+
+func TestUpdateExpenseHandlerIgnoresInvalidRedirect(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	now := time.Now()
+	expenses := []storage.Expense{
+		storage.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, storage.ChargeType, nil),
+	}
+	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
+	if err != nil {
+		t.Fatalf("Failed to insert expense: %v", err)
+	}
+
+	handler, _ := New(s, logger)
+
+	formData := url.Values{}
+	formData.Set("source", "Updated Source")
+	formData.Set("description", "Updated description")
+	formData.Set("amount", "10.00")
+	formData.Set("currency", "EUR")
+	formData.Set("date", now.Format("2006-01-02"))
+	formData.Set("type", "0")
+	formData.Set("redirect_to", "//evil.com/steal")
+
+	req := httptest.NewRequest(http.MethodPut, "/expense/1", strings.NewReader(formData.Encode()))
+	req.SetPathValue("id", "1")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200 OK for invalid redirect; got %v", resp.Status)
+	}
+	//nolint:canonicalheader //HTMX header
+	if got := w.Header().Get("HX-Redirect"); got != "" {
+		t.Errorf("Expected no HX-Redirect for invalid redirect target, got %q", got)
+	}
+}
+
 func TestCreateExpenseHandlerFormParseError(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
