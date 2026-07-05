@@ -35,7 +35,7 @@ var templateFuncs = template.FuncMap{
 	"divideFloat": func(a int64, b int64) float64 {
 		return float64(a) / float64(b)
 	},
-	"json": func(v interface{}) string {
+	"json": func(v any) string {
 		jsonBytes, err := json.Marshal(v)
 		if err != nil {
 			return "[]"
@@ -79,7 +79,7 @@ type templates struct {
 // even if there is an error we write the error message into `w`
 // If the writer is an http.ResponseWritter even when there is an error,
 // the response woud be 200 as writing to the response writer set the status code to 200.
-func (t *templates) Render(w io.Writer, templateName string, data interface{}) {
+func (t *templates) Render(w io.Writer, templateName string, data any) {
 	temp, ok := t.t[templateName]
 
 	if !ok {

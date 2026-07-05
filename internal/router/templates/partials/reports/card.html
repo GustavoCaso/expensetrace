@@ -34,7 +34,7 @@
               <div class="donut-chart-section">
                 <h3>Expenses</h3>
                 <div class="donut-chart-container">
-                  <canvas id="expensesDonutChart" data-categories="{{.ExpenseCategories | json}}" data-type="expense"></canvas>
+                  <canvas id="expensesDonutChart" data-categories="{{.ExpenseCategories | json}}" data-type="expense" data-open-category="{{.OpenCategory}}" data-open-month="{{.OpenMonth}}" data-open-year="{{.OpenYear}}"></canvas>
                 </div>
               </div>
             {{end}}
@@ -42,7 +42,7 @@
               <div class="donut-chart-section">
                 <h3>Income</h3>
                 <div class="donut-chart-container">
-                  <canvas id="incomeDonutChart" data-categories="{{.IncomeCategories | json}}" data-type="income"></canvas>
+                  <canvas id="incomeDonutChart" data-categories="{{.IncomeCategories | json}}" data-type="income" data-open-category="{{.OpenCategory}}" data-open-month="{{.OpenMonth}}" data-open-year="{{.OpenYear}}"></canvas>
                 </div>
               </div>
             {{end}}

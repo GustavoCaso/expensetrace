@@ -407,11 +407,6 @@ export function initializeBarChart() {
 
   // Initialize the chart
   function initChart() {
-    // Set initial offset to show the most recent months
-    if (chartData.length > config.visibleMonths) {
-      currentOffset = chartData.length - config.visibleMonths;
-    }
-
     // Set canvas dimensions based on container with high-DPI support
     const container = canvas.parentElement;
     const displayWidth = container.clientWidth;
@@ -430,6 +425,22 @@ export function initializeBarChart() {
 
     // Scale the context to ensure correct drawing operations
     ctx.scale(dpr, dpr);
+
+    // Set initial offset to show the most recent months
+    if (chartData.length > config.visibleMonths) {
+      currentOffset = chartData.length - config.visibleMonths;
+    }
+
+    // If open_month/open_year specified, scroll to that month instead
+    const openMonth = canvas.getAttribute('data-open-month');
+    const openYear = canvas.getAttribute('data-open-year');
+    if (openMonth && openYear) {
+      const targetUrl = `/?month=${openMonth}&year=${openYear}`;
+      const idx = chartData.findIndex(p => p.URL === targetUrl);
+      if (idx !== -1) {
+        currentOffset = Math.max(0, Math.min(idx, chartData.length - config.visibleMonths));
+      }
+    }
 
     // Initial draw
     drawChart();

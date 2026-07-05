@@ -205,7 +205,8 @@ func (a *authHandler) signout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	w.Header().Set("Hx-Redirect", "/")
+	//nolint:canonicalheader //HTMX header
+	w.Header().Set("HX-Redirect", "/")
 }
 
 func (a *authHandler) renderSignupError(w http.ResponseWriter, errorMsg string) {

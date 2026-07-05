@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"time"
@@ -213,6 +214,7 @@ type expenseViewData struct {
 	Categories []pkgStorage.Category
 	FormErrors map[string]string
 	Action     string
+	RedirectTo string
 }
 
 func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseWriter) {
@@ -352,6 +354,7 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 
 	data.Expense = expenseview
 	data.Categories = categories
+	data.RedirectTo = r.URL.Query().Get("redirect_to")
 }
 
 func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -367,8 +370,11 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		category: pkgStorage.NewCategory(0, "", "", 0),
 	}
 
+	redirected := false
 	defer func() {
-		c.templates.Render(w, "pages/expenses/edit.html", data)
+		if !redirected {
+			c.templates.Render(w, "pages/expenses/edit.html", data)
+		}
 	}()
 
 	idStr := r.PathValue("id")
@@ -415,7 +421,10 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		return
 	}
 
+	redirectTo := r.FormValue("redirect_to")
+
 	if len(data.FormErrors) > 0 {
+		data.RedirectTo = redirectTo
 		return
 	}
 
@@ -423,16 +432,26 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	if err != nil {
 		c.logger.Error("Failed to update expense", "error", err, "id", id)
 		data.FormErrors["failed to update expense"] = err.Error()
+		data.RedirectTo = redirectTo
 		return
 	}
 
 	if updated != 1 {
 		c.logger.Error("Failed to update expense", "id", id)
 		data.FormErrors["failed to update expense"] = "No record updated"
+		data.RedirectTo = redirectTo
 		return
 	}
 
 	c.logger.Info("Expense updated successfully", "id", id)
+
+	if isValidRedirectTarget(redirectTo) {
+		//nolint:canonicalheader //HTMX header
+		w.Header().Set("HX-Redirect", redirectTo)
+		w.WriteHeader(http.StatusNoContent)
+		redirected = true
+		return
+	}
 
 	var updatedCategory pkgStorage.Category
 	if updatedExpense.CategoryID() != nil {
@@ -452,6 +471,26 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		Icon:    "✅",
 		Message: "Expense Updated",
 	}
+}
+
+// isValidRedirectTarget ensures redirect targets are relative paths only, preventing open redirects.
+// Checks both raw and unescaped paths so /%2Fevil.com is rejected alongside //evil.com.
+func isValidRedirectTarget(target string) bool {
+	if target == "" {
+		return false
+	}
+	u, err := url.Parse(target)
+	if err != nil {
+		return false
+	}
+	if u.Scheme != "" || u.Host != "" {
+		return false
+	}
+	unescaped, err := url.PathUnescape(u.Path)
+	if err != nil {
+		return false
+	}
+	return len(unescaped) > 0 && unescaped[0] == '/' && (len(unescaped) < 2 || unescaped[1] != '/')
 }
 
 func parseExpenseForm(

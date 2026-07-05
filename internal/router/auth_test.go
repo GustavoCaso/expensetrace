@@ -459,9 +459,10 @@ func TestSignoutHandler(t *testing.T) {
 	}
 
 	// Verify HX-Redirect header was set
-	hxRedirect := resp.Header.Get("Hx-Redirect")
+	//nolint:canonicalheader //HTMX header
+	hxRedirect := resp.Header.Get("HX-Redirect")
 	if hxRedirect != "/" {
-		t.Errorf("Expected Hx-Redirect to '/'; got '%s'", hxRedirect)
+		t.Errorf("Expected HX-Redirect to '/'; got '%s'", hxRedirect)
 	}
 
 	// Verify session cookie was cleared

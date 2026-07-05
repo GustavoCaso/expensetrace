@@ -26,8 +26,15 @@ type chartDataPoint struct {
 
 type homeViewData struct {
 	viewBase
-	Report    report.Report
-	ChartData []chartDataPoint
+	ChartData  []chartDataPoint
+	ReportCard reportCardData
+}
+
+type reportCardData struct {
+	report.Report
+	OpenCategory string
+	OpenMonth    int
+	OpenYear     int
 }
 
 type reportHandler struct {
@@ -104,59 +111,59 @@ func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	now := time.Now()
-	var month int
-	var year int
-	var err error
-	useReportTemplate := false
+	selectedYear := now.Year()
+	selectedMonth := int(now.Month())
+	query := r.URL.Query()
 
-	monthQuery := r.URL.Query().Get("month")
-	if monthQuery != "" {
-		if month, err = strconv.Atoi(monthQuery); err != nil {
-			rh.logger.Warn(fmt.Sprintf("error strconv.Atoi with value %s. %s", monthQuery, err.Error()))
-			month = int(now.Month() - 1)
+	// ?month=X&year=Y — HTMX partial swap only
+	if monthQuery := query.Get("month"); monthQuery != "" {
+		if m, err := strconv.Atoi(monthQuery); err == nil {
+			selectedMonth = m
 		}
-		useReportTemplate = true
-	} else {
-		month = int(now.Month() - 1)
-	}
-	yearQuery := r.URL.Query().Get("year")
-	if yearQuery != "" {
-		if year, err = strconv.Atoi(yearQuery); err != nil {
-			rh.logger.Warn(fmt.Sprintf("error strconv.Atoi with value %s. %s", yearQuery, err.Error()))
-			year = now.Year()
+
+		if yearQuery := query.Get("year"); yearQuery != "" {
+			if y, err := strconv.Atoi(yearQuery); err == nil {
+				selectedYear = y
+			}
 		}
-		useReportTemplate = true
-	} else {
-		year = now.Year()
+		reportKey := fmt.Sprintf("%d-%d", selectedYear, selectedMonth)
+		rep := rh.reportsPerUser[userID][reportKey]
+		openCategory := query.Get("open_category")
+		rh.templates.Render(w, "partials/reports/card.html", reportCardData{
+			Report:       rep,
+			OpenCategory: openCategory,
+			OpenMonth:    selectedMonth,
+			OpenYear:     selectedYear,
+		})
+		return
 	}
 
-	var chartData []chartDataPoint
-	if !useReportTemplate {
-		chartData = rh.generateChartData(userID)
+	// Full page — chart + optional pre-rendered card via open_month/open_year/open_category
+	chartData := rh.generateChartData(userID)
+	data.ChartData = chartData
+
+	openCategory := query.Get("open_category")
+
+	if openMonthQuery := query.Get("open_month"); openMonthQuery != "" {
+		if m, err := strconv.Atoi(openMonthQuery); err == nil {
+			selectedMonth = m
+		}
+	}
+	if openYearQuery := query.Get("open_year"); openYearQuery != "" {
+		if y, err := strconv.Atoi(openYearQuery); err == nil {
+			selectedYear = y
+		}
 	}
 
-	if err != nil {
-		data.Error = err.Error()
-	} else {
-		reportKey := fmt.Sprintf("%d-%d", year, month)
-		report := rh.reportsPerUser[userID][reportKey]
-
-		data.Report = report
-		data.ChartData = chartData
+	reportKey := fmt.Sprintf("%d-%d", selectedYear, selectedMonth)
+	data.ReportCard = reportCardData{
+		Report:       rh.reportsPerUser[userID][reportKey],
+		OpenCategory: openCategory,
+		OpenMonth:    selectedMonth,
+		OpenYear:     selectedYear,
 	}
 
-	var template string
-	var renderData interface{}
-
-	if useReportTemplate {
-		template = "partials/reports/card.html"
-		renderData = data.Report
-	} else {
-		template = "pages/reports/index.html"
-		renderData = data
-	}
-
-	rh.templates.Render(w, template, renderData)
+	rh.templates.Render(w, "pages/reports/index.html", data)
 }
 
 func (rh *reportHandler) generateReports(ctx context.Context) {
