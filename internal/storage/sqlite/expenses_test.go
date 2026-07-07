@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 )
 
 func TestExpenseStorage(t *testing.T) {
@@ -14,9 +14,9 @@ func TestExpenseStorage(t *testing.T) {
 
 	// Test creating expenses
 	now := time.Now()
-	testExpenses := []storage.Expense{
-		storage.NewExpense(0, "Test Bank", "Coffee shop", "USD", -500, now, storage.ChargeType, nil),
-		storage.NewExpense(0, "Test Bank", "Salary deposit", "USD", 500000, now, storage.IncomeType, nil),
+	testExpenses := []domain.Expense{
+		domain.NewExpense(0, "Test Bank", "Coffee shop", "USD", -500, now, domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Bank", "Salary deposit", "USD", 500000, now, domain.IncomeType, nil),
 	}
 
 	insertedCount, err := stor.InsertExpenses(context.Background(), user.ID(), testExpenses)
@@ -83,7 +83,7 @@ func TestExpenseStorage(t *testing.T) {
 	}
 
 	// Test update expense
-	updatedExpense := storage.NewExpense(1, "Updated Bank", "Updated coffee", "EUR", -600, now, storage.ChargeType, nil)
+	updatedExpense := domain.NewExpense(1, "Updated Bank", "Updated coffee", "EUR", -600, now, domain.ChargeType, nil)
 	updateCount, err := stor.UpdateExpense(context.Background(), user.ID(), updatedExpense)
 	if err != nil {
 		t.Fatalf("Failed to update expense: %v", err)
@@ -128,8 +128,8 @@ func TestExpenseStorage(t *testing.T) {
 		t.Fatal("Expected error when fetching a non existng expense")
 	}
 
-	if !errors.Is(err, &storage.NotFoundError{}) {
-		t.Fatal("Expected error to be of type storage.NotFoundError")
+	if !errors.Is(err, &domain.NotFoundError{}) {
+		t.Fatal("Expected error to be of type domain.NotFoundError")
 	}
 }
 
@@ -144,28 +144,28 @@ func TestExpenseWithCategories(t *testing.T) {
 
 	// Create expense with category
 	now := time.Now()
-	expenseWithCategory := storage.NewExpense(
+	expenseWithCategory := domain.NewExpense(
 		0,
 		"Test Bank",
 		"Restaurant dinner",
 		"USD",
 		-2500,
 		now,
-		storage.ChargeType,
+		domain.ChargeType,
 		&categoryID,
 	)
-	expenseWithoutCategory := storage.NewExpense(
+	expenseWithoutCategory := domain.NewExpense(
 		0,
 		"Test Bank",
 		"Random purchase",
 		"USD",
 		-1000,
 		now,
-		storage.ChargeType,
+		domain.ChargeType,
 		nil,
 	)
 
-	expenses := []storage.Expense{expenseWithCategory, expenseWithoutCategory}
+	expenses := []domain.Expense{expenseWithCategory, expenseWithoutCategory}
 	_, err = stor.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
 		t.Fatalf("Failed to insert expenses: %v", err)

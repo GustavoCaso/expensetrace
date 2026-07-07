@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	"github.com/GustavoCaso/expensetrace/internal/router/service/auth"
+	"github.com/GustavoCaso/expensetrace/internal/service/auth"
 )
 
 const (
@@ -145,8 +145,7 @@ func (a *authHandler) signout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	//nolint:canonicalheader //HTMX header
-	w.Header().Set("HX-Redirect", "/")
+	w.Header().Set("Hx-Redirect", "/")
 }
 
 func (a *authHandler) renderSignupError(w http.ResponseWriter, errorMsg string) {

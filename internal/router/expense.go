@@ -10,7 +10,6 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/filter"
-	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 var newAction = "new"
@@ -140,8 +139,8 @@ func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseW
 
 	data.Categories = categories
 	data.Expense = &domain.ExpenseView{
-		Expense: pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		Cat:     pkgStorage.NewCategory(0, "", "", 0),
+		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
+		Cat:     domain.NewCategory(0, "", "", 0),
 	}
 }
 
@@ -155,8 +154,8 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 	data.CurrentPage = pageExpenses
 	data.FormErrors = make(map[string]string)
 	data.Expense = &domain.ExpenseView{
-		Expense: pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		Cat:     pkgStorage.NewCategory(0, "", "", 0),
+		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
+		Cat:     domain.NewCategory(0, "", "", 0),
 	}
 
 	defer func() {
@@ -207,8 +206,8 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 	}
 	data.Action = editAction
 	data.Expense = &domain.ExpenseView{
-		Expense: pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		Cat:     pkgStorage.NewCategory(0, "", "", 0),
+		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
+		Cat:     domain.NewCategory(0, "", "", 0),
 	}
 
 	defer func() {
@@ -231,7 +230,7 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 	categories, err := c.storage.GetCategories(ctx, userID)
 	if err != nil {
 		c.logger.Error("Failed to get categories", "error", err)
-		categories = []pkgStorage.Category{}
+		categories = []domain.Category{}
 	}
 
 	data.Expense = expenseView
@@ -248,8 +247,8 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	data.FormErrors = make(map[string]string)
 	data.Action = "edit"
 	data.Expense = &domain.ExpenseView{
-		Expense: pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		Cat:     pkgStorage.NewCategory(0, "", "", 0),
+		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
+		Cat:     domain.NewCategory(0, "", "", 0),
 	}
 
 	redirected := false
@@ -327,8 +326,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	}
 
 	if isValidRedirectTarget(redirectTo) {
-		//nolint:canonicalheader //HTMX header
-		w.Header().Set("HX-Redirect", redirectTo)
+		w.Header().Set("Hx-Redirect", redirectTo)
 		w.WriteHeader(http.StatusNoContent)
 		redirected = true
 		return
@@ -339,7 +337,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		c.logger.Error("Failed to get updated expense", "error", err)
 		updatedExpenseView = &domain.ExpenseView{
 			Expense: updatedExpense,
-			Cat:     pkgStorage.EmptyCategory(),
+			Cat:     domain.EmptyCategory(),
 		}
 	}
 
@@ -357,7 +355,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 func (c *expenseHandler) applyCategoryPatternUpdate(
 	ctx context.Context,
 	userID int64,
-	updatedExpense pkgStorage.Expense,
+	updatedExpense domain.Expense,
 ) error {
 	patternErr := c.categoryService.UpdateCategoryPattern(
 		ctx,
@@ -397,7 +395,7 @@ func parseExpenseForm(
 	w http.ResponseWriter,
 	id int64,
 	formErrors map[string]string,
-) (pkgStorage.Expense, error) {
+) (domain.Expense, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
 	err := r.ParseForm()
 	if err != nil {
@@ -423,7 +421,7 @@ func parseExpenseForm(
 	}
 
 	var amount int64
-	var expenseType pkgStorage.ExpenseType
+	var expenseType domain.ExpenseType
 
 	if amountStr == "" {
 		formErrors["amount"] = amountIsRequired
@@ -453,14 +451,14 @@ func parseExpenseForm(
 		if parseErr != nil {
 			formErrors["type"] = typeInvalid
 		} else {
-			expenseType = pkgStorage.ExpenseType(typeInt)
+			expenseType = domain.ExpenseType(typeInt)
 		}
 	}
 
 	if amount != 0 {
-		if expenseType == pkgStorage.ChargeType && amount > 0 {
+		if expenseType == domain.ChargeType && amount > 0 {
 			amount = -amount
-		} else if expenseType == pkgStorage.IncomeType && amount < 0 {
+		} else if expenseType == domain.IncomeType && amount < 0 {
 			amount = -amount
 		}
 	}
@@ -478,7 +476,7 @@ func parseExpenseForm(
 		categoryID = nil
 	}
 
-	return pkgStorage.NewExpense(id, source, description, currency, amount, date, expenseType, categoryID), nil
+	return domain.NewExpense(id, source, description, currency, amount, date, expenseType, categoryID), nil
 }
 
 func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {

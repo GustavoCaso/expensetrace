@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -106,7 +106,7 @@ func TestSignupHandler(t *testing.T) {
 
 	foundExclude := false
 	for _, category := range categories {
-		if category.Name() == storage.ExcludeCategory {
+		if category.Name() == domain.ExcludeCategory {
 			foundExclude = true
 			break
 		}
@@ -459,8 +459,8 @@ func TestSignoutHandler(t *testing.T) {
 	}
 
 	// Verify HX-Redirect header was set
-	//nolint:canonicalheader //HTMX header
-	hxRedirect := resp.Header.Get("HX-Redirect")
+
+	hxRedirect := resp.Header.Get("Hx-Redirect")
 	if hxRedirect != "/" {
 		t.Errorf("Expected HX-Redirect to '/'; got '%s'", hxRedirect)
 	}

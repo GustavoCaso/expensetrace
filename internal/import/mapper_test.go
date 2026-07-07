@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
-	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 func TestFieldMappingValidate(t *testing.T) {
@@ -92,9 +92,9 @@ func TestApplyMapping(t *testing.T) {
 
 	catFoodID := int64(1)
 	catTransportID := int64(2)
-	categories := []storage.Category{
-		storage.NewCategory(catFoodID, "Food", "restaurant|food|grocery", 0),
-		storage.NewCategory(catTransportID, "Transport", "uber|taxi|transit", 0),
+	categories := []domain.Category{
+		domain.NewCategory(catFoodID, "Food", "restaurant|food|grocery", 0),
+		domain.NewCategory(catTransportID, "Transport", "uber|taxi|transit", 0),
 	}
 	categoryMatcher := matcher.New(categories)
 
@@ -121,7 +121,7 @@ func TestApplyMapping(t *testing.T) {
 	if exp1.Amount() != -5000 {
 		t.Errorf("Expense[0].Amount = %d, want -5000", exp1.Amount())
 	}
-	if exp1.Type() != storage.ChargeType {
+	if exp1.Type() != domain.ChargeType {
 		t.Errorf("Expense[0].Type = %v, want ChargeType", exp1.Type())
 	}
 	if *exp1.CategoryID() != catFoodID {
@@ -137,7 +137,7 @@ func TestApplyMapping(t *testing.T) {
 	if exp3.Amount() != 250000 {
 		t.Errorf("Expense[2].Amount = %d, want 250000", exp3.Amount())
 	}
-	if exp3.Type() != storage.IncomeType {
+	if exp3.Type() != domain.IncomeType {
 		t.Errorf("Expense[2].Type = %v, want IncomeType", exp3.Type())
 	}
 	if exp3.CategoryID() != nil {
@@ -165,7 +165,7 @@ invalid-date,Coffee,-5.00,USD
 		CurrencyColumn:    3,
 	}
 
-	categories := []storage.Category{}
+	categories := []domain.Category{}
 	categoryMatcher := matcher.New(categories)
 
 	result, err := ApplyMapping(parsed, mapping, categoryMatcher)
@@ -272,7 +272,7 @@ func TestApplyMappingInvalidMapping(t *testing.T) {
 		CurrencyColumn:    3,
 	}
 
-	categories := []storage.Category{}
+	categories := []domain.Category{}
 	categoryMatcher := matcher.New(categories)
 
 	_, err = ApplyMapping(parsed, mapping, categoryMatcher)

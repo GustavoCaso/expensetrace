@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/filter"
-	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -17,9 +17,9 @@ func TestList_FiltersByUser(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "coffee", "USD", -500, now, storage.ChargeType, nil),
-		storage.NewExpense(0, "Test Source", "lunch", "USD", -1200, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "coffee", "USD", -500, now, domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Source", "lunch", "USD", -1200, now, domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -49,9 +49,9 @@ func TestGroupByYearAndMonth_GroupsCorrectly(t *testing.T) {
 	}
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, storage.ChargeType, &categoryID),
-		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, domain.ChargeType, &categoryID),
+		domain.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, domain.ChargeType, nil),
 	}
 
 	svc := New(s, logger)
@@ -102,7 +102,7 @@ func TestCreate_InsertsExpense(t *testing.T) {
 
 	svc := New(s, logger)
 
-	newExpense := storage.NewExpense(0, "Test Source", "New expense", "USD", -1000, time.Now(), storage.ChargeType, nil)
+	newExpense := domain.NewExpense(0, "Test Source", "New expense", "USD", -1000, time.Now(), domain.ChargeType, nil)
 
 	created, err := svc.Create(context.Background(), user.ID(), newExpense)
 	if err != nil {
@@ -128,8 +128,8 @@ func TestUpdate_UpdatesFields(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -139,14 +139,14 @@ func TestUpdate_UpdatesFields(t *testing.T) {
 
 	svc := New(s, logger)
 
-	updatedExpense := storage.NewExpense(
+	updatedExpense := domain.NewExpense(
 		1,
 		"Updated Source",
 		"Updated description",
 		"USD",
 		2050,
 		now,
-		storage.IncomeType,
+		domain.IncomeType,
 		nil,
 	)
 
@@ -180,8 +180,8 @@ func TestDelete_RemovesExpense(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "Test expense", "USD", -1000, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Test expense", "USD", -1000, now, domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -207,8 +207,8 @@ func TestExport_WritesCSV(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "Test expense for export", "USD", -1000, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Test expense for export", "USD", -1000, now, domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)

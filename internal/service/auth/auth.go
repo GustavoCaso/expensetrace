@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/util"
@@ -81,7 +82,7 @@ func (s *Service) Signup(
 	}
 
 	// Create default Exclude category for new user
-	_, excludeErr := s.storage.CreateCategory(ctx, user.ID(), storage.ExcludeCategory, "$a", 0)
+	_, excludeErr := s.storage.CreateCategory(ctx, user.ID(), domain.ExcludeCategory, "$a", 0)
 	if excludeErr != nil {
 		s.logger.Error("Failed to create exclude category for new user", "error", excludeErr, "user_id", user.ID())
 	}
@@ -103,7 +104,7 @@ func (s *Service) Signin(
 
 	user, getErr := s.storage.GetUserByUsername(ctx, username)
 	if getErr != nil {
-		var notFoundErr *storage.NotFoundError
+		var notFoundErr *domain.NotFoundError
 		if errors.As(getErr, &notFoundErr) {
 			//nolint:staticcheck // user-facing validation message
 			return "", time.Time{}, errors.New("Invalid username or password"), nil

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -20,9 +20,9 @@ func TestGenerate_BuildsMonthlyReportsBackToFirstExpense(t *testing.T) {
 	now := time.Now()
 	twoMonthsAgo := now.AddDate(0, -2, 0)
 
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "current month expense", "USD", -1000, now, storage.ChargeType, nil),
-		storage.NewExpense(0, "Test Source", "old expense", "USD", -2000, twoMonthsAgo, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "current month expense", "USD", -1000, now, domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Source", "old expense", "USD", -2000, twoMonthsAgo, domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -69,9 +69,9 @@ func TestChartData_OrdersOldestFirst(t *testing.T) {
 	now := time.Now()
 	twoMonthsAgo := now.AddDate(0, -2, 0)
 
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "current month expense", "USD", -1000, now, storage.ChargeType, nil),
-		storage.NewExpense(0, "Test Source", "old expense", "USD", -2000, twoMonthsAgo, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "current month expense", "USD", -1000, now, domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Source", "old expense", "USD", -2000, twoMonthsAgo, domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -110,8 +110,8 @@ func TestForMonth_ReturnsCachedReport(t *testing.T) {
 
 	now := time.Now()
 
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "current month expense", "USD", -1000, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "current month expense", "USD", -1000, now, domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)

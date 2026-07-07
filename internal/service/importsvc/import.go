@@ -11,6 +11,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	importUtil "github.com/GustavoCaso/expensetrace/internal/import"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
@@ -133,7 +134,7 @@ func (s *Service) Preview(filename string, r io.Reader) (
 // mapping-preview step after applying a field mapping to an import session.
 type MappingApplication struct {
 	Headers         []string
-	PreviewExpenses []storage.Expense
+	PreviewExpenses []domain.Expense
 	TotalRows       int
 	Errors          []string
 }
@@ -161,7 +162,7 @@ func (s *Service) ApplyMapping(
 
 	previewCount := min(previewExpenseCount, len(result.Expenses))
 
-	previewExpenses := make([]storage.Expense, previewCount)
+	previewExpenses := make([]domain.Expense, previewCount)
 	for i := range previewCount {
 		previewExpenses[i] = result.Expenses[i]
 	}

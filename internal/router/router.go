@@ -10,12 +10,12 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
-	"github.com/GustavoCaso/expensetrace/internal/router/service/auth"
-	"github.com/GustavoCaso/expensetrace/internal/router/service/category"
-	"github.com/GustavoCaso/expensetrace/internal/router/service/expense"
-	"github.com/GustavoCaso/expensetrace/internal/router/service/importsvc"
-	"github.com/GustavoCaso/expensetrace/internal/router/service/profile"
-	"github.com/GustavoCaso/expensetrace/internal/router/service/report"
+	"github.com/GustavoCaso/expensetrace/internal/service/auth"
+	"github.com/GustavoCaso/expensetrace/internal/service/category"
+	"github.com/GustavoCaso/expensetrace/internal/service/expense"
+	"github.com/GustavoCaso/expensetrace/internal/service/importsvc"
+	"github.com/GustavoCaso/expensetrace/internal/service/profile"
+	"github.com/GustavoCaso/expensetrace/internal/service/report"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 

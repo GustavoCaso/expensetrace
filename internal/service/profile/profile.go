@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
@@ -49,7 +50,7 @@ func (s *Service) UpdateUsername(
 		return errors.New("username already exists"), nil
 	}
 
-	var notFoundErr *storage.NotFoundError
+	var notFoundErr *domain.NotFoundError
 	if !errors.As(getErr, &notFoundErr) {
 		s.logger.Error("Failed to check username", "error", getErr)
 		return errors.New("internal Server Error"), nil

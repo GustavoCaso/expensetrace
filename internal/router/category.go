@@ -9,8 +9,7 @@ import (
 	"strconv"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	"github.com/GustavoCaso/expensetrace/internal/router/service/category"
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/service/category"
 )
 
 const errSearchCriteria = "You must provide a search criteria"
@@ -33,7 +32,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 		data := domain.CategoryViewData{
 			ViewBase: base,
 			Action:   newAction,
-			Category: storage.EmptyCategory(),
+			Category: domain.EmptyCategory(),
 		}
 		c.templates.Render(w, "pages/categories/new.html", data)
 	})
@@ -166,7 +165,7 @@ func (c *categoryHandler) updateCategoryHandler(
 		ViewBase: base,
 		Action:   editAction,
 	}
-	data.Category = storage.EmptyCategory()
+	data.Category = domain.EmptyCategory()
 
 	defer func() {
 		if err != nil {
@@ -378,7 +377,7 @@ func (c *categoryHandler) createCategoryHandler(
 	}()
 
 	// Initialize with empty category
-	data.Category = storage.EmptyCategory()
+	data.Category = domain.EmptyCategory()
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
 	// Parse and validate form using helper
@@ -390,7 +389,7 @@ func (c *categoryHandler) createCategoryHandler(
 	}
 
 	// Store parsed values in category for re-rendering
-	data.Category = storage.NewCategory(0, formData.Name, formData.Pattern, formData.MonthlyBudget)
+	data.Category = domain.NewCategory(0, formData.Name, formData.Pattern, formData.MonthlyBudget)
 
 	_, matched, createErr := c.categoryService.Create(ctx, userID, *formData)
 	if createErr != nil {
@@ -443,7 +442,7 @@ func (c *categoryHandler) testCategoryHandler(
 	}
 
 	// Store parsed values in category for re-rendering
-	data.Category = storage.NewCategory(0, formData.Name, formData.Pattern, formData.MonthlyBudget)
+	data.Category = domain.NewCategory(0, formData.Name, formData.Pattern, formData.MonthlyBudget)
 
 	matched, testErr := c.categoryService.Test(ctx, userID, formData.Pattern)
 	if testErr != nil {

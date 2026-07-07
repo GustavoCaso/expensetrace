@@ -1,9 +1,5 @@
 package domain
 
-import (
-	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
-)
-
 // PreviewData is the view model rendered by the import preview partial.
 type PreviewData struct {
 	ViewBase
@@ -19,7 +15,7 @@ type MappingData struct {
 	ViewBase
 	ImportSessionID string
 	Headers         []string
-	PreviewExpenses []pkgStorage.Expense
+	PreviewExpenses []Expense
 	TotalRows       int
 	Errors          []string
 }

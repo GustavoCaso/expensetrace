@@ -7,8 +7,8 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
-	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -110,11 +110,11 @@ CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,ATM Withdrawal,100.00,2.5
 			s, user := testutil.SetupTestStorage(t, logger)
 
 			// Create test categories
-			categories := []storage.Category{
-				storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
-				storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
-				storage.NewCategory(3, "Shopping", "amazon|purchase", 0),
-				storage.NewCategory(4, "Cash", "atm|withdrawal", 0),
+			categories := []domain.Category{
+				domain.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+				domain.NewCategory(2, "Transport", "uber|taxi|transit", 0),
+				domain.NewCategory(3, "Shopping", "amazon|purchase", 0),
+				domain.NewCategory(4, "Cash", "atm|withdrawal", 0),
 			}
 
 			for _, c := range categories {
@@ -164,9 +164,9 @@ CHARGE,Current,2024-01-01 10:00:00,2024-01-01 10:01:00,ATM Withdrawal,100.00,2.5
 				}
 
 				// Verify expense type based on amount
-				expectedType := storage.ChargeType
+				expectedType := domain.ChargeType
 				if expectedAmount >= 0 {
-					expectedType = storage.IncomeType
+					expectedType = domain.IncomeType
 				}
 				if expenses[i].Type() != expectedType {
 					t.Errorf("Expense[%d].Type = %v, want %v", i, expenses[i].Type(), expectedType)
@@ -181,9 +181,9 @@ func TestImportJSON(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	// Create test categories
-	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
+	categories := []domain.Category{
+		domain.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+		domain.NewCategory(2, "Transport", "uber|taxi|transit", 0),
 	}
 
 	for _, c := range categories {
@@ -252,7 +252,7 @@ func TestImportJSON(t *testing.T) {
 	if expenses[0].Amount() != -123456 {
 		t.Errorf("Expense[0].Amount = %v, want -123456", expenses[0].Amount())
 	}
-	if expenses[0].Type() != storage.ChargeType {
+	if expenses[0].Type() != domain.ChargeType {
 		t.Errorf("Expense[0].Type = %v, want ChargeType", expenses[0].Type())
 	}
 	if expenses[0].Currency() != "USD" {
@@ -277,7 +277,7 @@ func TestImportJSON(t *testing.T) {
 	if expenses[2].Amount() != 50000000 {
 		t.Errorf("Expense[2].Amount = %v, want 50000000", expenses[2].Amount())
 	}
-	if expenses[2].Type() != storage.IncomeType {
+	if expenses[2].Type() != domain.IncomeType {
 		t.Errorf("Expense[2].Type = %v, want IncomeType", expenses[2].Type())
 	}
 }
@@ -314,9 +314,9 @@ CHARGE,Current,invalid-date,2024-01-01 10:01:00,Restaurant bill,1234.56,0.00,USD
 			s, user := testutil.SetupTestStorage(t, logger)
 
 			// Create test categories
-			categories := []storage.Category{
-				storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
-				storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
+			categories := []domain.Category{
+				domain.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+				domain.NewCategory(2, "Transport", "uber|taxi|transit", 0),
 			}
 			matcher := matcher.New(categories)
 

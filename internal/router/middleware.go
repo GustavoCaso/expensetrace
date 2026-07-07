@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
@@ -102,7 +103,7 @@ func authMiddleware(router *router, s storage.Storage, logger *logger.Logger, ne
 		// Get session from database
 		session, err := s.GetSession(r.Context(), cookie.Value)
 		if err != nil {
-			var notFoundErr *storage.NotFoundError
+			var notFoundErr *domain.NotFoundError
 			if errors.As(err, &notFoundErr) {
 				// Session not found or expired, redirect to signin
 				http.Redirect(w, r, "/signin", http.StatusSeeOther)

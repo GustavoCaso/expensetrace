@@ -32,7 +32,7 @@ func (s *Service) List(
 	userID int64,
 	f *filter.ExpenseFilter,
 	sortOpts *filter.SortOptions,
-) ([]storage.Expense, error) {
+) ([]domain.Expense, error) {
 	expenses, err := s.storage.GetExpensesFiltered(ctx, userID, f, sortOpts)
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("error GetExpensesFiltered %s", err.Error()))
@@ -46,18 +46,18 @@ func (s *Service) List(
 func (s *Service) GroupByYearAndMonth(
 	ctx context.Context,
 	userID int64,
-	expenses []storage.Expense,
+	expenses []domain.Expense,
 ) (domain.ExpensesByYear, []int, error) {
 	groupedExpenses := domain.ExpensesByYear{}
 	years := []int{}
 
 	for _, exp := range expenses {
-		var category storage.Category
+		var category domain.Category
 
 		if exp.CategoryID() != nil {
 			c, categoryErr := s.storage.GetCategory(ctx, userID, *exp.CategoryID())
 			if categoryErr != nil {
-				if !errors.Is(categoryErr, &storage.NotFoundError{}) {
+				if !errors.Is(categoryErr, &domain.NotFoundError{}) {
 					s.logger.Error(fmt.Sprintf("error GetCategory %s", categoryErr.Error()))
 					return groupedExpenses, years, categoryErr
 				}
@@ -107,7 +107,7 @@ func (s *Service) GroupByYearAndMonth(
 }
 
 // Get fetches an expense along with its category (a zero-value
-// storage.Category if the expense has no category set), returned as a
+// domain.Category if the expense has no category set), returned as a
 // domain.ExpenseView ready for rendering.
 func (s *Service) Get(ctx context.Context, userID, id int64) (*domain.ExpenseView, error) {
 	exp, err := s.storage.GetExpenseByID(ctx, userID, id)
@@ -116,7 +116,7 @@ func (s *Service) Get(ctx context.Context, userID, id int64) (*domain.ExpenseVie
 		return nil, err
 	}
 
-	category := storage.EmptyCategory()
+	category := domain.EmptyCategory()
 	if exp.CategoryID() != nil {
 		cat, categoryErr := s.storage.GetCategory(ctx, userID, *exp.CategoryID())
 		if categoryErr != nil {
@@ -133,8 +133,8 @@ func (s *Service) Get(ctx context.Context, userID, id int64) (*domain.ExpenseVie
 }
 
 // Create inserts a new expense.
-func (s *Service) Create(ctx context.Context, userID int64, e storage.Expense) (storage.Expense, error) {
-	created, err := s.storage.InsertExpenses(ctx, userID, []storage.Expense{e})
+func (s *Service) Create(ctx context.Context, userID int64, e domain.Expense) (domain.Expense, error) {
+	created, err := s.storage.InsertExpenses(ctx, userID, []domain.Expense{e})
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("error InsertExpenses %s", err.Error()))
 		return nil, err
@@ -149,7 +149,7 @@ func (s *Service) Create(ctx context.Context, userID int64, e storage.Expense) (
 }
 
 // Update updates an expense's fields.
-func (s *Service) Update(ctx context.Context, userID int64, e storage.Expense) (int64, error) {
+func (s *Service) Update(ctx context.Context, userID int64, e domain.Expense) (int64, error) {
 	updated, err := s.storage.UpdateExpense(ctx, userID, e)
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("error UpdateExpense %s", err.Error()))

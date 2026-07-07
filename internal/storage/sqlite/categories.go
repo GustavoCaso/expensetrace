@@ -6,22 +6,22 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 )
 
-func (s *sqliteStorage) GetCategories(ctx context.Context, userID int64) ([]storage.Category, error) {
+func (s *sqliteStorage) GetCategories(ctx context.Context, userID int64) ([]domain.Category, error) {
 	rows, err := s.db.QueryContext(ctx, "SELECT * FROM categories WHERE user_id = ?", userID)
 	if err != nil {
-		return []storage.Category{}, err
+		return []domain.Category{}, err
 	}
 
 	if rows.Err() != nil {
-		return []storage.Category{}, rows.Err()
+		return []domain.Category{}, rows.Err()
 	}
 
 	defer rows.Close()
 
-	categories := []storage.Category{}
+	categories := []domain.Category{}
 
 	for rows.Next() {
 		category, categoryErr := categoryFromRow(rows.Scan)
@@ -36,16 +36,16 @@ func (s *sqliteStorage) GetCategories(ctx context.Context, userID int64) ([]stor
 	return categories, nil
 }
 
-func (s *sqliteStorage) GetCategory(ctx context.Context, userID, categoryID int64) (storage.Category, error) {
+func (s *sqliteStorage) GetCategory(ctx context.Context, userID, categoryID int64) (domain.Category, error) {
 	row := s.db.QueryRowContext(ctx, "SELECT * FROM categories WHERE id=? AND user_id = ?", categoryID, userID)
 	return categoryFromRow(row.Scan)
 }
 
-func (s *sqliteStorage) GetExcludeCategory(ctx context.Context, userID int64) (storage.Category, error) {
+func (s *sqliteStorage) GetExcludeCategory(ctx context.Context, userID int64) (domain.Category, error) {
 	row := s.db.QueryRowContext(
 		ctx,
 		"SELECT * FROM categories WHERE name=? AND user_id = ?",
-		storage.ExcludeCategory,
+		domain.ExcludeCategory,
 		userID,
 	)
 	return categoryFromRow(row.Scan)
@@ -99,7 +99,7 @@ func (s *sqliteStorage) DeleteCategories(ctx context.Context, userID int64) (int
 	excludeRow := tx.QueryRowContext(
 		ctx,
 		"SELECT * FROM categories WHERE name=? AND user_id = ?",
-		storage.ExcludeCategory,
+		domain.ExcludeCategory,
 		userID,
 	)
 	excludeCategory, excludeErr := categoryFromRow(excludeRow.Scan)
@@ -169,7 +169,7 @@ func (s *sqliteStorage) DeleteCategory(ctx context.Context, userID, categoryID i
 	return result.RowsAffected()
 }
 
-func categoryFromRow(scan func(dest ...any) error) (storage.Category, error) {
+func categoryFromRow(scan func(dest ...any) error) (domain.Category, error) {
 	var id int64
 	var name, pattern string
 	var userID int64
@@ -177,10 +177,10 @@ func categoryFromRow(scan func(dest ...any) error) (storage.Category, error) {
 
 	if err := scan(&id, &name, &pattern, &userID, &monthlyBudget); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, &storage.NotFoundError{}
+			return nil, &domain.NotFoundError{}
 		}
 		return nil, err
 	}
 
-	return storage.NewCategory(id, name, pattern, monthlyBudget), nil
+	return domain.NewCategory(id, name, pattern, monthlyBudget), nil
 }

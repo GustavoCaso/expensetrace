@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/router"
-	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -25,59 +25,59 @@ func TestFilteringEndToEnd(t *testing.T) {
 	ctx := context.Background()
 
 	// Insert diverse test data
-	expenses := []storage.Expense{
+	expenses := []domain.Expense{
 		// Coffee expenses on visa
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"visa",
 			"Starbucks coffee",
 			"USD",
 			-550,
 			time.Date(2024, 1, 15, 10, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"visa",
 			"Local cafe coffee",
 			"USD",
 			-450,
 			time.Date(2024, 1, 20, 9, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 		// Lunch on mastercard
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"mastercard",
 			"Restaurant lunch",
 			"USD",
 			-1500,
 			time.Date(2024, 1, 18, 12, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 		// Grocery on visa (different month)
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"visa",
 			"Grocery shopping",
 			"USD",
 			-8000,
 			time.Date(2024, 2, 5, 14, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 		// Income
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"employer",
 			"Salary",
 			"USD",
 			500000,
 			time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-			storage.IncomeType,
+			domain.IncomeType,
 			nil,
 		),
 	}

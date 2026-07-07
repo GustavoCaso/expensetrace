@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -14,8 +13,8 @@ func TestServiceCreate_MatchesExistingUncategorizedExpenses(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "cinema", "USD", -123456, time.Now(), storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "cinema", "USD", -123456, time.Now(), domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -65,9 +64,9 @@ func TestServiceUpdate_PatternChangeRecategorizesExpenses(t *testing.T) {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "cinema", "USD", -123456, time.Now(), storage.ChargeType, &categoryID),
-		storage.NewExpense(0, "Test Source", "gym", "USD", -123, time.Now(), storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "cinema", "USD", -123456, time.Now(), domain.ChargeType, &categoryID),
+		domain.NewExpense(0, "Test Source", "gym", "USD", -123, time.Now(), domain.ChargeType, nil),
 	}
 
 	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -159,10 +158,10 @@ func TestServiceGetUncategorized_GroupsByDescription(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "coffee shop", "USD", -500, time.Now(), storage.ChargeType, nil),
-		storage.NewExpense(0, "Test Source", "coffee shop", "USD", -600, time.Now(), storage.ChargeType, nil),
-		storage.NewExpense(0, "Test Source", "hardware store", "USD", -1500, time.Now(), storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "coffee shop", "USD", -500, time.Now(), domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Source", "coffee shop", "USD", -600, time.Now(), domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Source", "hardware store", "USD", -1500, time.Now(), domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -216,9 +215,9 @@ func TestServiceTest_ReturnsMatchesWithoutWriting(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "cinema", "USD", -123456, time.Now(), storage.ChargeType, nil),
-		storage.NewExpense(0, "Test Source", "grocery", "USD", -2000, time.Now(), storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "cinema", "USD", -123456, time.Now(), domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Source", "grocery", "USD", -2000, time.Now(), domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -260,7 +259,7 @@ func TestServiceTest_ReturnsMatchesWithoutWriting(t *testing.T) {
 	}
 
 	for _, c := range categories {
-		if c.Name() != storage.ExcludeCategory {
+		if c.Name() != domain.ExcludeCategory {
 			t.Fatalf("Expected no categories to be created, found %s", c.Name())
 		}
 	}

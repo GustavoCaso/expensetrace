@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -129,15 +128,15 @@ func TestUncategorizedHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"Test Source",
 			"Uncategorized expense",
 			"USD",
 			-123456,
 			time.Now(),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
@@ -167,25 +166,25 @@ func TestUncategorizedSearchHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"Test Source",
 			"Coffee shop purchase",
 			"USD",
 			-500,
 			time.Now(),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"Test Source",
 			"Hardware store",
 			"USD",
 			-1500,
 			time.Now(),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
@@ -251,8 +250,8 @@ func TestCreateCategoryHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "cinema", "USD", -123456, time.Now(), storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "cinema", "USD", -123456, time.Now(), domain.ChargeType, nil),
 	}
 
 	_, expenseError := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -322,13 +321,13 @@ func TestUpdateHandler(t *testing.T) {
 		name          string
 		body          string
 		updateMatcher bool
-		assertion     func(t *testing.T, updatedCategory storage.Category, updatedExpenses []storage.Expense)
+		assertion     func(t *testing.T, updatedCategory domain.Category, updatedExpenses []domain.Expense)
 	}{
 		{
 			"modify pattern and set expense to NULL category",
 			"pattern=test_pattern",
 			true,
-			func(t *testing.T, updatedCategory storage.Category, updatedExpenses []storage.Expense) {
+			func(t *testing.T, updatedCategory domain.Category, updatedExpenses []domain.Expense) {
 				if updatedCategory.Pattern() != "test_pattern" {
 					t.Fatalf(
 						"Category was not updated properly. Expected pattern to be `test_pattern` but was %s",
@@ -352,7 +351,7 @@ func TestUpdateHandler(t *testing.T) {
 			"modify pattern and update existing expenses",
 			"pattern=restaurant|bars|cinema|gym",
 			true,
-			func(t *testing.T, updatedCategory storage.Category, updatedExpenses []storage.Expense) {
+			func(t *testing.T, updatedCategory domain.Category, updatedExpenses []domain.Expense) {
 				if updatedCategory.Pattern() != "restaurant|bars|cinema|gym" {
 					t.Fatalf(
 						"Category was not updated properly. Expected pattern to be `restaurant|bars|cinema|gym` but was %s",
@@ -376,7 +375,7 @@ func TestUpdateHandler(t *testing.T) {
 			"modify name",
 			"name=Enjoyment",
 			false,
-			func(t *testing.T, updatedCategory storage.Category, updatedExpenses []storage.Expense) {
+			func(t *testing.T, updatedCategory domain.Category, updatedExpenses []domain.Expense) {
 				if updatedCategory.Name() != "Enjoyment" {
 					t.Fatalf(
 						"Category was not updated properly. Expected name to be `Enjoyment` but was %s",
@@ -407,7 +406,7 @@ func TestUpdateHandler(t *testing.T) {
 			"modify budget",
 			"monthly_budget=150",
 			false,
-			func(t *testing.T, updatedCategory storage.Category, _ []storage.Expense) {
+			func(t *testing.T, updatedCategory domain.Category, _ []domain.Expense) {
 				if updatedCategory.MonthlyBudget() != 15000 {
 					t.Fatalf(
 						"Category was not updated properly. Expected monthly budget to be 150 but was %d",
@@ -433,18 +432,18 @@ func TestUpdateHandler(t *testing.T) {
 				t.Fatalf("Failed to create Category: %v", err)
 			}
 
-			expenses := []storage.Expense{
-				storage.NewExpense(
+			expenses := []domain.Expense{
+				domain.NewExpense(
 					0,
 					"Test Source",
 					"cinema",
 					"USD",
 					-123456,
 					time.Now(),
-					storage.ChargeType,
+					domain.ChargeType,
 					&categoryID,
 				),
-				storage.NewExpense(0, "Test Source", "gym", "USD", -123, time.Now(), storage.ChargeType, nil),
+				domain.NewExpense(0, "Test Source", "gym", "USD", -123, time.Now(), domain.ChargeType, nil),
 			}
 
 			_, expenseError := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -515,7 +514,7 @@ func TestUpdateCategoryPatternDoesNotAffectExcludeCategory(t *testing.T) {
 
 	var excludeCategoryID int64
 	for _, cat := range categories {
-		if cat.Name() == storage.ExcludeCategory {
+		if cat.Name() == domain.ExcludeCategory {
 			excludeCategoryID = cat.ID()
 			break
 		}
@@ -524,47 +523,47 @@ func TestUpdateCategoryPatternDoesNotAffectExcludeCategory(t *testing.T) {
 		t.Fatal("Exclude category not found")
 	}
 
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"bank",
 			"cinema ticket",
 			"USD",
 			-1500,
 			time.Now(),
-			storage.ChargeType,
+			domain.ChargeType,
 			&entertainmentCategoryID,
 		),
 		// Expense that matches the new pattern, but is not updated as it already has a category (exclude)
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"bank",
 			"theater hat",
 			"USD",
 			-5000,
 			time.Now(),
-			storage.ChargeType,
+			domain.ChargeType,
 			&excludeCategoryID,
 		),
 		// Internal transfer excluded
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"bank",
 			"internal transfer",
 			"USD",
 			-5000,
 			time.Now(),
-			storage.ChargeType,
+			domain.ChargeType,
 			&excludeCategoryID,
 		),
 		// Income in exclude category
-		storage.NewExpense(0, "bank", "salary refund", "USD", 3000, time.Now(), storage.IncomeType, &excludeCategoryID),
+		domain.NewExpense(0, "bank", "salary refund", "USD", 3000, time.Now(), domain.IncomeType, &excludeCategoryID),
 		// Income with no category that should match the pattern, but won't get updated
-		storage.NewExpense(0, "bank", "cinema refund", "USD", 3000, time.Now(), storage.IncomeType, nil),
+		domain.NewExpense(0, "bank", "cinema refund", "USD", 3000, time.Now(), domain.IncomeType, nil),
 		// Uncategorized expense that should match new pattern
-		storage.NewExpense(0, "bank", "theater show", "USD", -2000, time.Now(), storage.ChargeType, nil),
+		domain.NewExpense(0, "bank", "theater show", "USD", -2000, time.Now(), domain.ChargeType, nil),
 		// Uncategorized expense that should not match
-		storage.NewExpense(0, "bank", "grocery shopping", "USD", -4000, time.Now(), storage.ChargeType, nil),
+		domain.NewExpense(0, "bank", "grocery shopping", "USD", -4000, time.Now(), domain.ChargeType, nil),
 	}
 
 	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -598,7 +597,7 @@ func TestUpdateCategoryPatternDoesNotAffectExcludeCategory(t *testing.T) {
 	}
 
 	// Track what we find
-	var cinemaExpense, transferExpense, salaryIncome, cinemaRefund, theaterExpense, excludeTheaterExpense, groceryExpense storage.Expense
+	var cinemaExpense, transferExpense, salaryIncome, cinemaRefund, theaterExpense, excludeTheaterExpense, groceryExpense domain.Expense
 	for i, exp := range allExpenses {
 		switch exp.Description() {
 		case "cinema ticket":
@@ -684,15 +683,15 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
 
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"Test Source",
 			"cinema. with friends",
 			"USD",
 			-123456,
 			time.Now(),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
@@ -764,9 +763,9 @@ func TestResetCategoryHandler(t *testing.T) {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "bank", "Restaurant dinner", "EUR", -2500, time.Now(), storage.ChargeType, &cat1ID),
-		storage.NewExpense(0, "bank", "Uber ride", "EUR", -1500, time.Now(), storage.ChargeType, &cat2ID),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "bank", "Restaurant dinner", "EUR", -2500, time.Now(), domain.ChargeType, &cat1ID),
+		domain.NewExpense(0, "bank", "Uber ride", "EUR", -1500, time.Now(), domain.ChargeType, &cat2ID),
 	}
 
 	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)

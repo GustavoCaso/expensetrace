@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
-	storageType "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 var amountRe = regexp.MustCompile(`(?P<charge>-)?(?P<amount>\d+)\.?(?P<decimal>\d*)`)
@@ -34,7 +34,7 @@ type mappingError struct {
 
 // MappingResult contains the results of applying a field mapping.
 type MappingResult struct {
-	Expenses []storageType.Expense
+	Expenses []domain.Expense
 	Errors   []mappingError
 }
 
@@ -69,7 +69,7 @@ func ApplyMapping(
 	}
 
 	result := &MappingResult{
-		Expenses: make([]storageType.Expense, 0, len(data.Rows)),
+		Expenses: make([]domain.Expense, 0, len(data.Rows)),
 		Errors:   make([]mappingError, 0),
 	}
 
@@ -93,7 +93,7 @@ func mapRow(
 	row []string,
 	mapping *FieldMapping,
 	categoryMatcher *matcher.Matcher,
-) (storageType.Expense, error) {
+) (domain.Expense, error) {
 	// Extract values from row
 	source := mapping.Source // Use manual source input
 	dateStr := row[mapping.DateColumn]
@@ -114,18 +114,18 @@ func mapRow(
 	}
 
 	// Determine expense type
-	var expenseType storageType.ExpenseType
+	var expenseType domain.ExpenseType
 	if amount < 0 {
-		expenseType = storageType.ChargeType
+		expenseType = domain.ChargeType
 	} else {
-		expenseType = storageType.IncomeType
+		expenseType = domain.IncomeType
 	}
 
 	// Match category
 	categoryID, _ := categoryMatcher.Match(description)
 
 	// Create expense
-	expense := storageType.NewExpense(
+	expense := domain.NewExpense(
 		0,
 		source,
 		description,

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -47,7 +47,7 @@ func TestSignup_CreatesUserSessionAndExcludeCategory(t *testing.T) {
 
 	found := false
 	for _, c := range categories {
-		if c.Name() == storage.ExcludeCategory {
+		if c.Name() == domain.ExcludeCategory {
 			found = true
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	storageType "github.com/GustavoCaso/expensetrace/internal/storage"
 )
@@ -82,20 +83,20 @@ func SupportedJSONSchema(reader io.Reader) (bool, []JSONExpense) {
 func ImportJSON(ctx context.Context, userID int64, expenses []JSONExpense, storage storageType.Storage,
 	categoryMatcher *matcher.Matcher) ImportInfo {
 	info := ImportInfo{}
-	storageExpenses := []storageType.Expense{}
+	storageExpenses := []domain.Expense{}
 
 	for _, jsonExp := range expenses {
 		description := strings.ToLower(jsonExp.Description)
 		categoryID, _ := categoryMatcher.Match(description)
 
-		var et storageType.ExpenseType
+		var et domain.ExpenseType
 		if jsonExp.Amount < 0 {
-			et = storageType.ChargeType
+			et = domain.ChargeType
 		} else {
-			et = storageType.IncomeType
+			et = domain.IncomeType
 		}
 
-		expense := storageType.NewExpense(
+		expense := domain.NewExpense(
 			0,
 			jsonExp.Source,
 			description,
@@ -132,7 +133,7 @@ func ImportCSV(
 	categoryMatcher *matcher.Matcher,
 ) ImportInfo {
 	info := ImportInfo{}
-	expenses := []storageType.Expense{}
+	expenses := []domain.Expense{}
 
 	source, err := extractFileSource(filename)
 
@@ -186,14 +187,14 @@ func ImportCSV(
 		}
 
 		categoryID, _ := categoryMatcher.Match(ex.description)
-		var et storageType.ExpenseType
+		var et domain.ExpenseType
 		if ex.amount < 0 {
-			et = storageType.ChargeType
+			et = domain.ChargeType
 		} else {
-			et = storageType.IncomeType
+			et = domain.IncomeType
 		}
 
-		expense := storageType.NewExpense(
+		expense := domain.NewExpense(
 			0,
 			captilizedSource,
 			ex.description,

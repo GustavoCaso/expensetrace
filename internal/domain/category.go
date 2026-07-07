@@ -1,10 +1,17 @@
 package domain
 
-import "github.com/GustavoCaso/expensetrace/internal/storage"
+type Category interface {
+	ID() int64
+	Name() string
+	Pattern() string
+	MonthlyBudget() int64
+}
 
-// EnhancedCategory extends storage.Category with extra UI-friendly fields.
+const ExcludeCategory = "🚫 Exclude"
+
+// EnhancedCategory extends Category with extra UI-friendly fields.
 type EnhancedCategory struct {
-	storage.Category
+	Category
 	AvgAmount       int64
 	LastTransaction string
 	Total           int
@@ -29,13 +36,13 @@ type CategoriesViewData struct {
 
 type CategoryViewData struct {
 	ViewBase
-	Category storage.Category
+	Category Category
 	Action   string
 }
 
 type UncategorizedInfo struct {
 	Count    int
-	Expenses []storage.Expense
+	Expenses []Expense
 	Total    int64
 	Slug     string
 }
@@ -44,15 +51,51 @@ type UncategorizedViewData struct {
 	ViewBase
 	Keys             []string
 	UncategorizeInfo map[string]UncategorizedInfo
-	Categories       []storage.Category
+	Categories       []Category
 	TotalExpenses    int
 	TotalAmount      int64
 }
 
 type CreateCategoryViewData struct {
 	ViewBase
-	Category storage.Category
-	Results  []storage.Expense
+	Category Category
+	Results  []Expense
 	Total    int
 	Action   string
+}
+
+type category struct {
+	id            int64
+	name          string
+	pattern       string
+	monthlyBudget int64
+}
+
+func (c category) ID() int64 {
+	return c.id
+}
+
+func (c category) Name() string {
+	return c.name
+}
+
+func (c category) Pattern() string {
+	return c.pattern
+}
+
+func (c category) MonthlyBudget() int64 {
+	return c.monthlyBudget
+}
+
+func NewCategory(id int64, name, pattern string, monthlyBudget int64) Category {
+	return category{
+		id:            id,
+		name:          name,
+		pattern:       pattern,
+		monthlyBudget: monthlyBudget,
+	}
+}
+
+func EmptyCategory() Category {
+	return NewCategory(0, "", "", 0)
 }

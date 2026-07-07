@@ -20,14 +20,14 @@ import (
 type Service struct {
 	storage        storage.Storage
 	logger         *logger.Logger
-	reportsPerUser map[int64]map[string]pkgreport.Report
+	reportsPerUser map[int64]map[string]domain.Report
 }
 
 func New(storage storage.Storage, logger *logger.Logger) *Service {
 	return &Service{
 		storage:        storage,
 		logger:         logger,
-		reportsPerUser: map[int64]map[string]pkgreport.Report{},
+		reportsPerUser: map[int64]map[string]domain.Report{},
 	}
 }
 
@@ -47,7 +47,7 @@ func (s *Service) Generate(ctx context.Context, userID int64) {
 	lastMonth := ex.Date().Month()
 	lastYear := ex.Date().Year()
 
-	reports := map[string]pkgreport.Report{}
+	reports := map[string]domain.Report{}
 
 	for year >= lastYear {
 		if month == time.January {
@@ -137,6 +137,6 @@ func (s *Service) ChartData(userID int64) []domain.ChartDataPoint {
 
 // ForMonth returns the cached report for the given month/year, or a
 // zero-value report if none has been generated.
-func (s *Service) ForMonth(userID int64, month, year int) pkgreport.Report {
+func (s *Service) ForMonth(userID int64, month, year int) domain.Report {
 	return s.reportsPerUser[userID][fmt.Sprintf("%d-%d", year, month)]
 }
