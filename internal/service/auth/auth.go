@@ -37,10 +37,9 @@ func New(storage storage.Storage, logger *logger.Logger) *Service {
 	}
 }
 
-// Signup validates the signup form, creates the user, an initial session and
-// the default Exclude category for the user. validationErr holds a
-// user-facing message meant to be re-displayed on the signup page; err holds
-// an unexpected/internal failure that should result in a 500.
+// Signup validates the signup form, creates the user and an initial session.
+// validationErr holds a user-facing message meant to be re-displayed
+// on the signup page; err holds.
 func (s *Service) Signup(
 	ctx context.Context,
 	username, password, confirmPassword string,

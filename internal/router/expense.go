@@ -291,9 +291,6 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	}
 
 	redirectTo := r.FormValue("redirect_to")
-	// Unchecked checkboxes are omitted from form data entirely, so an empty
-	// value means "not requested" rather than a parse failure.
-	updateCategory, _ := strconv.ParseBool(r.FormValue("update_category"))
 
 	if len(data.FormErrors) > 0 {
 		data.RedirectTo = redirectTo
@@ -317,14 +314,6 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 
 	c.logger.Info("Expense updated successfully", "id", id)
 
-	if updateCategory && updatedExpense.CategoryID() != nil {
-		if patternErr := c.applyCategoryPatternUpdate(ctx, userID, updatedExpense); patternErr != nil {
-			data.FormErrors["failed to update category"] = patternErr.Error()
-			data.RedirectTo = redirectTo
-			return
-		}
-	}
-
 	if isValidRedirectTarget(redirectTo) {
 		w.Header().Set("Hx-Redirect", redirectTo)
 		w.WriteHeader(http.StatusNoContent)
@@ -332,42 +321,24 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		return
 	}
 
-	updatedExpenseView, err := c.expenseService.Get(ctx, userID, id)
-	if err != nil {
-		c.logger.Error("Failed to get updated expense", "error", err)
-		updatedExpenseView = &domain.ExpenseView{
-			Expense: updatedExpense,
-			Cat:     domain.EmptyCategory(),
+	updatedCategory := domain.EmptyCategory()
+	if updatedExpense.CategoryID() != nil {
+		cat, categoryErr := c.categoryService.Get(ctx, userID, *updatedExpense.CategoryID())
+		if categoryErr != nil {
+			c.logger.Error("Failed to get category", "error", categoryErr)
 		}
+		updatedCategory = cat
 	}
 
-	data.Expense = updatedExpenseView
+	data.Expense = &domain.ExpenseView{
+		Expense: updatedExpense,
+		Cat:     updatedCategory,
+	}
 
 	data.Banner = domain.Banner{
 		Icon:    "✅",
 		Message: "Expense Updated",
 	}
-}
-
-// applyCategoryPatternUpdate extends the expense's category pattern to also
-// match its description, then refreshes the in-memory category matcher.
-// Callers must ensure updatedExpense.CategoryID() is non-nil.
-func (c *expenseHandler) applyCategoryPatternUpdate(
-	ctx context.Context,
-	userID int64,
-	updatedExpense domain.Expense,
-) error {
-	patternErr := c.categoryService.UpdateCategoryPattern(
-		ctx,
-		userID,
-		*updatedExpense.CategoryID(),
-		updatedExpense.Description(),
-	)
-	if patternErr != nil {
-		return patternErr
-	}
-
-	return c.updateCategoryMatcher(ctx, userID)
 }
 
 // isValidRedirectTarget ensures redirect targets are relative paths only, preventing open redirects.

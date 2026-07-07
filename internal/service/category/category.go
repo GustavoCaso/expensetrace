@@ -492,7 +492,7 @@ func (c *Service) GetUncategorized(
 }
 
 var specialCharactersRegex = regexp.MustCompile(`[^a-z0-9\-]`)
-var multipleHyphenRegex = regexp.MustCompile(`[^a-z0-9\-]`)
+var multipleHyphenRegex = regexp.MustCompile(`-{2,}`)
 
 func slugify(s string) string {
 	// Convert to lowercase
