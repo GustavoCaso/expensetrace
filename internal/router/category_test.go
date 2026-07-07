@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
@@ -863,14 +864,14 @@ func TestParseCategoryForm(t *testing.T) {
 		name          string
 		formData      string
 		expectError   bool
-		expectedData  *categoryFormData
+		expectedData  *domain.CategoryFormData
 		errorContains string
 	}{
 		{
 			name:        "valid form with budget",
 			formData:    "name=Entertainment&pattern=cinema|movie&monthly_budget=100.50",
 			expectError: false,
-			expectedData: &categoryFormData{
+			expectedData: &domain.CategoryFormData{
 				Name:          "Entertainment",
 				Pattern:       "cinema|movie",
 				MonthlyBudget: 10050, // cents
@@ -880,7 +881,7 @@ func TestParseCategoryForm(t *testing.T) {
 			name:        "valid form without budget",
 			formData:    "name=Food&pattern=restaurant|cafe",
 			expectError: false,
-			expectedData: &categoryFormData{
+			expectedData: &domain.CategoryFormData{
 				Name:          "Food",
 				Pattern:       "restaurant|cafe",
 				MonthlyBudget: 0,
@@ -890,7 +891,7 @@ func TestParseCategoryForm(t *testing.T) {
 			name:        "valid form with empty budget",
 			formData:    "name=Transport&pattern=uber|taxi&monthly_budget=",
 			expectError: false,
-			expectedData: &categoryFormData{
+			expectedData: &domain.CategoryFormData{
 				Name:          "Transport",
 				Pattern:       "uber|taxi",
 				MonthlyBudget: 0,
@@ -900,7 +901,7 @@ func TestParseCategoryForm(t *testing.T) {
 			name:        "valid form with zero budget",
 			formData:    "name=Misc&pattern=misc&monthly_budget=0",
 			expectError: false,
-			expectedData: &categoryFormData{
+			expectedData: &domain.CategoryFormData{
 				Name:          "Misc",
 				Pattern:       "misc",
 				MonthlyBudget: 0,
@@ -958,7 +959,7 @@ func TestParseCategoryForm(t *testing.T) {
 			name:        "budget with decimal precision",
 			formData:    "name=Test&pattern=valid&monthly_budget=99.99",
 			expectError: false,
-			expectedData: &categoryFormData{
+			expectedData: &domain.CategoryFormData{
 				Name:          "Test",
 				Pattern:       "valid",
 				MonthlyBudget: 9999, // cents
@@ -968,7 +969,7 @@ func TestParseCategoryForm(t *testing.T) {
 			name:        "complex regex pattern",
 			formData:    "name=Shopping&pattern=^(amazon|ebay|shop)",
 			expectError: false,
-			expectedData: &categoryFormData{
+			expectedData: &domain.CategoryFormData{
 				Name:          "Shopping",
 				Pattern:       "^(amazon|ebay|shop)",
 				MonthlyBudget: 0,

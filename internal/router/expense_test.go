@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/router/service/expense"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
@@ -82,7 +83,8 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, &cat2),
 	}
 
-	groupedExpenses, years, err := expensesGroupByYearAndMonth(context.Background(), user.ID(), expenses, s)
+	svc := expense.New(s, logger)
+	groupedExpenses, years, err := svc.GroupByYearAndMonth(context.Background(), user.ID(), expenses)
 
 	if err != nil {
 		t.Fatalf("Got error grouping expenses: %s", err.Error())

@@ -92,12 +92,19 @@
         </option>
       {{end}}
     </select>
+    
+    {{if eq .Action "edit"}}
+      <label class="radio-label">
+        <input type="checkbox" name="update_category">
+        <span class="radio-text">Update category for identical expenses</span>
+      </label>
+    {{end}}  
   </div>
   
   {{if eq .Action "edit"}}
     {{if .RedirectTo}}
     <input type="hidden" name="redirect_to" value="{{.RedirectTo}}">
-    {{end}}
+    {{end}}  
     <div class="form-actions">
       <button class="btn-primary"
               hx-put="/expense/{{.Expense.ID}}"

@@ -1,22 +1,19 @@
 package router
 
 import (
-	"errors"
 	"net/http"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
-	"github.com/GustavoCaso/expensetrace/internal/storage"
-	"github.com/GustavoCaso/expensetrace/internal/util"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
+	"github.com/GustavoCaso/expensetrace/internal/router/service/auth"
 )
 
 const (
 	sessionCookieName = "session_id"
-	sessionDuration   = 7 * 24 * time.Hour // 7 days
-	minPasswordLength = 8
-	sessionIDBytes    = 16      // Results in 32 hex characters
 	maxFormSize       = 1 << 20 // 1MB
+	// sessionDuration mirrors auth.SessionDuration; kept as a router-level
+	// alias since it's referenced throughout router tests for cookie setup.
+	sessionDuration = auth.SessionDuration
 )
 
 type authHandler struct {
@@ -32,7 +29,7 @@ func (a *authHandler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (a *authHandler) signupPage(w http.ResponseWriter, _ *http.Request) {
-	data := viewBase{
+	data := domain.ViewBase{
 		LoggedIn: false,
 	}
 
@@ -50,46 +47,20 @@ func (a *authHandler) signup(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	confirmPassword := r.FormValue("confirm_password")
 
-	// Validate input
-	if username == "" || password == "" {
-		a.renderSignupError(w, "Username and password are required")
-		return
-	}
-
-	if password != confirmPassword {
-		a.renderSignupError(w, "Passwords do not match")
-		return
-	}
-
-	if len(password) < minPasswordLength {
-		a.renderSignupError(w, "Password must be at least 8 characters long")
-		return
-	}
-
-	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	sessionID, expiresAt, validationErr, err := a.router.authService.Signup(
+		r.Context(),
+		username,
+		password,
+		confirmPassword,
+	)
 	if err != nil {
-		a.router.logger.Error("Failed to hash password", "error", err)
+		a.router.logger.Error("Failed to signup", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	// Create user
-	user, err := a.router.storage.CreateUser(r.Context(), username, string(hashedPassword))
-	if err != nil {
-		a.router.logger.Error("Failed to create user", "error", err, "username", username)
-		a.renderSignupError(w, "Username already exists or database error occurred")
-		return
-	}
-
-	// Create session
-	sessionID := util.GenerateRandomID(sessionIDBytes)
-
-	expiresAt := time.Now().Add(sessionDuration)
-	_, err = a.router.storage.CreateSession(r.Context(), user.ID(), sessionID, expiresAt)
-	if err != nil {
-		a.router.logger.Error("Failed to create session", "error", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	if validationErr != nil {
+		a.renderSignupError(w, validationErr.Error())
 		return
 	}
 
@@ -104,18 +75,12 @@ func (a *authHandler) signup(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	// Create default Exclude category for new user
-	_, err = a.router.storage.CreateCategory(r.Context(), user.ID(), storage.ExcludeCategory, "$a", 0)
-	if err != nil {
-		a.router.logger.Error("Failed to create exclude category for new user", "error", err, "user_id", user.ID())
-	}
-
 	// Redirect to home page
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (a *authHandler) signinPage(w http.ResponseWriter, _ *http.Request) {
-	data := viewBase{
+	data := domain.ViewBase{
 		LoggedIn: false,
 	}
 
@@ -132,40 +97,15 @@ func (a *authHandler) signin(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
-	// Validate input
-	if username == "" || password == "" {
-		a.renderSigninError(w, "Username and password are required")
-		return
-	}
-
-	// Get user
-	user, err := a.router.storage.GetUserByUsername(r.Context(), username)
+	sessionID, expiresAt, validationErr, err := a.router.authService.Signin(r.Context(), username, password)
 	if err != nil {
-		var notFoundErr *storage.NotFoundError
-		if errors.As(err, &notFoundErr) {
-			a.renderSigninError(w, "Invalid username or password")
-			return
-		}
-		a.router.logger.Error("Failed to get user", "error", err)
+		a.router.logger.Error("Failed to signin", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	// Verify password
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash()), []byte(password))
-	if err != nil {
-		a.renderSigninError(w, "Invalid username or password")
-		return
-	}
-
-	// Create session
-	sessionID := util.GenerateRandomID(sessionIDBytes)
-
-	expiresAt := time.Now().Add(sessionDuration)
-	_, err = a.router.storage.CreateSession(r.Context(), user.ID(), sessionID, expiresAt)
-	if err != nil {
-		a.router.logger.Error("Failed to create session", "error", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	if validationErr != nil {
+		a.renderSigninError(w, validationErr.Error())
 		return
 	}
 
@@ -189,7 +129,7 @@ func (a *authHandler) signout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err == nil {
 		// Delete session from database
-		if err = a.router.storage.DeleteSession(r.Context(), cookie.Value); err != nil {
+		if err = a.router.authService.Signout(r.Context(), cookie.Value); err != nil {
 			a.router.logger.Error("Failed to delete session", "error", err)
 		}
 	}
@@ -210,7 +150,7 @@ func (a *authHandler) signout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *authHandler) renderSignupError(w http.ResponseWriter, errorMsg string) {
-	data := viewBase{
+	data := domain.ViewBase{
 		Error:    errorMsg,
 		LoggedIn: false,
 	}
@@ -219,7 +159,7 @@ func (a *authHandler) renderSignupError(w http.ResponseWriter, errorMsg string) 
 }
 
 func (a *authHandler) renderSigninError(w http.ResponseWriter, errorMsg string) {
-	data := viewBase{
+	data := domain.ViewBase{
 		Error:    errorMsg,
 		LoggedIn: false,
 	}
