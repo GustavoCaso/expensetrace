@@ -194,7 +194,7 @@ func (c *categoryHandler) updateCategoryHandler(
 	pattern := r.FormValue("pattern")
 	budgetStr := r.FormValue("monthly_budget")
 
-	updatedCategory, changed, patternDidChange, updateErr := c.categoryService.Update(
+	updatedCategory, changed, _, updateErr := c.categoryService.Update(
 		ctx,
 		userID,
 		categoryIDInt64,
@@ -223,15 +223,6 @@ func (c *categoryHandler) updateCategoryHandler(
 		Icon:    "✅",
 		Message: "Category Updated",
 	}
-
-	if !patternDidChange {
-		return
-	}
-
-	if matcherErr := c.updateCategoryMatcher(ctx, userID); matcherErr != nil {
-		err = matcherErr
-		return
-	}
 }
 
 func (c *categoryHandler) uncategorizedHandler(
@@ -256,9 +247,15 @@ func (c *categoryHandler) uncategorizedHandler(
 		return
 	}
 
+	categories, err := c.categoryService.List(ctx, userID)
+	if err != nil {
+		data.Error = err.Error()
+		return
+	}
+
 	data.Keys = keys
 	data.UncategorizeInfo = grouped
-	data.Categories = c.matcher.Categories()
+	data.Categories = categories
 	data.TotalExpenses = totalExpenses
 	data.TotalAmount = totalAmount
 
@@ -303,12 +300,6 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 		return
 	}
 
-	updateCategoryMatcherErr := c.updateCategoryMatcher(ctx, userID)
-	if updateCategoryMatcherErr != nil {
-		data.Error = updateCategoryMatcherErr.Error()
-		return
-	}
-
 	c.uncategorizedHandler(ctx, w, "", &domain.Banner{
 		Icon:    "✅",
 		Message: "Expenses succesfully categorized",
@@ -321,12 +312,6 @@ func (c *categoryHandler) resetCategoryHandler(ctx context.Context, w http.Respo
 
 	if err != nil {
 		c.categoryIndexError(ctx, w, err)
-		return
-	}
-
-	updateCategoryMatcherErr := c.updateCategoryMatcher(ctx, userID)
-	if updateCategoryMatcherErr != nil {
-		c.categoryIndexError(ctx, w, updateCategoryMatcherErr)
 		return
 	}
 
@@ -395,13 +380,6 @@ func (c *categoryHandler) createCategoryHandler(
 	if createErr != nil {
 		c.logger.Error("Failed to create category", "error", createErr)
 		data.Error = createErr.Error()
-		return
-	}
-
-	updateCategoryMatcherErr := c.updateCategoryMatcher(ctx, userID)
-	if updateCategoryMatcherErr != nil {
-		c.logger.Error("Failed to update category matcher", "error", updateCategoryMatcherErr)
-		data.Error = updateCategoryMatcherErr.Error()
 		return
 	}
 

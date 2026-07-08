@@ -49,6 +49,11 @@ func (c *Service) List(ctx context.Context, userID int64) ([]domain.Category, er
 	return categoriesWithoutExclude, nil
 }
 
+// ListWithExclude returns all of the user's categories including exclude category.
+func (c *Service) ListWithExclude(ctx context.Context, userID int64) ([]domain.Category, error) {
+	return c.storage.GetCategories(ctx, userID)
+}
+
 // Get returns a single category by ID.
 func (c *Service) Get(ctx context.Context, userID, id int64) (domain.Category, error) {
 	return c.storage.GetCategory(ctx, userID, id)

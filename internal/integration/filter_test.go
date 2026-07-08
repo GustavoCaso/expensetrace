@@ -88,7 +88,7 @@ func TestFilteringEndToEnd(t *testing.T) {
 	}
 
 	// Setup router
-	handler, _ := router.New(st, logger)
+	handler := router.New(st, logger)
 
 	// Test scenarios
 	tests := []struct {

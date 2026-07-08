@@ -54,7 +54,7 @@ func TestExpensesHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
@@ -158,7 +158,7 @@ func TestExpenseHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/1", nil)
 	req.SetPathValue("id", "1")
@@ -184,7 +184,7 @@ func TestExpenseHandlerNotFound(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/999", nil)
 	req.SetPathValue("id", "999")
@@ -205,7 +205,7 @@ func TestExpenseHandlerInvalidID(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/expense/invalid", nil)
 	req.SetPathValue("id", "invalid")
@@ -241,7 +241,7 @@ func TestUpdateExpenseHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	formData := url.Values{}
 	formData.Set("source", "Updated Source")
@@ -306,7 +306,7 @@ func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 		t.Fatalf("Failed to insert test expense: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	tests := []struct {
 		name        string
@@ -410,7 +410,7 @@ func TestDeleteExpenseHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expense/1", nil)
 	req.SetPathValue("id", "1")
@@ -449,7 +449,7 @@ func TestDeleteExpenseHandlerNotFound(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expense/999", nil)
 	req.SetPathValue("id", "999")
@@ -476,7 +476,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	now := time.Now()
 	expenses := []domain.Expense{
@@ -571,7 +571,7 @@ func TestCreateExpenseHandler(t *testing.T) {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	now := time.Now()
 	formData := url.Values{}
@@ -636,7 +636,7 @@ func TestCreateExpenseHandlerNilCategory(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	now := time.Now()
 	formData := url.Values{}
@@ -688,7 +688,7 @@ func TestCreateExpenseHandlerAmountSigning(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	now := time.Now()
 
@@ -778,7 +778,7 @@ func TestCreateExpenseHandlerValidationErrors(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	now := time.Now()
 
@@ -948,7 +948,7 @@ func TestExpenseHandlerPassesRedirectTo(t *testing.T) {
 		t.Fatalf("Failed to insert expense: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	redirectTo := "/?open_month=1&open_year=2024&open_category=Food"
 	req := httptest.NewRequest(http.MethodGet, "/expense/1?redirect_to="+url.QueryEscape(redirectTo), nil)
@@ -982,7 +982,7 @@ func TestUpdateExpenseHandlerRedirectsWithHXRedirect(t *testing.T) {
 		t.Fatalf("Failed to insert expense: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	redirectTo := "/?open_month=1&open_year=2024&open_category=Food"
 	formData := url.Values{}
@@ -1025,7 +1025,7 @@ func TestUpdateExpenseHandlerIgnoresInvalidRedirect(t *testing.T) {
 		t.Fatalf("Failed to insert expense: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	formData := url.Values{}
 	formData.Set("source", "Updated Source")
@@ -1058,7 +1058,7 @@ func TestCreateExpenseHandlerFormParseError(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodPost, "/expense", strings.NewReader("%zzzzz"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -1137,7 +1137,7 @@ func TestExpensesHandlerWithFilters(t *testing.T) {
 		t.Fatalf("failed to insert expenses: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	tests := []struct {
 		name       string
@@ -1344,7 +1344,7 @@ func TestExpensesHandlerSortOrder(t *testing.T) {
 		t.Fatalf("failed to insert expenses: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	indexBefore := func(body, a, b string) bool {
 		ia := strings.Index(body, a)

@@ -9,6 +9,63 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
+func TestServiceList_OmitsExcludeCategory(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	_, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "cinema|movie", 0)
+	if err != nil {
+		t.Fatalf("Failed to create Category: %v", err)
+	}
+
+	svc := New(s, logger)
+
+	categories, err := svc.List(context.Background(), user.ID())
+	if err != nil {
+		t.Fatalf("List returned error: %v", err)
+	}
+
+	if len(categories) != 1 {
+		t.Fatalf("Expected 1 category, got %d", len(categories))
+	}
+
+	if categories[0].Name() != "Entertainment" {
+		t.Fatalf("Expected 'Entertainment' category, got %s", categories[0].Name())
+	}
+}
+
+func TestServiceListWithExclude_IncludesExcludeCategory(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	_, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "cinema|movie", 0)
+	if err != nil {
+		t.Fatalf("Failed to create Category: %v", err)
+	}
+
+	svc := New(s, logger)
+
+	categories, err := svc.ListWithExclude(context.Background(), user.ID())
+	if err != nil {
+		t.Fatalf("ListWithExclude returned error: %v", err)
+	}
+
+	if len(categories) != 2 {
+		t.Fatalf("Expected 2 categories, got %d", len(categories))
+	}
+
+	foundExclude := false
+	for _, c := range categories {
+		if c.Name() == domain.ExcludeCategory {
+			foundExclude = true
+		}
+	}
+
+	if !foundExclude {
+		t.Fatal("Expected exclude category to be included")
+	}
+}
+
 func TestServiceCreate_MatchesExistingUncategorizedExpenses(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)

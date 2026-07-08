@@ -130,7 +130,7 @@ func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseW
 		c.templates.Render(w, "pages/expenses/new.html", data)
 	}()
 
-	categories, err := c.storage.GetCategories(ctx, userID)
+	categories, err := c.categoryService.List(ctx, userID)
 	if err != nil {
 		c.logger.Error("Failed to get categories", "error", err)
 		data.Error = fmt.Sprintf("Failed to get categories: %s", err.Error())
@@ -162,7 +162,7 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 		c.templates.Render(w, "pages/expenses/new.html", data)
 	}()
 
-	categories, categoriesErr := c.storage.GetCategories(ctx, userID)
+	categories, categoriesErr := c.categoryService.List(ctx, userID)
 	if categoriesErr != nil {
 		c.logger.Error("Failed to fetch categories", "error", categoriesErr)
 		data.Error = categoriesErr.Error()
@@ -227,7 +227,7 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 		return
 	}
 
-	categories, err := c.storage.GetCategories(ctx, userID)
+	categories, err := c.categoryService.List(ctx, userID)
 	if err != nil {
 		c.logger.Error("Failed to get categories", "error", err)
 		categories = []domain.Category{}
@@ -266,7 +266,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		return
 	}
 
-	categories, categoriesErr := c.storage.GetCategories(ctx, userID)
+	categories, categoriesErr := c.categoryService.List(ctx, userID)
 	if categoriesErr != nil {
 		data.Error = categoriesErr.Error()
 		return

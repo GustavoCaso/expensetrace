@@ -24,8 +24,6 @@ import (
 const importSessionTTL = 30 * time.Minute
 
 type router struct {
-	matcher         *matcher.Matcher
-	storage         storage.Storage
 	logger          *logger.Logger
 	categoryService *category.Service
 	expenseService  *expense.Service
@@ -38,27 +36,8 @@ type router struct {
 	reload          bool
 }
 
-//nolint:revive // We return the private router struct to allow testing some internal functions
-func New(storage storage.Storage, logger *logger.Logger) (http.Handler, *router) {
-	categoryService := category.New(storage, logger)
-	expenseService := expense.New(storage, logger)
-	reportService := report.New(storage, logger)
-	importService := importsvc.New(storage, logger, importSessionTTL)
-	authService := auth.New(storage, logger)
-	profileService := profile.New(storage, logger)
-
-	router := &router{
-		reload:          os.Getenv("EXPENSE_LIVERELOAD") == "true",
-		secureCookie:    os.Getenv("EXPENSETRACE_SECURE_COOKIES") == "true",
-		storage:         storage,
-		logger:          logger,
-		categoryService: categoryService,
-		expenseService:  expenseService,
-		reportService:   reportService,
-		importService:   importService,
-		authService:     authService,
-		profileService:  profileService,
-	}
+func New(storage storage.Storage, logger *logger.Logger) http.Handler {
+	router := newRouter(storage, logger)
 
 	staticFS, staticFSError := router.parserStaticFiles()
 
@@ -123,7 +102,25 @@ func New(storage storage.Storage, logger *logger.Logger) (http.Handler, *router)
 
 	wrappedMux = csrfProtectionMiddleware(logger, wrappedMux)
 
-	return wrappedMux, router
+	return wrappedMux
+}
+
+// newRouter builds the router with its services. Split from New so tests can
+// exercise internal functions directly.
+func newRouter(storage storage.Storage, logger *logger.Logger) *router {
+	router := &router{
+		reload:          os.Getenv("EXPENSE_LIVERELOAD") == "true",
+		secureCookie:    os.Getenv("EXPENSETRACE_SECURE_COOKIES") == "true",
+		logger:          logger,
+		categoryService: category.New(storage, logger),
+		expenseService:  expense.New(storage, logger),
+		reportService:   report.New(storage, logger),
+		importService:   importsvc.New(storage, logger, importSessionTTL),
+		authService:     auth.New(storage, logger),
+		profileService:  profile.New(storage, logger),
+	}
+
+	return router
 }
 
 func (r *router) parseTemplates() error {
@@ -170,13 +167,13 @@ func (r *router) parserStaticFiles() (fs.FS, error) {
 	return fs, err
 }
 
-func (r *router) updateCategoryMatcher(ctx context.Context, userID int64) error {
-	categories, categoryErr := r.storage.GetCategories(ctx, userID)
-	if categoryErr != nil {
-		return categoryErr
+// categoryMatcher builds a matcher from the user's current categories. It is
+// constructed on demand so it always reflects the latest category patterns.
+func (r *router) categoryMatcher(ctx context.Context, userID int64) (*matcher.Matcher, error) {
+	categories, err := r.categoryService.ListWithExclude(ctx, userID)
+	if err != nil {
+		return nil, err
 	}
 
-	m := matcher.New(categories)
-	r.matcher = m
-	return nil
+	return matcher.New(categories), nil
 }

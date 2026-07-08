@@ -26,7 +26,7 @@ func TestHomeHandlerWithOpenParams(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	tests := []struct {
 		name string
@@ -80,7 +80,7 @@ func TestHomeHandlerHTMXPartialSwap(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	// ?month=X&year=Y triggers HTMX partial (no full page layout)
 	url := fmt.Sprintf("/?month=%d&year=%d", int(now.Month()), now.Year())
@@ -119,7 +119,7 @@ func TestHomeHandler(t *testing.T) {
 	}
 
 	// Create router
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	tests := []struct {
 		name           string

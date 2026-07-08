@@ -18,7 +18,7 @@ func TestSignupPageHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, _ := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/signup", nil)
 	w := httptest.NewRecorder()
@@ -37,7 +37,7 @@ func TestSignupHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, _ := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	formData := url.Values{}
 	formData.Set("username", "newuser")
@@ -121,7 +121,7 @@ func TestSignupHandlerValidationErrors(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, _ := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	tests := []struct {
 		name          string
@@ -200,7 +200,7 @@ func TestSignupHandlerDuplicateUsername(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	formData := url.Values{}
 	formData.Set("username", user.Username())
@@ -228,7 +228,7 @@ func TestSignupHandlerFormParseError(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, _ := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodPost, "/signup", strings.NewReader("%zzzzz"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -246,7 +246,7 @@ func TestSigninPageHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, _ := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/signin", nil)
 	w := httptest.NewRecorder()
@@ -265,7 +265,7 @@ func TestSigninHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	formData := url.Values{}
 	formData.Set("username", user.Username())
@@ -314,7 +314,7 @@ func TestSigninHandlerValidationErrors(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, _ := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	tests := []struct {
 		name          string
@@ -373,7 +373,7 @@ func TestSigninHandlerInvalidCredentials(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	tests := []struct {
 		name     string
@@ -427,7 +427,7 @@ func TestSigninHandlerFormParseError(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, _ := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodPost, "/signin", strings.NewReader("%zzzzz"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -445,7 +445,7 @@ func TestSignoutHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodPost, "/signout", nil)
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
@@ -495,7 +495,7 @@ func TestSignoutHandlerWithoutCookie(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, _ := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodPost, "/signout", nil)
 	w := httptest.NewRecorder()

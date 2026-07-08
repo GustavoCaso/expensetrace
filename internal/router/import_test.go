@@ -44,7 +44,7 @@ func TestImport(t *testing.T) {
 	}
 
 	// Create router
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	// Hit home to populate cache
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -121,7 +121,7 @@ func TestInteractiveImportPreview(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	// Create CSV data for upload
 	csvData := `source,date,description,amount,currency
@@ -182,7 +182,7 @@ func TestInteractiveImportInvalidFile(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	// Upload file with unsupported format
 	body := new(bytes.Buffer)

@@ -10,7 +10,6 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
-	"github.com/GustavoCaso/expensetrace/internal/matcher"
 )
 
 type contextKey string
@@ -169,17 +168,6 @@ func authMiddleware(router *router, next http.Handler) http.Handler {
 			CurrentPage:      currentPageFromPath(path),
 		})
 
-		if router.matcher == nil {
-			categories, categoryErr := router.categoryService.List(context.Background(), user.ID())
-			if categoryErr != nil {
-				router.logger.Error("Failed to get categories", "error", categoryErr)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-
-			matcher := matcher.New(categories)
-			router.matcher = matcher
-		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

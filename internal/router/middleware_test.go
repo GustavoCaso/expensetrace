@@ -12,7 +12,7 @@ import (
 func TestAuthMiddlewareRedirectsWithoutCookie(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, _ := testutil.SetupTestStorage(t, logger)
-	_, r := New(s, logger)
+	r := newRouter(s, logger)
 
 	protected := authMiddleware(r, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -33,7 +33,7 @@ func TestAuthMiddlewareRedirectsWithoutCookie(t *testing.T) {
 func TestAuthMiddlewareRedirectsWithInvalidSession(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, _ := testutil.SetupTestStorage(t, logger)
-	_, r := New(s, logger)
+	r := newRouter(s, logger)
 
 	protected := authMiddleware(r, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -55,7 +55,7 @@ func TestAuthMiddlewareRedirectsWithInvalidSession(t *testing.T) {
 func TestAuthMiddlewareSkipsAuthEndpoints(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, _ := testutil.SetupTestStorage(t, logger)
-	_, r := New(s, logger)
+	r := newRouter(s, logger)
 
 	for _, path := range []string{"/signin", "/signup", "/static/css/base.css"} {
 		t.Run(path, func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestAuthMiddlewareSkipsAuthEndpoints(t *testing.T) {
 func TestAuthMiddlewareSetsUserAndViewBase(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
-	_, r := New(s, logger)
+	r := newRouter(s, logger)
 
 	tests := []struct {
 		path         string
