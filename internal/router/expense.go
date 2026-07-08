@@ -2,39 +2,18 @@ package router
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"sort"
 	"strconv"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/export"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/filter"
-	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 var newAction = "new"
 var editAction = "edit"
-
-type expenseView struct {
-	pkgStorage.Expense
-	category pkgStorage.Category
-}
-
-func (e *expenseView) Category() pkgStorage.Category {
-	return e.category
-}
-
-func (e *expenseView) CategoryID() int64 {
-	if e.Expense.CategoryID() != nil {
-		return *e.Expense.CategoryID()
-	}
-	return 0
-}
-
-type expensesByYear map[int]map[string][]*expenseView
 
 const centsMultiplier = 100
 
@@ -87,22 +66,16 @@ func (c *expenseHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 }
 
-type expesesViewData struct {
-	viewBase
-	Expenses     expensesByYear
-	Years        []int
-	Months       []string
-	CurrentYear  int
-	CurrentMonth string
-	Filter       *filter.ExpenseFilter
-	Sort         *filter.SortOptions
-}
-
-func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, banner *banner) {
+func (c *expenseHandler) expensesHandler(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+	banner *domain.Banner,
+) {
 	userID := userIDFromContext(ctx)
 	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
-	data := expesesViewData{
-		viewBase: base,
+	data := domain.ExpensesViewData{
+		ViewBase: base,
 	}
 
 	defer func() {
@@ -117,14 +90,14 @@ func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWri
 	}
 
 	// Get filtered expenses
-	expenses, err := c.storage.GetExpensesFiltered(ctx, userID, expenseFilter, sortOptions)
+	expenses, err := c.expenseService.List(ctx, userID, expenseFilter, sortOptions)
 	if err != nil {
 		data.Error = err.Error()
 		return
 	}
 
 	// Group by year and month (existing logic)
-	groupedExpenses, years, err := expensesGroupByYearAndMonth(ctx, userID, expenses, c.storage)
+	groupedExpenses, years, err := c.expenseService.GroupByYearAndMonth(ctx, userID, expenses)
 	if err != nil {
 		data.Error = fmt.Sprintf("Error grouping expenses: %s", err.Error())
 		return
@@ -145,83 +118,11 @@ func (c *expenseHandler) expensesHandler(ctx context.Context, w http.ResponseWri
 	}
 }
 
-func expensesGroupByYearAndMonth(
-	ctx context.Context,
-	userID int64,
-	expenses []pkgStorage.Expense,
-	storage pkgStorage.Storage,
-) (expensesByYear, []int, error) {
-	groupedExpenses := expensesByYear{}
-	years := []int{}
-
-	for _, expense := range expenses {
-		var category pkgStorage.Category
-
-		if expense.CategoryID() != nil {
-			c, categoryErr := storage.GetCategory(ctx, userID, *expense.CategoryID())
-			if categoryErr != nil {
-				if !errors.Is(categoryErr, &pkgStorage.NotFoundError{}) {
-					return groupedExpenses, years, categoryErr
-				}
-			}
-			category = c
-		}
-
-		expenseYear := expense.Date().Year()
-		expenseMonth := expense.Date().Month().String()
-
-		year, okYear := groupedExpenses[expenseYear]
-
-		if okYear {
-			month, okMonth := year[expenseMonth]
-			if okMonth {
-				expenseview := &expenseView{
-					Expense:  expense,
-					category: category,
-				}
-				month = append(month, expenseview)
-			} else {
-				expenseview := &expenseView{
-					Expense:  expense,
-					category: category,
-				}
-				month = []*expenseView{expenseview}
-			}
-
-			year[expenseMonth] = month
-		} else {
-			years = append(years, expenseYear)
-			newYear := map[string][]*expenseView{}
-			expenseview := &expenseView{
-				Expense:  expense,
-				category: category,
-			}
-			newYear[expenseMonth] = []*expenseView{expenseview}
-			groupedExpenses[expenseYear] = newYear
-		}
-	}
-
-	sort.SliceStable(years, func(i, j int) bool {
-		return years[i] > years[j]
-	})
-
-	return groupedExpenses, years, nil
-}
-
-type expenseViewData struct {
-	viewBase
-	Expense    *expenseView
-	Categories []pkgStorage.Category
-	FormErrors map[string]string
-	Action     string
-	RedirectTo string
-}
-
 func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseWriter) {
 	userID := userIDFromContext(ctx)
 	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
-	data := expenseViewData{
-		viewBase: base,
+	data := domain.ExpenseViewData{
+		ViewBase: base,
 	}
 	data.Action = newAction
 
@@ -237,24 +138,24 @@ func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseW
 	}
 
 	data.Categories = categories
-	data.Expense = &expenseView{
-		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		category: pkgStorage.NewCategory(0, "", "", 0),
+	data.Expense = &domain.ExpenseView{
+		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
+		Cat:     domain.NewCategory(0, "", "", 0),
 	}
 }
 
 func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
 	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
-	data := expenseViewData{
-		viewBase: base,
+	data := domain.ExpenseViewData{
+		ViewBase: base,
 	}
 	data.Action = "new"
 	data.CurrentPage = pageExpenses
 	data.FormErrors = make(map[string]string)
-	data.Expense = &expenseView{
-		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		category: pkgStorage.NewCategory(0, "", "", 0),
+	data.Expense = &domain.ExpenseView{
+		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
+		Cat:     domain.NewCategory(0, "", "", 0),
 	}
 
 	defer func() {
@@ -282,22 +183,16 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 		return
 	}
 
-	created, err := c.storage.InsertExpenses(ctx, userID, []pkgStorage.Expense{newExpense})
+	_, err = c.expenseService.Create(ctx, userID, newExpense)
 	if err != nil {
 		c.logger.Error("Failed to create expense", "error", err)
 		data.Error = err.Error()
 		return
 	}
 
-	if created != 1 {
-		c.logger.Error("Failed to create expense")
-		data.Error = "Expense not created :("
-		return
-	}
-
 	c.logger.Info("Expense created successfully")
 
-	data.Banner = banner{
+	data.Banner = domain.Banner{
 		Icon:    "✅",
 		Message: "Expense Created",
 	}
@@ -306,13 +201,13 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
 	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
-	data := expenseViewData{
-		viewBase: base,
+	data := domain.ExpenseViewData{
+		ViewBase: base,
 	}
 	data.Action = editAction
-	data.Expense = &expenseView{
-		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		category: pkgStorage.NewCategory(0, "", "", 0),
+	data.Expense = &domain.ExpenseView{
+		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
+		Cat:     domain.NewCategory(0, "", "", 0),
 	}
 
 	defer func() {
@@ -326,7 +221,7 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 		return
 	}
 
-	expense, err := c.storage.GetExpenseByID(ctx, userID, id)
+	expenseView, err := c.expenseService.Get(ctx, userID, id)
 	if err != nil {
 		data.Error = err.Error()
 		return
@@ -335,24 +230,10 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 	categories, err := c.storage.GetCategories(ctx, userID)
 	if err != nil {
 		c.logger.Error("Failed to get categories", "error", err)
-		categories = []pkgStorage.Category{}
+		categories = []domain.Category{}
 	}
 
-	var category pkgStorage.Category
-	if expense.CategoryID() != nil {
-		cat, categoryErr := c.storage.GetCategory(ctx, userID, *expense.CategoryID())
-		if categoryErr != nil {
-			c.logger.Error("Failed to get category", "error", categoryErr)
-		}
-		category = cat
-	}
-
-	expenseview := &expenseView{
-		Expense:  expense,
-		category: category,
-	}
-
-	data.Expense = expenseview
+	data.Expense = expenseView
 	data.Categories = categories
 	data.RedirectTo = r.URL.Query().Get("redirect_to")
 }
@@ -360,14 +241,14 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
 	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
-	data := expenseViewData{
-		viewBase: base,
+	data := domain.ExpenseViewData{
+		ViewBase: base,
 	}
 	data.FormErrors = make(map[string]string)
 	data.Action = "edit"
-	data.Expense = &expenseView{
-		Expense:  pkgStorage.NewExpense(0, "", "", "", 0, time.Now(), pkgStorage.ChargeType, nil),
-		category: pkgStorage.NewCategory(0, "", "", 0),
+	data.Expense = &domain.ExpenseView{
+		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
+		Cat:     domain.NewCategory(0, "", "", 0),
 	}
 
 	redirected := false
@@ -392,25 +273,13 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	}
 	data.Categories = categories
 
-	expense, expenseErr := c.storage.GetExpenseByID(ctx, userID, id)
+	expenseView, expenseErr := c.expenseService.Get(ctx, userID, id)
 	if expenseErr != nil {
 		data.Error = expenseErr.Error()
 		return
 	}
 
-	var category pkgStorage.Category
-	if expense.CategoryID() != nil {
-		cat, categoryErr := c.storage.GetCategory(ctx, userID, *expense.CategoryID())
-		if categoryErr != nil {
-			c.logger.Error("Failed to get category", "error", categoryErr)
-		}
-		category = cat
-	}
-
-	data.Expense = &expenseView{
-		Expense:  expense,
-		category: category,
-	}
+	data.Expense = expenseView
 
 	updatedExpense, err := parseExpenseForm(r, w, id, data.FormErrors)
 	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
@@ -428,7 +297,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 		return
 	}
 
-	updated, err := c.storage.UpdateExpense(ctx, userID, updatedExpense)
+	updated, err := c.expenseService.Update(ctx, userID, updatedExpense)
 	if err != nil {
 		c.logger.Error("Failed to update expense", "error", err, "id", id)
 		data.FormErrors["failed to update expense"] = err.Error()
@@ -446,28 +315,27 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	c.logger.Info("Expense updated successfully", "id", id)
 
 	if isValidRedirectTarget(redirectTo) {
-		//nolint:canonicalheader //HTMX header
-		w.Header().Set("HX-Redirect", redirectTo)
+		w.Header().Set("Hx-Redirect", redirectTo)
 		w.WriteHeader(http.StatusNoContent)
 		redirected = true
 		return
 	}
 
-	var updatedCategory pkgStorage.Category
+	updatedCategory := domain.EmptyCategory()
 	if updatedExpense.CategoryID() != nil {
-		cat, categoryErr := c.storage.GetCategory(ctx, userID, *updatedExpense.CategoryID())
+		cat, categoryErr := c.categoryService.Get(ctx, userID, *updatedExpense.CategoryID())
 		if categoryErr != nil {
 			c.logger.Error("Failed to get category", "error", categoryErr)
 		}
 		updatedCategory = cat
 	}
 
-	data.Expense = &expenseView{
-		Expense:  updatedExpense,
-		category: updatedCategory,
+	data.Expense = &domain.ExpenseView{
+		Expense: updatedExpense,
+		Cat:     updatedCategory,
 	}
 
-	data.Banner = banner{
+	data.Banner = domain.Banner{
 		Icon:    "✅",
 		Message: "Expense Updated",
 	}
@@ -498,7 +366,7 @@ func parseExpenseForm(
 	w http.ResponseWriter,
 	id int64,
 	formErrors map[string]string,
-) (pkgStorage.Expense, error) {
+) (domain.Expense, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
 	err := r.ParseForm()
 	if err != nil {
@@ -524,7 +392,7 @@ func parseExpenseForm(
 	}
 
 	var amount int64
-	var expenseType pkgStorage.ExpenseType
+	var expenseType domain.ExpenseType
 
 	if amountStr == "" {
 		formErrors["amount"] = amountIsRequired
@@ -554,14 +422,14 @@ func parseExpenseForm(
 		if parseErr != nil {
 			formErrors["type"] = typeInvalid
 		} else {
-			expenseType = pkgStorage.ExpenseType(typeInt)
+			expenseType = domain.ExpenseType(typeInt)
 		}
 	}
 
 	if amount != 0 {
-		if expenseType == pkgStorage.ChargeType && amount > 0 {
+		if expenseType == domain.ChargeType && amount > 0 {
 			amount = -amount
-		} else if expenseType == pkgStorage.IncomeType && amount < 0 {
+		} else if expenseType == domain.IncomeType && amount < 0 {
 			amount = -amount
 		}
 	}
@@ -579,7 +447,7 @@ func parseExpenseForm(
 		categoryID = nil
 	}
 
-	return pkgStorage.NewExpense(id, source, description, currency, amount, date, expenseType, categoryID), nil
+	return domain.NewExpense(id, source, description, currency, amount, date, expenseType, categoryID), nil
 }
 
 func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -601,7 +469,7 @@ func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.Respon
 		return
 	}
 
-	_, err = c.storage.DeleteExpense(ctx, userID, id)
+	err = c.expenseService.Delete(ctx, userID, id)
 	if err != nil {
 		c.logger.Error("Failed to delete expense", "error", err, "id", id)
 		err = fmt.Errorf("error deleting the expense. %s", err.Error())
@@ -610,7 +478,7 @@ func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.Respon
 
 	c.logger.Info("Expense deleted successfully", "id", id)
 
-	c.expensesHandler(ctx, w, r, &banner{
+	c.expensesHandler(ctx, w, r, &domain.Banner{
 		Icon:    "🔥",
 		Message: "Expense deleted",
 	})
@@ -618,13 +486,6 @@ func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.Respon
 
 func (c *expenseHandler) exportExpensesHandler(ctx context.Context, w http.ResponseWriter) {
 	userID := userIDFromContext(ctx)
-	// Get all expenses
-	expenses, err := c.storage.GetAllExpenseTypes(ctx, userID)
-	if err != nil {
-		c.logger.Error("Failed to get expenses for export", "error", err)
-		http.Error(w, fmt.Sprintf("Failed to get expenses: %s", err.Error()), http.StatusInternalServerError)
-		return
-	}
 
 	// Set CSV headers
 	filename := fmt.Sprintf("expenses_%s.csv", time.Now().Format("2006-01-02"))
@@ -632,11 +493,11 @@ func (c *expenseHandler) exportExpensesHandler(ctx context.Context, w http.Respo
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 
 	// Export to CSV
-	if exportErr := export.CSV(ctx, userID, w, expenses, c.storage); exportErr != nil {
+	if exportErr := c.expenseService.Export(ctx, userID, w); exportErr != nil {
 		c.logger.Error("Failed to export expenses to CSV", "error", exportErr)
 		http.Error(w, fmt.Sprintf("Failed to export expenses: %s", exportErr.Error()), http.StatusInternalServerError)
 		return
 	}
 
-	c.logger.Info("Expenses exported successfully", "count", len(expenses))
+	c.logger.Info("Expenses exported successfully")
 }

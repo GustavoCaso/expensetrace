@@ -3,7 +3,7 @@ package matcher
 import (
 	"regexp"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 )
 
 var Exclude = "exclude"
@@ -16,10 +16,10 @@ type matcher struct {
 
 type Matcher struct {
 	matchers   []matcher
-	categories []storage.Category
+	categories []domain.Category
 }
 
-func New(categories []storage.Category) *Matcher {
+func New(categories []domain.Category) *Matcher {
 	matchers := make([]matcher, len(categories))
 
 	for i, category := range categories {
@@ -37,7 +37,7 @@ func New(categories []storage.Category) *Matcher {
 	}
 }
 
-func (c Matcher) Categories() []storage.Category {
+func (c Matcher) Categories() []domain.Category {
 	return c.categories
 }
 

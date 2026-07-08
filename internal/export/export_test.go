@@ -10,7 +10,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -32,19 +32,19 @@ func TestCSV(t *testing.T) {
 
 	// Create test expenses
 	testDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"TestSource",
 			"restaurant bill",
 			"USD",
 			-5000,
 			testDate,
-			storage.ChargeType,
+			domain.ChargeType,
 			&categoryID1,
 		),
-		storage.NewExpense(0, "TestSource", "uber ride", "EUR", -3000, testDate, storage.ChargeType, &categoryID2),
-		storage.NewExpense(0, "TestSource", "salary", "USD", 500000, testDate, storage.IncomeType, nil),
+		domain.NewExpense(0, "TestSource", "uber ride", "EUR", -3000, testDate, domain.ChargeType, &categoryID2),
+		domain.NewExpense(0, "TestSource", "salary", "USD", 500000, testDate, domain.IncomeType, nil),
 	}
 
 	_, err = s.InsertExpenses(ctx, user.ID(), expenses)
@@ -201,20 +201,20 @@ func TestExpenseToCSVRecord(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		expense      storage.Expense
+		expense      domain.Expense
 		expectedRow  []string
 		validateFunc func(t *testing.T, row []string)
 	}{
 		{
 			name: "Charge with category",
-			expense: storage.NewExpense(
+			expense: domain.NewExpense(
 				123,
 				"Bank",
 				"coffee shop",
 				"USD",
 				-450,
 				time.Date(2024, 3, 10, 0, 0, 0, 0, time.UTC),
-				storage.ChargeType,
+				domain.ChargeType,
 				&categoryID,
 			),
 			validateFunc: func(t *testing.T, row []string) {
@@ -246,14 +246,14 @@ func TestExpenseToCSVRecord(t *testing.T) {
 		},
 		{
 			name: "Income without category",
-			expense: storage.NewExpense(
+			expense: domain.NewExpense(
 				456,
 				"Employer",
 				"monthly salary",
 				"EUR",
 				250000,
 				time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC),
-				storage.IncomeType,
+				domain.IncomeType,
 				nil,
 			),
 			validateFunc: func(t *testing.T, row []string) {
@@ -303,15 +303,15 @@ func TestCSVRoundTrip(t *testing.T) {
 
 	// Create a test expense
 	testDate := time.Date(2024, 6, 15, 12, 30, 0, 0, time.UTC)
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"MyBank",
 			"supermarket purchase",
 			"GBP",
 			-12550,
 			testDate,
-			storage.ChargeType,
+			domain.ChargeType,
 			&categoryID,
 		),
 	}

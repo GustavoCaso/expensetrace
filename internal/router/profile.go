@@ -4,9 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"golang.org/x/crypto/bcrypt"
-
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 )
 
 type profileHandler struct {
@@ -21,7 +19,7 @@ func (p *profileHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /profile/password", p.updatePassword)
 }
 
-func (p *profileHandler) profilePage(w http.ResponseWriter, r *http.Request, banner *banner, err error) {
+func (p *profileHandler) profilePage(w http.ResponseWriter, r *http.Request, banner *domain.Banner, err error) {
 	ctx := r.Context()
 	base := newViewBase(ctx, p.router.storage, p.router.logger, pageProfile)
 	if banner != nil {
@@ -47,35 +45,18 @@ func (p *profileHandler) updateUsername(w http.ResponseWriter, r *http.Request) 
 
 	newUsername := r.FormValue("username")
 
-	// Validate input
-	if newUsername == "" {
-		p.renderError(w, r, errors.New("username is required"))
-		return
-	}
-
-	// Check if username already exists
-	_, err := p.router.storage.GetUserByUsername(ctx, newUsername)
-	if err == nil {
-		p.renderError(w, r, errors.New("username already exists"))
-		return
-	}
-
-	var notFoundErr *storage.NotFoundError
-	if !errors.As(err, &notFoundErr) {
-		p.router.logger.Error("Failed to check username", "error", err)
-		p.renderError(w, r, errors.New("internal Server Error"))
-		return
-	}
-
-	// Update username
-	err = p.router.storage.UpdateUsername(ctx, userID, newUsername)
+	validationErr, err := p.router.profileService.UpdateUsername(ctx, userID, newUsername)
 	if err != nil {
 		p.router.logger.Error("Failed to update username", "error", err, "user_id", userID)
-		p.renderError(w, r, errors.New("failed to update username"))
+		p.renderError(w, r, err)
 		return
 	}
 
-	p.router.logger.Info("Username updated", "user_id", userID, "new_username", newUsername)
+	if validationErr != nil {
+		p.renderError(w, r, validationErr)
+		return
+	}
+
 	p.renderSuccess(w, r, "Username updated successfully")
 }
 
@@ -93,54 +74,24 @@ func (p *profileHandler) updatePassword(w http.ResponseWriter, r *http.Request) 
 	newPassword := r.FormValue("new_password")
 	confirmPassword := r.FormValue("confirm_password")
 
-	// Validate input
-	if currentPassword == "" || newPassword == "" || confirmPassword == "" {
-		p.renderError(w, r, errors.New("all fields are required"))
-		return
-	}
-
-	if newPassword != confirmPassword {
-		p.renderError(w, r, errors.New("new passwords do not match"))
-		return
-	}
-
-	if len(newPassword) < minPasswordLength {
-		p.renderError(w, r, errors.New("password must be at least 8 characters long"))
-		return
-	}
-
-	// Get current user
-	user, err := p.router.storage.GetUserByID(ctx, userID)
-	if err != nil {
-		p.router.logger.Error("Failed to get user", "error", err, "user_id", userID)
-		p.renderError(w, r, errors.New("internal Server Error"))
-		return
-	}
-
-	// Verify current password
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash()), []byte(currentPassword))
-	if err != nil {
-		p.renderError(w, r, errors.New("current password is incorrect"))
-		return
-	}
-
-	// Hash new password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
-	if err != nil {
-		p.router.logger.Error("Failed to hash password", "error", err)
-		p.renderError(w, r, errors.New("internal Server Error"))
-		return
-	}
-
-	// Update password
-	err = p.router.storage.UpdatePassword(ctx, userID, string(hashedPassword))
+	validationErr, err := p.router.profileService.UpdatePassword(
+		ctx,
+		userID,
+		currentPassword,
+		newPassword,
+		confirmPassword,
+	)
 	if err != nil {
 		p.router.logger.Error("Failed to update password", "error", err, "user_id", userID)
-		p.renderError(w, r, errors.New("failed to update password"))
+		p.renderError(w, r, err)
 		return
 	}
 
-	p.router.logger.Info("Password updated", "user_id", userID)
+	if validationErr != nil {
+		p.renderError(w, r, validationErr)
+		return
+	}
+
 	p.renderSuccess(w, r, "Password changed successfully")
 }
 
@@ -149,7 +100,7 @@ func (p *profileHandler) renderError(w http.ResponseWriter, r *http.Request, err
 }
 
 func (p *profileHandler) renderSuccess(w http.ResponseWriter, r *http.Request, message string) {
-	data := &banner{
+	data := &domain.Banner{
 		Icon:    "✓",
 		Message: message,
 	}

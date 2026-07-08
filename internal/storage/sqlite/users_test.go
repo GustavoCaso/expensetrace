@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 )
 
 func TestCreateUser(t *testing.T) {
@@ -96,7 +96,7 @@ func TestGetUserByUsernameNotFound(t *testing.T) {
 		t.Error("Expected error when getting non-existent user")
 	}
 
-	var notFoundErr *storage.NotFoundError
+	var notFoundErr *domain.NotFoundError
 	if !errors.As(err, &notFoundErr) {
 		t.Errorf("Expected NotFoundError, got %v", err)
 	}
@@ -178,7 +178,7 @@ func TestUpdateUsername(t *testing.T) {
 
 	// Verify old username doesn't work
 	_, err = s.GetUserByUsername(context.Background(), "oldusername")
-	var notFoundErr *storage.NotFoundError
+	var notFoundErr *domain.NotFoundError
 	if !errors.As(err, &notFoundErr) {
 		t.Error("Expected NotFoundError when getting user with old username")
 	}
@@ -202,7 +202,7 @@ func TestUpdateUsernameNotFound(t *testing.T) {
 		t.Error("Expected error when updating non-existent user")
 	}
 
-	var notFoundErr *storage.NotFoundError
+	var notFoundErr *domain.NotFoundError
 	if !errors.As(err, &notFoundErr) {
 		t.Errorf("Expected NotFoundError, got %v", err)
 	}
@@ -259,7 +259,7 @@ func TestUpdatePasswordNotFound(t *testing.T) {
 		t.Error("Expected error when updating password for non-existent user")
 	}
 
-	var notFoundErr *storage.NotFoundError
+	var notFoundErr *domain.NotFoundError
 	if !errors.As(err, &notFoundErr) {
 		t.Errorf("Expected NotFoundError, got %v", err)
 	}

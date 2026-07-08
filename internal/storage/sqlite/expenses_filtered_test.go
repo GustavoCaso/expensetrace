@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/filter"
-	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 func TestGetExpensesFiltered_NoFilters(t *testing.T) {
@@ -15,35 +15,35 @@ func TestGetExpensesFiltered_NoFilters(t *testing.T) {
 	ctx := context.Background()
 
 	// Insert test expenses
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"store1",
 			"coffee",
 			"USD",
 			-500,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store2",
 			"lunch",
 			"USD",
 			-1200,
 			time.Date(2024, 1, 16, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"employer",
 			"salary",
 			"USD",
 			500000,
 			time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-			storage.IncomeType,
+			domain.IncomeType,
 			nil,
 		),
 	}
@@ -77,35 +77,35 @@ func TestGetExpensesFiltered_DescriptionFilter(t *testing.T) {
 	ctx := context.Background()
 
 	// Insert test expenses
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"store1",
 			"morning coffee",
 			"USD",
 			-500,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store2",
 			"afternoon coffee",
 			"USD",
 			-450,
 			time.Date(2024, 1, 16, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store3",
 			"lunch",
 			"USD",
 			-1200,
 			time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
@@ -143,35 +143,35 @@ func TestGetExpensesFiltered_SourceFilter(t *testing.T) {
 	stor, user := setupTestStorage(t)
 	ctx := context.Background()
 
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"visa",
 			"coffee",
 			"USD",
 			-500,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"mastercard",
 			"lunch",
 			"USD",
 			-1200,
 			time.Date(2024, 1, 16, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"visa",
 			"dinner",
 			"USD",
 			-2000,
 			time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
@@ -208,35 +208,35 @@ func TestGetExpensesFiltered_AmountRangeFilter(t *testing.T) {
 	stor, user := setupTestStorage(t)
 	ctx := context.Background()
 
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"store",
 			"small",
 			"USD",
 			-300,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store",
 			"medium",
 			"USD",
 			-800,
 			time.Date(2024, 1, 16, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store",
 			"large",
 			"USD",
 			-1500,
 			time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
@@ -272,35 +272,35 @@ func TestGetExpensesFiltered_DateRangeFilter(t *testing.T) {
 	stor, user := setupTestStorage(t)
 	ctx := context.Background()
 
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"store",
 			"jan",
 			"USD",
 			-500,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store",
 			"feb",
 			"USD",
 			-600,
 			time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store",
 			"mar",
 			"USD",
 			-700,
 			time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
@@ -336,45 +336,45 @@ func TestGetExpensesFiltered_CombinedFilters(t *testing.T) {
 	stor, user := setupTestStorage(t)
 	ctx := context.Background()
 
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"visa",
 			"coffee shop",
 			"USD",
 			-500,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"visa",
 			"coffee shop",
 			"USD",
 			-600,
 			time.Date(2024, 1, 16, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"mastercard",
 			"coffee shop",
 			"USD",
 			-550,
 			time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"visa",
 			"restaurant",
 			"USD",
 			-1200,
 			time.Date(2024, 1, 18, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
@@ -415,35 +415,35 @@ func TestGetExpensesFiltered_SortByDateAsc(t *testing.T) {
 	stor, user := setupTestStorage(t)
 	ctx := context.Background()
 
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"store",
 			"third",
 			"USD",
 			-500,
 			time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store",
 			"first",
 			"USD",
 			-600,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store",
 			"second",
 			"USD",
 			-700,
 			time.Date(2024, 1, 16, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
@@ -483,35 +483,35 @@ func TestGetExpensesFiltered_SortByAmountDesc(t *testing.T) {
 	stor, user := setupTestStorage(t)
 	ctx := context.Background()
 
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"store",
 			"medium",
 			"USD",
 			-800,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store",
 			"small",
 			"USD",
 			-500,
 			time.Date(2024, 1, 16, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store",
 			"large",
 			"USD",
 			-1200,
 			time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
@@ -559,25 +559,25 @@ func TestGetExpensesFiltered_UserIsolation(t *testing.T) {
 	}
 
 	// Insert expenses for user 1
-	user1Expenses := []storage.Expense{
-		storage.NewExpense(
+	user1Expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"store",
 			"user1 expense1",
 			"USD",
 			-500,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store",
 			"user1 expense2",
 			"USD",
 			-600,
 			time.Date(2024, 1, 16, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
@@ -587,15 +587,15 @@ func TestGetExpensesFiltered_UserIsolation(t *testing.T) {
 	}
 
 	// Insert expenses for user 2
-	user2Expenses := []storage.Expense{
-		storage.NewExpense(
+	user2Expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"store",
 			"user2 expense1",
 			"USD",
 			-700,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}

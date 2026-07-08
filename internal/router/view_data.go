@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
@@ -16,22 +17,8 @@ const (
 	pageProfile    = "profile"
 )
 
-type banner struct {
-	Icon    string
-	Message string
-}
-
-type viewBase struct {
-	Error            string
-	Banner           banner
-	CurrentPage      string
-	LoggedIn         bool
-	Username         string
-	UsernameInitials string
-}
-
-// newViewBase creates a new viewBase with user information from context.
-func newViewBase(ctx context.Context, s storage.Storage, logger *logger.Logger, currentPage string) viewBase {
+// newViewBase creates a new domain.ViewBase with user information from context.
+func newViewBase(ctx context.Context, s storage.Storage, logger *logger.Logger, currentPage string) domain.ViewBase {
 	userID := userIDFromContext(ctx)
 	username := ""
 	usernameInitials := ""
@@ -48,7 +35,7 @@ func newViewBase(ctx context.Context, s storage.Storage, logger *logger.Logger, 
 		}
 	}
 
-	return viewBase{
+	return domain.ViewBase{
 		LoggedIn:         loggedIn,
 		Username:         username,
 		UsernameInitials: usernameInitials,

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
-	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 func createMigrationsTable(db *sql.DB) error {
@@ -308,7 +308,7 @@ func (s *sqliteStorage) ApplyMigrations(ctx context.Context, logger *logger.Logg
 			up: func(tx *sql.Tx) error {
 				_, alterErr := tx.ExecContext(ctx, `
 						INSERT INTO categories (name, pattern) values(?, "$a")
-				`, storage.ExcludeCategory)
+				`, domain.ExcludeCategory)
 				if alterErr != nil {
 					return alterErr
 				}

@@ -3,13 +3,13 @@ package matcher
 import (
 	"testing"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 )
 
 func TestNew(t *testing.T) {
-	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
+	categories := []domain.Category{
+		domain.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+		domain.NewCategory(2, "Transport", "uber|taxi|transit", 0),
 	}
 
 	matcher := New(categories)
@@ -28,10 +28,10 @@ func TestMatch(t *testing.T) {
 	transportCategoryID := int64(1)
 	entertaimentCategoryID := int64(1)
 
-	categories := []storage.Category{
-		storage.NewCategory(foodCategoryID, "Food", "restaurant|food|grocery", 0),
-		storage.NewCategory(transportCategoryID, "Transport", "uber|taxi|transit", 0),
-		storage.NewCategory(entertaimentCategoryID, "Entertainment", "netflix|spotify|movie", 0),
+	categories := []domain.Category{
+		domain.NewCategory(foodCategoryID, "Food", "restaurant|food|grocery", 0),
+		domain.NewCategory(transportCategoryID, "Transport", "uber|taxi|transit", 0),
+		domain.NewCategory(entertaimentCategoryID, "Entertainment", "netflix|spotify|movie", 0),
 	}
 
 	matcher := New(categories)
@@ -90,9 +90,9 @@ func TestMatch(t *testing.T) {
 }
 
 func TestCategories(t *testing.T) {
-	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
+	categories := []domain.Category{
+		domain.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+		domain.NewCategory(2, "Transport", "uber|taxi|transit", 0),
 	}
 
 	matcher := New(categories)

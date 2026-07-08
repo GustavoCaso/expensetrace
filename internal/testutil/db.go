@@ -8,12 +8,13 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/storage/sqlite"
 )
 
-func SetupTestStorage(t *testing.T, logger *logger.Logger) (storage.Storage, storage.User) {
+func SetupTestStorage(t *testing.T, logger *logger.Logger) (storage.Storage, domain.User) {
 	t.Helper()
 	// We use a tempDir + the unique test name (t.Name) that way we can warranty that any test has its own DB
 	// Using a tempDir ensure it gets clean after each test

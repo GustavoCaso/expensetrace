@@ -7,6 +7,7 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	storageType "github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
@@ -22,7 +23,7 @@ func CSV(
 	ctx context.Context,
 	userID int64,
 	writer io.Writer,
-	expenses []storageType.Expense,
+	expenses []domain.Expense,
 	storage storageType.Storage,
 ) error {
 	w := csv.NewWriter(writer)
@@ -51,7 +52,7 @@ func CSV(
 func expenseToCSVRecord(
 	ctx context.Context,
 	userID int64,
-	expense storageType.Expense,
+	expense domain.Expense,
 	storage storageType.Storage,
 ) []string {
 	// Get category name if category exists
@@ -72,7 +73,7 @@ func expenseToCSVRecord(
 
 	// Format type
 	typeStr := "charge"
-	if expense.Type() == storageType.IncomeType {
+	if expense.Type() == domain.IncomeType {
 		typeStr = "income"
 	}
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
@@ -13,7 +14,7 @@ func SetupAuthCookie(
 	t *testing.T,
 	s storage.Storage,
 	req *http.Request,
-	user storage.User,
+	user domain.User,
 	cookieKey string,
 	duration time.Duration,
 ) {

@@ -7,54 +7,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
 )
-
-type BudgetStatus string
-
-const (
-	BudgetStatusUnder    BudgetStatus = "under"
-	BudgetStatusNear     BudgetStatus = "near"
-	BudgetStatusOver     BudgetStatus = "over"
-	BudgetStatusNoBudget BudgetStatus = "no_budget"
-)
-
-const (
-	budgetUnder = 80
-	budgetFull  = 100
-)
-
-type BudgetInfo struct {
-	Amount         int64        `json:"amount"`          // Budget amount in cents (0 if no budget)
-	Spent          int64        `json:"spent"`           // Amount spent (positive)
-	Remaining      int64        `json:"remaining"`       // Remaining budget (can be negative)
-	PercentageUsed float64      `json:"percentage_used"` // Percentage of budget used
-	Status         BudgetStatus `json:"status"`          // Color coding status
-}
-
-type Category struct {
-	Name              string               `json:"name"`
-	Amount            int64                `json:"amount"`
-	Expenses          []pkgStorage.Expense `json:"expenses"`
-	PercentageOfTotal float64              `json:"percentage_of_total"`
-	LastTransaction   time.Time            `json:"last_transaction"`
-	AvgAmount         int64                `json:"average_amount"`
-	Budget            BudgetInfo           `json:"budget"`
-}
-
-type Report struct {
-	Title                 string     `json:"title"`
-	Spending              int64      `json:"spending"`
-	Income                int64      `json:"income"`
-	Savings               int64      `json:"savings"`
-	StartDate             time.Time  `json:"start_date"`
-	EndDate               time.Time  `json:"end_date"`
-	SavingsPercentage     float32    `json:"savings_percentage"`
-	EarningsPerDay        int64      `json:"earnings_per_day"`
-	AverageSpendingPerDay int64      `json:"average_spending_per_day"`
-	ExpenseCategories     []Category `json:"expense_categories"`
-	IncomeCategories      []Category `json:"income_categories"`
-}
 
 const (
 	percentageOfTotal = 100
@@ -65,10 +20,10 @@ func Generate(
 	userID int64,
 	startDate, endDate time.Time,
 	storage pkgStorage.Storage,
-	expenses []pkgStorage.Expense,
+	expenses []domain.Expense,
 	reportType string,
-) (Report, error) {
-	var report Report
+) (domain.Report, error) {
+	var report domain.Report
 
 	expenseCategories, incomeCategories, totalIncome, totalSpending, err := splitByExpenseType(
 		ctx,
@@ -113,16 +68,16 @@ func splitByExpenseType(
 	ctx context.Context,
 	userID int64,
 	storage pkgStorage.Storage,
-	expenses []pkgStorage.Expense,
-) ([]Category, []Category, int64, int64, error) {
+	expenses []domain.Expense,
+) ([]domain.CategoryReport, []domain.CategoryReport, int64, int64, error) {
 	var incomeTotal int64
 	var spendingTotal int64
 	// Track category budgets by category name
 	categoryBudgets := make(map[string]int64)
-	expenseCategories := []Category{}
-	incomeCategories := []Category{}
+	expenseCategories := []domain.CategoryReport{}
+	incomeCategories := []domain.CategoryReport{}
 	// internal map to keep track of expense categories
-	expenseCategoryMap := map[string]Category{}
+	expenseCategoryMap := map[string]domain.CategoryReport{}
 
 	for _, ex := range expenses {
 		categoryName := ""
@@ -133,7 +88,7 @@ func splitByExpenseType(
 				return expenseCategories, incomeCategories, incomeTotal, spendingTotal, categoryError
 			}
 
-			if category.Name() == pkgStorage.ExcludeCategory {
+			if category.Name() == domain.ExcludeCategory {
 				continue
 			}
 
@@ -143,9 +98,9 @@ func splitByExpenseType(
 		}
 
 		switch ex.Type() {
-		case pkgStorage.ChargeType:
+		case domain.ChargeType:
 			spendingTotal += ex.Amount()
-		case pkgStorage.IncomeType:
+		case domain.IncomeType:
 			incomeTotal += ex.Amount()
 		}
 		addExpenseToCategory(expenseCategoryMap, ex, categoryName)
@@ -182,16 +137,16 @@ func splitByExpenseType(
 			if hasBudget && budget > 0 {
 				category.Budget = calculateBudgetInfo(budget, category.Amount)
 			} else {
-				category.Budget = BudgetInfo{
+				category.Budget = domain.BudgetInfo{
 					Amount: 0,
-					Status: BudgetStatusNoBudget,
+					Status: domain.BudgetStatusNoBudget,
 				}
 			}
 		} else {
 			// Income categories don't have budgets
-			category.Budget = BudgetInfo{
+			category.Budget = domain.BudgetInfo{
 				Amount: 0,
-				Status: BudgetStatusNoBudget,
+				Status: domain.BudgetStatusNoBudget,
 			}
 		}
 
@@ -205,7 +160,7 @@ func splitByExpenseType(
 	return expenseCategories, incomeCategories, incomeTotal, spendingTotal, nil
 }
 
-func addExpenseToCategory(categories map[string]Category, ex pkgStorage.Expense, categoryString string) {
+func addExpenseToCategory(categories map[string]domain.CategoryReport, ex domain.Expense, categoryString string) {
 	categoryName := expeseCategoryName(ex, categoryString)
 
 	c, ok := categories[categoryName]
@@ -216,10 +171,10 @@ func addExpenseToCategory(categories map[string]Category, ex pkgStorage.Expense,
 		categories[categoryName] = c
 	} else {
 		amount := ex.Amount()
-		cat := Category{
+		cat := domain.CategoryReport{
 			Amount: amount,
 			Name:   categoryName,
-			Expenses: []pkgStorage.Expense{
+			Expenses: []domain.Expense{
 				ex,
 			},
 		}
@@ -227,8 +182,8 @@ func addExpenseToCategory(categories map[string]Category, ex pkgStorage.Expense,
 	}
 }
 
-func expeseCategoryName(ex pkgStorage.Expense, categoryName string) string {
-	if ex.Type() == pkgStorage.IncomeType {
+func expeseCategoryName(ex domain.Expense, categoryName string) string {
+	if ex.Type() == domain.IncomeType {
 		return "income"
 	}
 
@@ -252,7 +207,7 @@ func calendarDays(t1, t2 time.Time) int {
 	return int(days)
 }
 
-func calculateBudgetInfo(budgetAmount int64, spentAmount int64) BudgetInfo {
+func calculateBudgetInfo(budgetAmount int64, spentAmount int64) domain.BudgetInfo {
 	// spentAmount is negative for expenses, convert to positive
 	spent := spentAmount * -1
 
@@ -265,17 +220,17 @@ func calculateBudgetInfo(budgetAmount int64, spentAmount int64) BudgetInfo {
 		percentageUsed = 0
 	}
 
-	var status BudgetStatus
+	var status domain.BudgetStatus
 	switch {
-	case percentageUsed < budgetUnder:
-		status = BudgetStatusUnder
-	case percentageUsed <= budgetFull:
-		status = BudgetStatusNear
+	case percentageUsed < domain.BudgetUnder:
+		status = domain.BudgetStatusUnder
+	case percentageUsed <= domain.BudgetFull:
+		status = domain.BudgetStatusNear
 	default:
-		status = BudgetStatusOver
+		status = domain.BudgetStatusOver
 	}
 
-	return BudgetInfo{
+	return domain.BudgetInfo{
 		Amount:         budgetAmount,
 		Spent:          spent,
 		Remaining:      remaining,

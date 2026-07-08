@@ -12,6 +12,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
@@ -50,10 +51,10 @@ func TestGetCategories(t *testing.T) {
 		t.Errorf("Failed to get categories: %v", err)
 	}
 
-	categoriesMap := map[int64]storage.Category{}
+	categoriesMap := map[int64]domain.Category{}
 
 	for _, category := range categories {
-		if category.Name() == storage.ExcludeCategory {
+		if category.Name() == domain.ExcludeCategory {
 			continue
 		}
 		categoriesMap[category.ID()] = category
@@ -92,8 +93,8 @@ func TestGetCategory(t *testing.T) {
 		t.Error("Expected error when getting non-existent category, got nil")
 	}
 
-	if !errors.Is(err, &storage.NotFoundError{}) {
-		t.Error("Expected error to be of type storage.NotFoundError")
+	if !errors.Is(err, &domain.NotFoundError{}) {
+		t.Error("Expected error to be of type domain.NotFoundError")
 	}
 }
 
@@ -165,19 +166,19 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 	}
 	excludeID := excludeCategory.ID()
 	testTime := time.Now()
-	expense := storage.NewExpense(0, "bank", "Restaurant dinner", "EUR", -2500, testTime, storage.ChargeType, &catID)
-	excludeExpense := storage.NewExpense(
+	expense := domain.NewExpense(0, "bank", "Restaurant dinner", "EUR", -2500, testTime, domain.ChargeType, &catID)
+	excludeExpense := domain.NewExpense(
 		0,
 		"bank",
 		"excluded expense",
 		"EUR",
 		1000,
 		testTime,
-		storage.IncomeType,
+		domain.IncomeType,
 		&excludeID,
 	)
 
-	expenses := []storage.Expense{expense, excludeExpense}
+	expenses := []domain.Expense{expense, excludeExpense}
 	_, insertErr := stor.InsertExpenses(context.Background(), user.ID(), expenses)
 	if insertErr != nil {
 		t.Fatalf("Failed to create test expense: %v", insertErr)
@@ -249,9 +250,9 @@ func TestDeleteCategory(t *testing.T) {
 		t.Fatalf("Failed to create test category: %v", createCategoryErr)
 	}
 	testTime := time.Now()
-	expense := storage.NewExpense(0, "bank", "Restaurant dinner", "EUR", -2500, testTime, storage.ChargeType, &catID)
+	expense := domain.NewExpense(0, "bank", "Restaurant dinner", "EUR", -2500, testTime, domain.ChargeType, &catID)
 
-	expenses := []storage.Expense{expense}
+	expenses := []domain.Expense{expense}
 	_, insertErr := stor.InsertExpenses(context.Background(), user.ID(), expenses)
 	if insertErr != nil {
 		t.Fatalf("Failed to create test expense: %v", insertErr)
@@ -330,7 +331,7 @@ func TestUpdateCategory(t *testing.T) {
 	}
 }
 
-func setupTestStorage(t *testing.T) (storage.Storage, storage.User) {
+func setupTestStorage(t *testing.T) (storage.Storage, domain.User) {
 	t.Helper()
 	// We use a tempDir + the unique test name (t.Name) that way we can warrant that any test has its own DB
 	// Using a tempDir ensure it gets clean after each test

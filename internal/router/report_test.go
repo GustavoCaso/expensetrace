@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -18,8 +18,8 @@ func TestHomeHandlerWithOpenParams(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, domain.ChargeType, nil),
 	}
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
@@ -72,8 +72,8 @@ func TestHomeHandlerHTMXPartialSwap(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, domain.ChargeType, nil),
 	}
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
@@ -108,9 +108,9 @@ func TestHomeHandler(t *testing.T) {
 
 	// Create test expenses
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, storage.ChargeType, nil),
-		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)

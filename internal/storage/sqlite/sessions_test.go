@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 )
 
 func TestCreateSession(t *testing.T) {
@@ -99,7 +99,7 @@ func TestGetSessionExpired(t *testing.T) {
 		t.Error("Expected error when getting expired session")
 	}
 
-	var notFoundErr *storage.NotFoundError
+	var notFoundErr *domain.NotFoundError
 	if !errors.As(err, &notFoundErr) {
 		t.Errorf("Expected NotFoundError for expired session, got %v", err)
 	}
@@ -114,7 +114,7 @@ func TestGetSessionNotFound(t *testing.T) {
 		t.Error("Expected error when getting non-existent session")
 	}
 
-	var notFoundErr *storage.NotFoundError
+	var notFoundErr *domain.NotFoundError
 	if !errors.As(err, &notFoundErr) {
 		t.Errorf("Expected NotFoundError, got %v", err)
 	}

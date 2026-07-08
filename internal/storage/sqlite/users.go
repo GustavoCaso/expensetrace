@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 )
 
-func (s *sqliteStorage) CreateUser(ctx context.Context, username, passwordHash string) (storage.User, error) {
+func (s *sqliteStorage) CreateUser(ctx context.Context, username, passwordHash string) (domain.User, error) {
 	// Begin transaction to ensure atomic user + exclude category creation
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -36,7 +36,7 @@ func (s *sqliteStorage) CreateUser(ctx context.Context, username, passwordHash s
 	// Create Exclude category for this user
 	_, err = tx.ExecContext(ctx,
 		`INSERT INTO categories (name, pattern, user_id) VALUES (?, ?, ?)`,
-		storage.ExcludeCategory, "$a", userID)
+		domain.ExcludeCategory, "$a", userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create exclude category: %w", err)
 	}
@@ -46,10 +46,10 @@ func (s *sqliteStorage) CreateUser(ctx context.Context, username, passwordHash s
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return storage.NewUser(userID, username, passwordHash, createdAt), nil
+	return domain.NewUser(userID, username, passwordHash, createdAt), nil
 }
 
-func (s *sqliteStorage) GetUserByUsername(ctx context.Context, username string) (storage.User, error) {
+func (s *sqliteStorage) GetUserByUsername(ctx context.Context, username string) (domain.User, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT id, username, password_hash, created_at
 		FROM users
@@ -64,15 +64,15 @@ func (s *sqliteStorage) GetUserByUsername(ctx context.Context, username string) 
 	err := row.Scan(&id, &uname, &passwordHash, &createdAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, &storage.NotFoundError{}
+			return nil, &domain.NotFoundError{}
 		}
 		return nil, fmt.Errorf("failed to scan user: %w", err)
 	}
 
-	return storage.NewUser(id, uname, passwordHash, time.Unix(createdAt, 0)), nil
+	return domain.NewUser(id, uname, passwordHash, time.Unix(createdAt, 0)), nil
 }
 
-func (s *sqliteStorage) GetUserByID(ctx context.Context, id int64) (storage.User, error) {
+func (s *sqliteStorage) GetUserByID(ctx context.Context, id int64) (domain.User, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT id, username, password_hash, created_at
 		FROM users
@@ -87,12 +87,12 @@ func (s *sqliteStorage) GetUserByID(ctx context.Context, id int64) (storage.User
 	err := row.Scan(&userID, &username, &passwordHash, &createdAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, &storage.NotFoundError{}
+			return nil, &domain.NotFoundError{}
 		}
 		return nil, fmt.Errorf("failed to scan user: %w", err)
 	}
 
-	return storage.NewUser(userID, username, passwordHash, time.Unix(createdAt, 0)), nil
+	return domain.NewUser(userID, username, passwordHash, time.Unix(createdAt, 0)), nil
 }
 
 func (s *sqliteStorage) UpdateUsername(ctx context.Context, userID int64, newUsername string) error {
@@ -111,7 +111,7 @@ func (s *sqliteStorage) UpdateUsername(ctx context.Context, userID int64, newUse
 	}
 
 	if rowsAffected == 0 {
-		return &storage.NotFoundError{}
+		return &domain.NotFoundError{}
 	}
 
 	return nil
@@ -133,7 +133,7 @@ func (s *sqliteStorage) UpdatePassword(ctx context.Context, userID int64, newPas
 	}
 
 	if rowsAffected == 0 {
-		return &storage.NotFoundError{}
+		return &domain.NotFoundError{}
 	}
 
 	return nil

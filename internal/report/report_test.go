@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -17,26 +17,26 @@ func TestGenerate(t *testing.T) {
 	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	endDate := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
 
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, startDate, storage.ChargeType, nil),
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, startDate, domain.ChargeType, nil),
+		domain.NewExpense(
 			0,
 			"Test Source",
 			"Uber ride",
 			"USD",
 			-50000,
 			startDate.Add(24*time.Hour),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"Test Source",
 			"Salary",
 			"USD",
 			5000000,
 			startDate.Add(48*time.Hour),
-			storage.IncomeType,
+			domain.IncomeType,
 			nil,
 		),
 	}
@@ -104,46 +104,46 @@ func TestCategories(t *testing.T) {
 	}
 
 	// Test with duplicate expenses
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, startDate, storage.ChargeType, nil),
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, startDate, domain.ChargeType, nil),
+		domain.NewExpense(
 			0,
 			"Test Source",
 			"Restaurant bill",
 			"USD",
 			-123456,
 			startDate.Add(24*time.Hour),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		), // Duplicate description
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"Test Source",
 			"Salary",
 			"USD",
 			5000000,
 			startDate.Add(48*time.Hour),
-			storage.IncomeType,
+			domain.IncomeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"Test Source",
 			"Expense with category",
 			"USD",
 			-123456,
 			startDate.Add(48*time.Hour),
-			storage.ChargeType,
+			domain.ChargeType,
 			&catID,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"Refund from restaurant",
 			"Income with same category as an expense",
 			"USD",
 			678,
 			startDate.Add(48*time.Hour),
-			storage.IncomeType,
+			domain.IncomeType,
 			&catID,
 		),
 	}
@@ -177,7 +177,7 @@ func TestCategories(t *testing.T) {
 	}
 
 	for _, expense := range incomeCategories[0].Expenses {
-		if expense.Type() != storage.IncomeType {
+		if expense.Type() != domain.IncomeType {
 			t.Fatal("income category includes expense")
 		}
 	}
@@ -198,7 +198,7 @@ func TestCategories(t *testing.T) {
 		}
 
 		for _, expense := range expenseCategory.Expenses {
-			if expense.Type() != storage.ChargeType {
+			if expense.Type() != domain.ChargeType {
 				t.Fatal("uncategorized charge category includes income")
 			}
 		}

@@ -12,7 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/domain"
+	"github.com/GustavoCaso/expensetrace/internal/service/expense"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -20,9 +21,9 @@ func TestExpensesHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categories := []storage.Category{
-		storage.NewCategory(1, "Food", "restaurant|food|grocery", 0),
-		storage.NewCategory(2, "Transport", "uber|taxi|transit", 0),
+	categories := []domain.Category{
+		domain.NewCategory(1, "Food", "restaurant|food|grocery", 0),
+		domain.NewCategory(2, "Transport", "uber|taxi|transit", 0),
 	}
 	categoryIDs := make([]int64, 2)
 	for i, c := range categories {
@@ -34,18 +35,18 @@ func TestExpensesHandler(t *testing.T) {
 	}
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"Test Source",
 			"Restaurant bill",
 			"USD",
 			-123456,
 			now,
-			storage.ChargeType,
+			domain.ChargeType,
 			&categoryIDs[0],
 		),
-		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, &categoryIDs[1]),
+		domain.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, domain.ChargeType, &categoryIDs[1]),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -77,12 +78,13 @@ func TestExpensesGroupByYearAndMonth(t *testing.T) {
 	cat2 := int64(2)
 	now := time.Now()
 
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, storage.ChargeType, &cat1),
-		storage.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, storage.ChargeType, &cat2),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, now, domain.ChargeType, &cat1),
+		domain.NewExpense(0, "Test Source", "Uber ride", "USD", -50000, now, domain.ChargeType, &cat2),
 	}
 
-	groupedExpenses, years, err := expensesGroupByYearAndMonth(context.Background(), user.ID(), expenses, s)
+	svc := expense.New(s, logger)
+	groupedExpenses, years, err := svc.GroupByYearAndMonth(context.Background(), user.ID(), expenses)
 
 	if err != nil {
 		t.Fatalf("Got error grouping expenses: %s", err.Error())
@@ -138,15 +140,15 @@ func TestExpenseHandler(t *testing.T) {
 	}
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"Test Source",
 			"Test expense for edit",
 			"USD",
 			-123456,
 			now,
-			storage.ChargeType,
+			domain.ChargeType,
 			&categoryID,
 		),
 	}
@@ -230,8 +232,8 @@ func TestUpdateExpenseHandler(t *testing.T) {
 	}
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, domain.ChargeType, nil),
 	}
 
 	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -282,7 +284,7 @@ func TestUpdateExpenseHandler(t *testing.T) {
 	if updatedExpense.Currency() != "USD" {
 		t.Errorf("Expected currency 'USD', got '%s'", updatedExpense.Currency())
 	}
-	if updatedExpense.Type() != storage.IncomeType {
+	if updatedExpense.Type() != domain.IncomeType {
 		t.Errorf("Expected type IncomeType, got %v", updatedExpense.Type())
 	}
 	if *updatedExpense.CategoryID() != categoryID {
@@ -295,8 +297,8 @@ func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "Test expense", "USD", -100000, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Test expense", "USD", -100000, now, domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -381,8 +383,7 @@ func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 
 			ensureNoErrorInTemplateResponse(t, fmt.Sprintf("update expense: %s", tt.name), resp.Body)
 
-			//nolint:canonicalheader //HTMX header
-			if w.Header().Get("HX-Redirect") != "" {
+			if w.Header().Get("Hx-Redirect") != "" {
 				t.Error("Should not redirect when there are validation errors")
 			}
 
@@ -399,9 +400,9 @@ func TestDeleteExpenseHandler(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source 1", "Test expense 1", "USD", -100000, now, storage.ChargeType, nil),
-		storage.NewExpense(0, "Test Source 2", "Test expense 2", "USD", -200000, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source 1", "Test expense 1", "USD", -100000, now, domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Source 2", "Test expense 2", "USD", -200000, now, domain.ChargeType, nil),
 	}
 
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
@@ -478,15 +479,15 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 	handler, _ := New(s, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"Integration Source",
 			"Integration test expense",
 			"EUR",
 			-500000,
 			now,
-			storage.ChargeType,
+			domain.ChargeType,
 			&categoryID,
 		),
 	}
@@ -537,7 +538,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 	if updatedExpense.Amount() != 7525 {
 		t.Errorf("Amount not updated correctly: got %d, expected 7525", updatedExpense.Amount())
 	}
-	if updatedExpense.Type() != storage.IncomeType {
+	if updatedExpense.Type() != domain.IncomeType {
 		t.Errorf("Type not updated correctly")
 	}
 
@@ -623,7 +624,7 @@ func TestCreateExpenseHandler(t *testing.T) {
 	if expense.Currency() != "USD" {
 		t.Errorf("Expected currency 'USD', got '%s'", expense.Currency())
 	}
-	if expense.Type() != storage.ChargeType {
+	if expense.Type() != domain.ChargeType {
 		t.Errorf("Expected type ChargeType, got %v", expense.Type())
 	}
 	if *expense.CategoryID() != categoryID {
@@ -678,7 +679,7 @@ func TestCreateExpenseHandlerNilCategory(t *testing.T) {
 	if expense.CategoryID() != nil {
 		t.Errorf("Expected nil category ID, got %v", expense.CategoryID())
 	}
-	if expense.Type() != storage.IncomeType {
+	if expense.Type() != domain.IncomeType {
 		t.Errorf("Expected type IncomeType, got %v", expense.Type())
 	}
 }
@@ -939,8 +940,8 @@ func TestExpenseHandlerPassesRedirectTo(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Test Source", "Test expense", "USD", -123456, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Test expense", "USD", -123456, now, domain.ChargeType, nil),
 	}
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
@@ -973,8 +974,8 @@ func TestUpdateExpenseHandlerRedirectsWithHXRedirect(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, domain.ChargeType, nil),
 	}
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
@@ -1005,8 +1006,8 @@ func TestUpdateExpenseHandlerRedirectsWithHXRedirect(t *testing.T) {
 	if resp.StatusCode != http.StatusNoContent {
 		t.Errorf("Expected status 204 NoContent when redirect_to set; got %v", resp.Status)
 	}
-	//nolint:canonicalheader //HTMX header
-	if got := w.Header().Get("HX-Redirect"); got != redirectTo {
+
+	if got := w.Header().Get("Hx-Redirect"); got != redirectTo {
 		t.Errorf("Expected HX-Redirect header %q, got %q", redirectTo, got)
 	}
 }
@@ -1016,8 +1017,8 @@ func TestUpdateExpenseHandlerIgnoresInvalidRedirect(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	now := time.Now()
-	expenses := []storage.Expense{
-		storage.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, storage.ChargeType, nil),
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Original Source", "Original description", "EUR", -100000, now, domain.ChargeType, nil),
 	}
 	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
 	if err != nil {
@@ -1047,8 +1048,8 @@ func TestUpdateExpenseHandlerIgnoresInvalidRedirect(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200 OK for invalid redirect; got %v", resp.Status)
 	}
-	//nolint:canonicalheader //HTMX header
-	if got := w.Header().Get("HX-Redirect"); got != "" {
+
+	if got := w.Header().Get("Hx-Redirect"); got != "" {
 		t.Errorf("Expected no HX-Redirect for invalid redirect target, got %q", got)
 	}
 }
@@ -1079,55 +1080,55 @@ func TestExpensesHandlerWithFilters(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	// Insert test expenses with varied data for comprehensive testing
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"visa",
 			"morning coffee",
 			"USD",
 			-500,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"mastercard",
 			"lunch",
 			"USD",
 			-1200,
 			time.Date(2024, 1, 16, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"visa",
 			"afternoon coffee",
 			"USD",
 			-450,
 			time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"visa",
 			"grocery shopping",
 			"USD",
 			-8000,
 			time.Date(2024, 2, 5, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"employer",
 			"salary",
 			"USD",
 			500000,
 			time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-			storage.IncomeType,
+			domain.IncomeType,
 			nil,
 		),
 	}
@@ -1306,35 +1307,35 @@ func TestExpensesHandlerSortOrder(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	expenses := []storage.Expense{
-		storage.NewExpense(
+	expenses := []domain.Expense{
+		domain.NewExpense(
 			0,
 			"store",
 			"alpha",
 			"USD",
 			-300,
 			time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store",
 			"beta",
 			"USD",
 			-900,
 			time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
-		storage.NewExpense(
+		domain.NewExpense(
 			0,
 			"store",
 			"gamma",
 			"USD",
 			-600,
 			time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			storage.ChargeType,
+			domain.ChargeType,
 			nil,
 		),
 	}
