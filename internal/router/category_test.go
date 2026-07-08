@@ -18,7 +18,7 @@ func TestCategoriesHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/categories", nil)
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
@@ -44,7 +44,7 @@ func TestCategoryHandler(t *testing.T) {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/category/%d", categoryID), nil)
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
@@ -64,7 +64,7 @@ func TestCategoryHandlerNotFound(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	// Request a non-existent category ID
 	req := httptest.NewRequest(http.MethodGet, "/category/99999", nil)
@@ -96,7 +96,7 @@ func TestCategoryHandlerInvalidID(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	// Request with invalid ID format
 	req := httptest.NewRequest(http.MethodGet, "/category/invalid", nil)
@@ -146,7 +146,7 @@ func TestUncategorizedHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/category/uncategorized", nil)
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
@@ -194,7 +194,7 @@ func TestUncategorizedSearchHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	body := strings.NewReader("q=Coffee")
 	req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/search", body)
@@ -259,9 +259,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
-	handler, router := New(s, logger)
-
-	oldMatcher := router.matcher
+	handler := New(s, logger)
 
 	body := strings.NewReader("name=Entertainment&pattern=cinema|movie|theater&type=0&monthly_budget=100")
 	req := httptest.NewRequest(http.MethodPost, "/category", body)
@@ -310,23 +308,17 @@ func TestCreateCategoryHandler(t *testing.T) {
 	if expensesUpdated[0].CategoryID() != nil && *expensesUpdated[0].CategoryID() != categoryID {
 		t.Fatal("Expense did not update the category ID")
 	}
-
-	if oldMatcher == router.matcher {
-		t.Error("Category matcher was not re-created")
-	}
 }
 
 func TestUpdateHandler(t *testing.T) {
 	tests := []struct {
-		name          string
-		body          string
-		updateMatcher bool
-		assertion     func(t *testing.T, updatedCategory domain.Category, updatedExpenses []domain.Expense)
+		name      string
+		body      string
+		assertion func(t *testing.T, updatedCategory domain.Category, updatedExpenses []domain.Expense)
 	}{
 		{
 			"modify pattern and set expense to NULL category",
 			"pattern=test_pattern",
-			true,
 			func(t *testing.T, updatedCategory domain.Category, updatedExpenses []domain.Expense) {
 				if updatedCategory.Pattern() != "test_pattern" {
 					t.Fatalf(
@@ -350,7 +342,6 @@ func TestUpdateHandler(t *testing.T) {
 		{
 			"modify pattern and update existing expenses",
 			"pattern=restaurant|bars|cinema|gym",
-			true,
 			func(t *testing.T, updatedCategory domain.Category, updatedExpenses []domain.Expense) {
 				if updatedCategory.Pattern() != "restaurant|bars|cinema|gym" {
 					t.Fatalf(
@@ -374,7 +365,6 @@ func TestUpdateHandler(t *testing.T) {
 		{
 			"modify name",
 			"name=Enjoyment",
-			false,
 			func(t *testing.T, updatedCategory domain.Category, updatedExpenses []domain.Expense) {
 				if updatedCategory.Name() != "Enjoyment" {
 					t.Fatalf(
@@ -405,7 +395,6 @@ func TestUpdateHandler(t *testing.T) {
 		{
 			"modify budget",
 			"monthly_budget=150",
-			false,
 			func(t *testing.T, updatedCategory domain.Category, _ []domain.Expense) {
 				if updatedCategory.MonthlyBudget() != 15000 {
 					t.Fatalf(
@@ -451,9 +440,7 @@ func TestUpdateHandler(t *testing.T) {
 				t.Fatalf("Failed to insert test expenses: %v", expenseError)
 			}
 
-			handler, router := New(s, logger)
-
-			oldMatcher := router.matcher
+			handler := New(s, logger)
 
 			body := strings.NewReader(tt.body)
 			req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/category/%d", categoryID), body)
@@ -482,12 +469,6 @@ func TestUpdateHandler(t *testing.T) {
 			}
 
 			tt.assertion(t, categoryUpdated, updatedExpenses)
-
-			if tt.updateMatcher {
-				if oldMatcher == router.matcher {
-					t.Error("Router matcher was not updated")
-				}
-			}
 		})
 	}
 }
@@ -571,7 +552,7 @@ func TestUpdateCategoryPatternDoesNotAffectExcludeCategory(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	// Update the entertainment category pattern to include "theater"
 	body := strings.NewReader("pattern=cinema|movie|theater")
@@ -701,7 +682,7 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 		t.Fatalf("Failed to insert test expenses: %v", expenseError)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	body := strings.NewReader(fmt.Sprintf("description=cinema. with friends&category_id=%d", categoryID))
 	req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/update", body)
@@ -781,9 +762,7 @@ func TestResetCategoryHandler(t *testing.T) {
 		t.Fatalf("Expected three categories (two + exclude) initially, got %d", len(categories))
 	}
 
-	handler, router := New(s, logger)
-
-	oldMatcher := router.matcher
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodPost, "/category/reset", nil)
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
@@ -824,17 +803,13 @@ func TestResetCategoryHandler(t *testing.T) {
 	if !strings.Contains(responseBody, "Total Categories") {
 		t.Error("Response should contain 'Total Categories' heading")
 	}
-
-	if oldMatcher == router.matcher {
-		t.Error("Router matcher was not updated")
-	}
 }
 
 func TestResetCategoryHandlerEmptyDatabase(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodPost, "/category/reset", nil)
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)

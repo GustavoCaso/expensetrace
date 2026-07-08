@@ -17,7 +17,7 @@ func TestProfilePageHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/profile", nil)
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
@@ -37,7 +37,7 @@ func TestUpdateUsernameHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	formData := url.Values{}
 	formData.Set("username", "newusername")
@@ -75,7 +75,7 @@ func TestUpdateUsernameHandlerEmptyUsername(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	formData := url.Values{}
 	formData.Set("username", "")
@@ -109,7 +109,7 @@ func TestUpdateUsernameHandlerDuplicateUsername(t *testing.T) {
 		t.Fatalf("Failed to create second user: %v", err)
 	}
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	formData := url.Values{}
 	formData.Set("username", "existinguser")
@@ -136,7 +136,7 @@ func TestUpdateUsernameHandlerFormParseError(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodPost, "/profile/username", strings.NewReader("%zzzzz"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -157,7 +157,7 @@ func TestUpdatePasswordHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	formData := url.Values{}
 	formData.Set("current_password", "test")
@@ -198,7 +198,7 @@ func TestUpdatePasswordHandlerValidationErrors(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	tests := []struct {
 		name          string
@@ -293,7 +293,7 @@ func TestUpdatePasswordHandlerFormParseError(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	handler, _ := New(s, logger)
+	handler := New(s, logger)
 
 	req := httptest.NewRequest(http.MethodPost, "/profile/password", strings.NewReader("%zzzzz"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")

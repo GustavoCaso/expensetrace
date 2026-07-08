@@ -71,7 +71,19 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 	}
 	defer file.Close()
 
-	info, needsPreview, previewReader, err := i.importService.ImportFile(ctx, userID, header.Filename, file, i.matcher)
+	categoryMatcher, err := i.categoryMatcher(ctx, userID)
+	if err != nil {
+		data.Error = err.Error()
+		return
+	}
+
+	info, needsPreview, previewReader, err := i.importService.ImportFile(
+		ctx,
+		userID,
+		header.Filename,
+		file,
+		categoryMatcher,
+	)
 	if err != nil {
 		data.Error = err.Error()
 		return
@@ -129,7 +141,7 @@ func (i *importHandler) previewHandler(
 }
 
 // mappingHandler handles field mapping and shows confirmation preview.
-func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter, r *http.Request) {
+func (i *importHandler) mappingHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	data := domain.MappingData{ViewBase: domain.ViewBase{CurrentPage: pageImport}}
 
 	defer func() {
@@ -186,7 +198,13 @@ func (i *importHandler) mappingHandler(_ context.Context, w http.ResponseWriter,
 		CurrencyColumn:    currencyCol,
 	}
 
-	result, err := i.importService.ApplyMapping(sessionID, mapping, i.matcher)
+	categoryMatcher, err := i.categoryMatcher(ctx, userIDFromContext(ctx))
+	if err != nil {
+		data.Error = err.Error()
+		return
+	}
+
+	result, err := i.importService.ApplyMapping(sessionID, mapping, categoryMatcher)
 	if err != nil {
 		data.Error = err.Error()
 		return
@@ -222,7 +240,13 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 		return
 	}
 
-	inserted, withoutCategory, _, err := i.importService.Execute(ctx, userID, sessionID, i.matcher)
+	categoryMatcher, err := i.categoryMatcher(ctx, userID)
+	if err != nil {
+		data.Error = err.Error()
+		return
+	}
+
+	inserted, withoutCategory, _, err := i.importService.Execute(ctx, userID, sessionID, categoryMatcher)
 	if err != nil {
 		data.Error = err.Error()
 		return

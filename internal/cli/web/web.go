@@ -41,7 +41,7 @@ func Run(storage storage.Storage, logger *logger.Logger) error {
 		timeout = defaultTimeout
 	}
 
-	handler, _ := router.New(storage, logger)
+	handler := router.New(storage, logger)
 	logger.Info("Starting web server", "url", fmt.Sprintf("http://localhost:%s", port))
 
 	server := &http.Server{

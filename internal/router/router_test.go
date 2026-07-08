@@ -11,7 +11,7 @@ func TestNew(t *testing.T) {
 	database, _ := testutil.SetupTestStorage(t, logger)
 
 	// Create router
-	handler, _ := New(database, logger)
+	handler := New(database, logger)
 	if handler == nil {
 		t.Fatal("Expected non-nil handler")
 	}
