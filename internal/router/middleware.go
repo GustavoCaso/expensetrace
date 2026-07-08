@@ -11,12 +11,22 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
-	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 type contextKey string
 
-const userIDKey contextKey = "userID"
+const (
+	userIDKey   contextKey = "userID"
+	viewBaseKey contextKey = "viewBase"
+)
+
+const (
+	pageReports    = "reports"
+	pageExpenses   = "expenses"
+	pageCategories = "categories"
+	pageImport     = "import"
+	pageProfile    = "profile"
+)
 
 // userIDFromContext retrieves user ID from context.
 func userIDFromContext(ctx context.Context) int64 {
@@ -24,6 +34,42 @@ func userIDFromContext(ctx context.Context) int64 {
 		return userID
 	}
 	return 0
+}
+
+// viewBaseFromContext retrieves the ViewBase stored by authMiddleware.
+func viewBaseFromContext(ctx context.Context) domain.ViewBase {
+	if base, ok := ctx.Value(viewBaseKey).(domain.ViewBase); ok {
+		return base
+	}
+	return domain.ViewBase{}
+}
+
+// currentPageFromPath derives the current page from the request URL path.
+func currentPageFromPath(path string) string {
+	segment, _, _ := strings.Cut(strings.TrimPrefix(path, "/"), "/")
+	switch segment {
+	case "expense", "expenses":
+		return pageExpenses
+	case "category", "categories":
+		return pageCategories
+	case "import":
+		return pageImport
+	case "profile":
+		return pageProfile
+	default:
+		return pageReports
+	}
+}
+
+// getInitials returns the first two characters of a username in uppercase.
+func getInitials(username string) string {
+	if len(username) == 0 {
+		return ""
+	}
+	if len(username) == 1 {
+		return strings.ToUpper(username)
+	}
+	return strings.ToUpper(username[:2])
 }
 
 type responseWriter struct {
@@ -81,7 +127,7 @@ func liveReloadMiddleware(router *router, handlder http.Handler) http.Handler {
 	})
 }
 
-func authMiddleware(router *router, s storage.Storage, logger *logger.Logger, next http.Handler) http.Handler {
+func authMiddleware(router *router, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Skip authentication for auth endpoints and static files
 		path := r.URL.Path
@@ -100,8 +146,8 @@ func authMiddleware(router *router, s storage.Storage, logger *logger.Logger, ne
 			return
 		}
 
-		// Get session from database
-		session, err := s.GetSession(r.Context(), cookie.Value)
+		// Resolve the session to its user
+		user, err := router.authService.AuthenticatedUser(r.Context(), cookie.Value)
 		if err != nil {
 			var notFoundErr *domain.NotFoundError
 			if errors.As(err, &notFoundErr) {
@@ -109,18 +155,24 @@ func authMiddleware(router *router, s storage.Storage, logger *logger.Logger, ne
 				http.Redirect(w, r, "/signin", http.StatusSeeOther)
 				return
 			}
-			logger.Error("Failed to get session", "error", err)
+			router.logger.Error("Failed to authenticate session", "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
-		// Add user ID to context
-		ctx := context.WithValue(r.Context(), userIDKey, session.UserID())
+		// Add user ID and view base data to context
+		ctx := context.WithValue(r.Context(), userIDKey, user.ID())
+		ctx = context.WithValue(ctx, viewBaseKey, domain.ViewBase{
+			LoggedIn:         true,
+			Username:         user.Username(),
+			UsernameInitials: getInitials(user.Username()),
+			CurrentPage:      currentPageFromPath(path),
+		})
 
 		if router.matcher == nil {
-			categories, categoryErr := s.GetCategories(context.Background(), session.UserID())
+			categories, categoryErr := router.categoryService.List(context.Background(), user.ID())
 			if categoryErr != nil {
-				logger.Error("Failed to get categories", "error", categoryErr)
+				router.logger.Error("Failed to get categories", "error", categoryErr)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}

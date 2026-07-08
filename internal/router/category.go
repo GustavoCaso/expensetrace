@@ -28,7 +28,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /category/new", func(w http.ResponseWriter, r *http.Request) {
-		base := newViewBase(r.Context(), c.storage, c.logger, pageCategories)
+		base := viewBaseFromContext(r.Context())
 		data := domain.CategoryViewData{
 			ViewBase: base,
 			Action:   newAction,
@@ -96,7 +96,7 @@ func (c *categoryHandler) categoriesHandler(
 	banner *domain.Banner,
 ) {
 	userID := userIDFromContext(ctx)
-	base := newViewBase(ctx, c.storage, c.logger, pageCategories)
+	base := viewBaseFromContext(ctx)
 	data := domain.CategoriesViewData{
 		ViewBase: base,
 	}
@@ -126,7 +126,7 @@ func (c *categoryHandler) categoriesHandler(
 
 func (c *categoryHandler) categoryHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
-	base := newViewBase(ctx, c.storage, c.logger, pageCategories)
+	base := viewBaseFromContext(ctx)
 	data := domain.CategoryViewData{
 		ViewBase: base,
 		Action:   editAction,
@@ -160,7 +160,7 @@ func (c *categoryHandler) updateCategoryHandler(
 ) {
 	userID := userIDFromContext(ctx)
 	var err error
-	base := newViewBase(ctx, c.storage, c.logger, pageCategories)
+	base := viewBaseFromContext(ctx)
 	data := domain.CategoryViewData{
 		ViewBase: base,
 		Action:   editAction,
@@ -241,7 +241,7 @@ func (c *categoryHandler) uncategorizedHandler(
 	banner *domain.Banner,
 ) {
 	userID := userIDFromContext(ctx)
-	base := newViewBase(ctx, c.storage, c.logger, pageCategories)
+	base := viewBaseFromContext(ctx)
 	data := domain.UncategorizedViewData{
 		ViewBase: base,
 	}
@@ -269,7 +269,7 @@ func (c *categoryHandler) uncategorizedHandler(
 
 func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
-	data := newViewBase(ctx, c.storage, c.logger, pageCategories)
+	data := viewBaseFromContext(ctx)
 
 	defer func() {
 		if data.Error != "" {
@@ -456,7 +456,7 @@ func (c *categoryHandler) testCategoryHandler(
 }
 
 func (c *categoryHandler) categoryIndexError(ctx context.Context, w http.ResponseWriter, err error) {
-	data := newViewBase(ctx, c.storage, c.logger, pageCategories)
+	data := viewBaseFromContext(ctx)
 	data.Error = err.Error()
 	c.templates.Render(w, "pages/categories/index.html", data)
 }

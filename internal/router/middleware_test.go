@@ -5,8 +5,161 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
+
+func TestAuthMiddlewareRedirectsWithoutCookie(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, _ := testutil.SetupTestStorage(t, logger)
+	_, r := New(s, logger)
+
+	protected := authMiddleware(r, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
+	rr := httptest.NewRecorder()
+	protected.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusSeeOther {
+		t.Errorf("expected status %d, got %d", http.StatusSeeOther, rr.Code)
+	}
+	if location := rr.Header().Get("Location"); location != "/signin" {
+		t.Errorf("expected redirect to /signin, got %q", location)
+	}
+}
+
+func TestAuthMiddlewareRedirectsWithInvalidSession(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, _ := testutil.SetupTestStorage(t, logger)
+	_, r := New(s, logger)
+
+	protected := authMiddleware(r, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "invalid-session"})
+	rr := httptest.NewRecorder()
+	protected.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusSeeOther {
+		t.Errorf("expected status %d, got %d", http.StatusSeeOther, rr.Code)
+	}
+	if location := rr.Header().Get("Location"); location != "/signin" {
+		t.Errorf("expected redirect to /signin, got %q", location)
+	}
+}
+
+func TestAuthMiddlewareSkipsAuthEndpoints(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, _ := testutil.SetupTestStorage(t, logger)
+	_, r := New(s, logger)
+
+	for _, path := range []string{"/signin", "/signup", "/static/css/base.css"} {
+		t.Run(path, func(t *testing.T) {
+			var base domain.ViewBase
+			protected := authMiddleware(r, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				base = viewBaseFromContext(req.Context())
+				w.WriteHeader(http.StatusOK)
+			}))
+
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			rr := httptest.NewRecorder()
+			protected.ServeHTTP(rr, req)
+
+			if rr.Code != http.StatusOK {
+				t.Errorf("expected status %d, got %d", http.StatusOK, rr.Code)
+			}
+			if base.LoggedIn {
+				t.Error("expected base view not being created for auth endpoints ")
+			}
+		})
+	}
+}
+
+func TestAuthMiddlewareSetsUserAndViewBase(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+	_, r := New(s, logger)
+
+	tests := []struct {
+		path         string
+		expectedPage string
+	}{
+		{"/", pageReports},
+		{"/expenses", pageExpenses},
+		{"/expense/1", pageExpenses},
+		{"/categories", pageCategories},
+		{"/category/new", pageCategories},
+		{"/import", pageImport},
+		{"/profile", pageProfile},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			var userID int64
+			var base domain.ViewBase
+			protected := authMiddleware(r, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				userID = userIDFromContext(req.Context())
+				base = viewBaseFromContext(req.Context())
+				w.WriteHeader(http.StatusOK)
+			}))
+
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+			rr := httptest.NewRecorder()
+			protected.ServeHTTP(rr, req)
+
+			if rr.Code != http.StatusOK {
+				t.Fatalf("expected status %d, got %d", http.StatusOK, rr.Code)
+			}
+			if userID != user.ID() {
+				t.Errorf("expected user ID %d in context, got %d", user.ID(), userID)
+			}
+			if !base.LoggedIn {
+				t.Error("expected ViewBase.LoggedIn to be true")
+			}
+			if base.Username != user.Username() {
+				t.Errorf("expected username %q, got %q", user.Username(), base.Username)
+			}
+			if base.UsernameInitials != "TE" {
+				t.Errorf("expected initials %q, got %q", "TE", base.UsernameInitials)
+			}
+			if base.CurrentPage != tt.expectedPage {
+				t.Errorf("expected current page %q, got %q", tt.expectedPage, base.CurrentPage)
+			}
+		})
+	}
+}
+
+func TestCurrentPageFromPath(t *testing.T) {
+	tests := []struct {
+		path     string
+		expected string
+	}{
+		{"/", pageReports},
+		{"/unknown", pageReports},
+		{"/expenses", pageExpenses},
+		{"/expenses/export", pageExpenses},
+		{"/expense/new", pageExpenses},
+		{"/categories", pageCategories},
+		{"/category/uncategorized", pageCategories},
+		{"/import", pageImport},
+		{"/import/execute", pageImport},
+		{"/profile", pageProfile},
+		{"/profile/password", pageProfile},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			if got := currentPageFromPath(tt.path); got != tt.expected {
+				t.Errorf("currentPageFromPath(%q) = %q, expected %q", tt.path, got, tt.expected)
+			}
+		})
+	}
+}
 
 func TestCSRFProtectionMiddleware(t *testing.T) {
 	logger := testutil.TestLogger(t)

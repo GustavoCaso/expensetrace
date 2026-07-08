@@ -73,7 +73,7 @@ func (c *expenseHandler) expensesHandler(
 	banner *domain.Banner,
 ) {
 	userID := userIDFromContext(ctx)
-	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+	base := viewBaseFromContext(ctx)
 	data := domain.ExpensesViewData{
 		ViewBase: base,
 	}
@@ -120,7 +120,7 @@ func (c *expenseHandler) expensesHandler(
 
 func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseWriter) {
 	userID := userIDFromContext(ctx)
-	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+	base := viewBaseFromContext(ctx)
 	data := domain.ExpenseViewData{
 		ViewBase: base,
 	}
@@ -146,7 +146,7 @@ func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseW
 
 func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
-	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+	base := viewBaseFromContext(ctx)
 	data := domain.ExpenseViewData{
 		ViewBase: base,
 	}
@@ -200,7 +200,7 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 
 func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
-	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+	base := viewBaseFromContext(ctx)
 	data := domain.ExpenseViewData{
 		ViewBase: base,
 	}
@@ -240,7 +240,7 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 
 func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
-	base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+	base := viewBaseFromContext(ctx)
 	data := domain.ExpenseViewData{
 		ViewBase: base,
 	}
@@ -456,7 +456,7 @@ func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.Respon
 
 	defer func() {
 		if err != nil {
-			base := newViewBase(ctx, c.storage, c.logger, pageExpenses)
+			base := viewBaseFromContext(ctx)
 			base.Error = err.Error()
 			c.templates.Render(w, "pages/expenses/edit.html", base)
 		}

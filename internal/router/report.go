@@ -28,7 +28,7 @@ func (rh *reportHandler) RegisterRoutes(mux *http.ServeMux) {
 func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := userIDFromContext(ctx)
-	base := newViewBase(ctx, rh.storage, rh.logger, pageReports)
+	base := viewBaseFromContext(ctx)
 	data := domain.HomeViewData{
 		ViewBase: base,
 	}

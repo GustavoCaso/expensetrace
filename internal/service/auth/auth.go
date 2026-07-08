@@ -130,6 +130,16 @@ func (s *Service) Signin(
 	return sessionID, expiresAt, nil, nil
 }
 
+// AuthenticatedUser returns the user that owns the given session.
+func (s *Service) AuthenticatedUser(ctx context.Context, sessionID string) (domain.User, error) {
+	session, err := s.storage.GetSession(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.storage.GetUserByID(ctx, session.UserID())
+}
+
 // Signout deletes the given session.
 func (s *Service) Signout(ctx context.Context, sessionID string) error {
 	return s.storage.DeleteSession(ctx, sessionID)
