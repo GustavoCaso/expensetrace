@@ -110,7 +110,7 @@ func New(storage storage.Storage, logger *logger.Logger) (http.Handler, *router)
 	allowEmbedding := os.Getenv("EXPENSETRACE_ALLOW_EMBEDDING") == "true"
 
 	// wrap entire mux with middlewares
-	wrappedMux := authMiddleware(router, storage, logger, mux)
+	wrappedMux := authMiddleware(router, mux)
 	wrappedMux = loggingMiddleware(logger, wrappedMux)
 
 	if router.reload {

@@ -23,7 +23,7 @@ type importHandler struct {
 
 func (i *importHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /import", func(w http.ResponseWriter, r *http.Request) {
-		base := newViewBase(r.Context(), i.storage, i.logger, pageImport)
+		base := viewBaseFromContext(r.Context())
 		i.templates.Render(w, "pages/import/index.html", base)
 	})
 
@@ -42,7 +42,7 @@ func (i *importHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
-	data := newViewBase(ctx, i.storage, i.logger, pageImport)
+	data := viewBaseFromContext(ctx)
 	previewFlow := false
 
 	defer func() {

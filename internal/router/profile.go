@@ -21,7 +21,7 @@ func (p *profileHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (p *profileHandler) profilePage(w http.ResponseWriter, r *http.Request, banner *domain.Banner, err error) {
 	ctx := r.Context()
-	base := newViewBase(ctx, p.router.storage, p.router.logger, pageProfile)
+	base := viewBaseFromContext(ctx)
 	if banner != nil {
 		base.Banner = *banner
 	}
