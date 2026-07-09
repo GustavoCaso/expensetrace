@@ -92,6 +92,14 @@
         </option>
       {{end}}
     </select>
+    {{if eq .Action "edit"}}
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="checkbox" name="update_category" value="true"/>
+          <span class="radio-text">Update Category's Pattern</span>
+        </label>
+      </div>
+    {{end}}
   </div>
   
   {{if eq .Action "edit"}}
