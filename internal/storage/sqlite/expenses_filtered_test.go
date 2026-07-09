@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	"github.com/GustavoCaso/expensetrace/internal/filter"
 )
 
 func TestGetExpensesFiltered_NoFilters(t *testing.T) {
@@ -54,8 +53,8 @@ func TestGetExpensesFiltered_NoFilters(t *testing.T) {
 	}
 
 	// Query with no filters
-	emptyFilter := &filter.ExpenseFilter{}
-	sortOptions := filter.DefaultSortOptions()
+	emptyFilter := &domain.ExpenseFilter{}
+	sortOptions := domain.DefaultSortOptions()
 
 	results, err := stor.GetExpensesFiltered(ctx, user.ID(), emptyFilter, sortOptions)
 	if err != nil {
@@ -117,10 +116,10 @@ func TestGetExpensesFiltered_DescriptionFilter(t *testing.T) {
 
 	// Filter by description
 	desc := "coffee"
-	expFilter := &filter.ExpenseFilter{
+	expFilter := &domain.ExpenseFilter{
 		Description: &desc,
 	}
-	sortOptions := filter.DefaultSortOptions()
+	sortOptions := domain.DefaultSortOptions()
 
 	results, err := stor.GetExpensesFiltered(ctx, user.ID(), expFilter, sortOptions)
 	if err != nil {
@@ -182,10 +181,10 @@ func TestGetExpensesFiltered_SourceFilter(t *testing.T) {
 	}
 
 	source := "visa"
-	expFilter := &filter.ExpenseFilter{
+	expFilter := &domain.ExpenseFilter{
 		Source: &source,
 	}
-	sortOptions := filter.DefaultSortOptions()
+	sortOptions := domain.DefaultSortOptions()
 
 	results, err := stor.GetExpensesFiltered(ctx, user.ID(), expFilter, sortOptions)
 	if err != nil {
@@ -248,11 +247,11 @@ func TestGetExpensesFiltered_AmountRangeFilter(t *testing.T) {
 
 	minAmount := int64(-1000)
 	maxAmount := int64(-500)
-	expFilter := &filter.ExpenseFilter{
+	expFilter := &domain.ExpenseFilter{
 		AmountMin: &minAmount,
 		AmountMax: &maxAmount,
 	}
-	sortOptions := filter.DefaultSortOptions()
+	sortOptions := domain.DefaultSortOptions()
 
 	results, err := stor.GetExpensesFiltered(ctx, user.ID(), expFilter, sortOptions)
 	if err != nil {
@@ -312,11 +311,11 @@ func TestGetExpensesFiltered_DateRangeFilter(t *testing.T) {
 
 	from := time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2024, 2, 28, 0, 0, 0, 0, time.UTC)
-	expFilter := &filter.ExpenseFilter{
+	expFilter := &domain.ExpenseFilter{
 		DateFrom: &from,
 		DateTo:   &to,
 	}
-	sortOptions := filter.DefaultSortOptions()
+	sortOptions := domain.DefaultSortOptions()
 
 	results, err := stor.GetExpensesFiltered(ctx, user.ID(), expFilter, sortOptions)
 	if err != nil {
@@ -388,12 +387,12 @@ func TestGetExpensesFiltered_CombinedFilters(t *testing.T) {
 	source := "visa"
 	desc := "coffee"
 	maxAmount := int64(-520)
-	expFilter := &filter.ExpenseFilter{
+	expFilter := &domain.ExpenseFilter{
 		Source:      &source,
 		Description: &desc,
 		AmountMax:   &maxAmount,
 	}
-	sortOptions := filter.DefaultSortOptions()
+	sortOptions := domain.DefaultSortOptions()
 
 	results, err := stor.GetExpensesFiltered(ctx, user.ID(), expFilter, sortOptions)
 	if err != nil {
@@ -453,10 +452,10 @@ func TestGetExpensesFiltered_SortByDateAsc(t *testing.T) {
 		t.Fatalf("failed to insert test expenses: %v", err)
 	}
 
-	expFilter := &filter.ExpenseFilter{}
-	sortOptions := &filter.SortOptions{
-		Field:     filter.SortByDate,
-		Direction: filter.SortAsc,
+	expFilter := &domain.ExpenseFilter{}
+	sortOptions := &domain.SortOptions{
+		Field:     domain.SortByDate,
+		Direction: domain.SortAsc,
 	}
 
 	results, err := stor.GetExpensesFiltered(ctx, user.ID(), expFilter, sortOptions)
@@ -521,10 +520,10 @@ func TestGetExpensesFiltered_SortByAmountDesc(t *testing.T) {
 		t.Fatalf("failed to insert test expenses: %v", err)
 	}
 
-	expFilter := &filter.ExpenseFilter{}
-	sortOptions := &filter.SortOptions{
-		Field:     filter.SortByAmount,
-		Direction: filter.SortDesc,
+	expFilter := &domain.ExpenseFilter{}
+	sortOptions := &domain.SortOptions{
+		Field:     domain.SortByAmount,
+		Direction: domain.SortDesc,
 	}
 
 	results, err := stor.GetExpensesFiltered(ctx, user.ID(), expFilter, sortOptions)
@@ -605,8 +604,8 @@ func TestGetExpensesFiltered_UserIsolation(t *testing.T) {
 	}
 
 	// Query for user 1 - should only see user 1's expenses
-	expFilter := &filter.ExpenseFilter{}
-	sortOptions := filter.DefaultSortOptions()
+	expFilter := &domain.ExpenseFilter{}
+	sortOptions := domain.DefaultSortOptions()
 
 	results, err := stor.GetExpensesFiltered(ctx, user1.ID(), expFilter, sortOptions)
 	if err != nil {

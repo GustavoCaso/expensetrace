@@ -12,7 +12,6 @@ import (
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
-	pkgreport "github.com/GustavoCaso/expensetrace/internal/report"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 	"github.com/GustavoCaso/expensetrace/internal/util"
 )
@@ -63,7 +62,7 @@ func (s *Service) Generate(ctx context.Context, userID int64) {
 			return
 		}
 
-		result, reportErr := pkgreport.Generate(ctx, userID, firstDay, lastDay, s.storage, expenses, "monthly")
+		result, reportErr := generate(ctx, userID, firstDay, lastDay, s.storage, expenses, "monthly")
 
 		if reportErr != nil {
 			s.logger.Warn("Failed to generate reports", "error", reportErr, "userID", userID)

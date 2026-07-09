@@ -1,4 +1,4 @@
-package integration
+package router
 
 import (
 	"context"
@@ -8,13 +8,7 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	"github.com/GustavoCaso/expensetrace/internal/router"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
-)
-
-const (
-	sessionCookieName = "session_id"
-	sessionDuration   = 24 * time.Hour
 )
 
 // TestFilteringEndToEnd tests the complete filtering flow from HTTP request to database query.
@@ -88,7 +82,7 @@ func TestFilteringEndToEnd(t *testing.T) {
 	}
 
 	// Setup router
-	handler := router.New(st, logger)
+	handler := New(st, logger)
 
 	// Test scenarios
 	tests := []struct {

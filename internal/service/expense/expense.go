@@ -8,8 +8,6 @@ import (
 	"sort"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	"github.com/GustavoCaso/expensetrace/internal/export"
-	"github.com/GustavoCaso/expensetrace/internal/filter"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
@@ -30,8 +28,8 @@ func New(storage storage.Storage, logger *logger.Logger) *Service {
 func (s *Service) List(
 	ctx context.Context,
 	userID int64,
-	f *filter.ExpenseFilter,
-	sortOpts *filter.SortOptions,
+	f *domain.ExpenseFilter,
+	sortOpts *domain.SortOptions,
 ) ([]domain.Expense, error) {
 	expenses, err := s.storage.GetExpensesFiltered(ctx, userID, f, sortOpts)
 	if err != nil {
@@ -176,7 +174,7 @@ func (s *Service) Export(ctx context.Context, userID int64, w io.Writer) error {
 		return err
 	}
 
-	if exportErr := export.CSV(ctx, userID, w, expenses, s.storage); exportErr != nil {
+	if exportErr := csvExport(ctx, userID, w, expenses, s.storage); exportErr != nil {
 		s.logger.Error(fmt.Sprintf("error export.CSV %s", exportErr.Error()))
 		return exportErr
 	}

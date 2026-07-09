@@ -33,24 +33,6 @@ func New(storage storage.Storage, logger *logger.Logger) *Service {
 // List returns all of the user's categories, excluding the special exclude
 // category.
 func (c *Service) List(ctx context.Context, userID int64) ([]domain.Category, error) {
-	categories, err := c.storage.GetCategories(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	categoriesWithoutExclude := []domain.Category{}
-	for _, category := range categories {
-		if category.Name() == domain.ExcludeCategory {
-			continue
-		}
-		categoriesWithoutExclude = append(categoriesWithoutExclude, category)
-	}
-
-	return categoriesWithoutExclude, nil
-}
-
-// ListWithExclude returns all of the user's categories including exclude category.
-func (c *Service) ListWithExclude(ctx context.Context, userID int64) ([]domain.Category, error) {
 	return c.storage.GetCategories(ctx, userID)
 }
 

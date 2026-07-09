@@ -9,7 +9,7 @@ test:
 	go test ./...
 
 run_web:
-	EXPENSE_LIVERELOAD=true go run cmd/main.go web
+	EXPENSE_LIVERELOAD=true go run cmd/main.go
 
 lint:
 	golangci-lint run --fix
