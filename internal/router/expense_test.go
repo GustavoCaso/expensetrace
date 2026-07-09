@@ -292,6 +292,117 @@ func TestUpdateExpenseHandler(t *testing.T) {
 	}
 }
 
+func TestUpdateExpenseHandlerUpdatesCategoryPattern(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Groceries", "grocery", 0)
+	if err != nil {
+		t.Fatalf("Failed to create test category: %v", err)
+	}
+
+	now := time.Now()
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Original Source", "Trader Joes", "USD", -100000, now, domain.ChargeType, &categoryID),
+	}
+
+	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)
+	if err != nil {
+		t.Fatalf("Failed to insert test expense: %v", err)
+	}
+
+	handler := New(s, logger)
+
+	formData := url.Values{}
+	formData.Set("source", "Original Source")
+	formData.Set("description", "Trader Joes")
+	formData.Set("amount", "1000.00")
+	formData.Set("currency", "USD")
+	formData.Set("date", now.Format("2006-01-02"))
+	formData.Set("type", "0")
+	formData.Set("category_id", strconv.FormatInt(categoryID, 10))
+	formData.Set("update_category", "true")
+
+	req := httptest.NewRequest(http.MethodPut, "/expense/1", strings.NewReader(formData.Encode()))
+	req.SetPathValue("id", "1")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK; got %v", resp.Status)
+	}
+
+	ensureNoErrorInTemplateResponse(t, "update expense with category pattern update", resp.Body)
+
+	updatedCategory, err := s.GetCategory(context.Background(), user.ID(), categoryID)
+	if err != nil {
+		t.Fatalf("Failed to retrieve updated category: %v", err)
+	}
+
+	if !strings.Contains(updatedCategory.Pattern(), "Trader Joes") {
+		t.Errorf("Expected category pattern to be extended with 'Trader Joes', got %q", updatedCategory.Pattern())
+	}
+}
+
+func TestUpdateExpenseHandlerDoesNotUpdateCategoryPatternWhenUnchecked(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Groceries", "grocery", 0)
+	if err != nil {
+		t.Fatalf("Failed to create test category: %v", err)
+	}
+
+	now := time.Now()
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Original Source", "Trader Joes", "USD", -100000, now, domain.ChargeType, &categoryID),
+	}
+
+	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)
+	if err != nil {
+		t.Fatalf("Failed to insert test expense: %v", err)
+	}
+
+	handler := New(s, logger)
+
+	formData := url.Values{}
+	formData.Set("source", "Original Source")
+	formData.Set("description", "Trader Joes")
+	formData.Set("amount", "1000.00")
+	formData.Set("currency", "USD")
+	formData.Set("date", now.Format("2006-01-02"))
+	formData.Set("type", "0")
+	formData.Set("category_id", strconv.FormatInt(categoryID, 10))
+
+	req := httptest.NewRequest(http.MethodPut, "/expense/1", strings.NewReader(formData.Encode()))
+	req.SetPathValue("id", "1")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK; got %v", resp.Status)
+	}
+
+	ensureNoErrorInTemplateResponse(t, "update expense without category pattern update", resp.Body)
+
+	updatedCategory, err := s.GetCategory(context.Background(), user.ID(), categoryID)
+	if err != nil {
+		t.Fatalf("Failed to retrieve category: %v", err)
+	}
+
+	if updatedCategory.Pattern() != "grocery" {
+		t.Errorf("Expected category pattern to remain 'grocery', got %q", updatedCategory.Pattern())
+	}
+}
+
 func TestUpdateExpenseHandlerValidationErrors(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)

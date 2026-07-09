@@ -194,6 +194,67 @@ func TestServiceUpdate_NoopWhenNothingChanged(t *testing.T) {
 	}
 }
 
+func TestServiceUpdateCategoryPattern_ExtendsPatternAndRecategorizes(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "cinema|movie", 0)
+	if err != nil {
+		t.Fatalf("Failed to create Category: %v", err)
+	}
+
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "netflix", "USD", -1500, time.Now(), domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Source", "cinema", "USD", -1000, time.Now(), domain.ChargeType, &categoryID),
+	}
+
+	_, err = s.InsertExpenses(context.Background(), user.ID(), expenses)
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
+	}
+
+	svc := New(s, logger)
+
+	err = svc.UpdateCategoryPattern(context.Background(), user.ID(), categoryID, "netflix")
+	if err != nil {
+		t.Fatalf("UpdateCategoryPattern returned error: %v", err)
+	}
+
+	updatedCategory, err := s.GetCategory(context.Background(), user.ID(), categoryID)
+	if err != nil {
+		t.Fatalf("Failed to get category: %v", err)
+	}
+
+	if updatedCategory.Pattern() != "cinema|movie|netflix" {
+		t.Fatalf("Expected pattern to be extended, got %s", updatedCategory.Pattern())
+	}
+
+	allExpenses, err := s.GetExpenses(context.Background(), user.ID())
+	if err != nil {
+		t.Fatalf("Failed to get expenses: %v", err)
+	}
+
+	for _, ex := range allExpenses {
+		if ex.Description() == "netflix" {
+			if ex.CategoryID() == nil || *ex.CategoryID() != categoryID {
+				t.Fatalf("Expected netflix expense to be categorized into %d, got %v", categoryID, ex.CategoryID())
+			}
+		}
+	}
+}
+
+func TestServiceUpdateCategoryPattern_ReturnsErrorWhenCategoryNotFound(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	svc := New(s, logger)
+
+	err := svc.UpdateCategoryPattern(context.Background(), user.ID(), 999999, "netflix")
+	if err == nil {
+		t.Fatal("Expected error when category does not exist, got nil")
+	}
+}
+
 func TestServiceGetUncategorized_GroupsByDescription(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)

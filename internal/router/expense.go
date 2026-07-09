@@ -313,6 +313,28 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 
 	c.logger.Info("Expense updated successfully", "id", id)
 
+	updateCategory, _ := strconv.ParseBool(r.FormValue("update_category"))
+
+	if updateCategory {
+		if updatedExpense.CategoryID() == nil {
+			c.logger.Info("Expense update tried to update category but expense has no category", "id", id)
+		} else {
+			catgegoryUpdateError := c.categoryService.UpdateCategoryPattern(
+				ctx,
+				userID,
+				*updatedExpense.CategoryID(),
+				updatedExpense.Description(),
+			)
+
+			if catgegoryUpdateError != nil {
+				c.logger.Error("Failed to update expense's category", "id", id)
+				data.FormErrors["failed to update expense's catgeory"] = catgegoryUpdateError.Error()
+				data.RedirectTo = redirectTo
+				return
+			}
+		}
+	}
+
 	if isValidRedirectTarget(redirectTo) {
 		w.Header().Set("Hx-Redirect", redirectTo)
 		w.WriteHeader(http.StatusNoContent)
