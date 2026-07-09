@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	"github.com/GustavoCaso/expensetrace/internal/filter"
 )
 
 func convertToTemplateExpenses(userID int64, expenses []domain.Expense) []*templateExpense {
@@ -288,8 +287,8 @@ func (s *sqliteStorage) GetExpensesByCategory(
 func (s *sqliteStorage) GetExpensesFiltered(
 	ctx context.Context,
 	userID int64,
-	expFilter *filter.ExpenseFilter,
-	sort *filter.SortOptions,
+	expFilter *domain.ExpenseFilter,
+	sort *domain.SortOptions,
 ) ([]domain.Expense, error) {
 	query := "SELECT * FROM expenses WHERE user_id = ?"
 	args := []any{userID}

@@ -3,8 +3,6 @@ package domain
 import (
 	"encoding/json"
 	"time"
-
-	"github.com/GustavoCaso/expensetrace/internal/filter"
 )
 
 type ExpenseType int
@@ -48,8 +46,8 @@ type ExpensesViewData struct {
 	Months       []string
 	CurrentYear  int
 	CurrentMonth string
-	Filter       *filter.ExpenseFilter
-	Sort         *filter.SortOptions
+	Filter       *ExpenseFilter
+	Sort         *SortOptions
 }
 
 type ExpenseViewData struct {

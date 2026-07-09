@@ -1,4 +1,4 @@
-package export
+package expense
 
 import (
 	"bytes"
@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
@@ -60,7 +58,7 @@ func TestCSV(t *testing.T) {
 
 	// Export to CSV
 	var buf bytes.Buffer
-	err = CSV(ctx, user.ID(), &buf, allExpenses, s)
+	err = csvExport(ctx, user.ID(), &buf, allExpenses, s)
 	if err != nil {
 		t.Fatalf("CSV failed: %v", err)
 	}
@@ -163,7 +161,7 @@ func TestCSVEmpty(t *testing.T) {
 
 	// Export to CSV
 	var buf bytes.Buffer
-	err = CSV(ctx, user.ID(), &buf, allExpenses, s)
+	err = csvExport(ctx, user.ID(), &buf, allExpenses, s)
 	if err != nil {
 		t.Fatalf("CSV failed: %v", err)
 	}
@@ -328,7 +326,7 @@ func TestCSVRoundTrip(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err = CSV(ctx, user.ID(), &buf, allExpenses, s)
+	err = csvExport(ctx, user.ID(), &buf, allExpenses, s)
 	if err != nil {
 		t.Fatalf("CSV failed: %v", err)
 	}

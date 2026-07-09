@@ -1,4 +1,4 @@
-package export
+package expense
 
 import (
 	"context"
@@ -17,9 +17,9 @@ const (
 	base10         = 10
 )
 
-// CSV exports expenses to CSV format
+// csvExport exports expenses to CSV format
 // format: ID,Source,Date,Description,Amount,Type,Currency,Category
-func CSV(
+func csvExport(
 	ctx context.Context,
 	userID int64,
 	writer io.Writer,

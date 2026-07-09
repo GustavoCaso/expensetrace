@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	"github.com/GustavoCaso/expensetrace/internal/filter"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 )
 
@@ -49,8 +48,8 @@ type Storage interface {
 	GetExpensesFiltered(
 		ctx context.Context,
 		userID int64,
-		expFilter *filter.ExpenseFilter,
-		sort *filter.SortOptions,
+		expFilter *domain.ExpenseFilter,
+		sort *domain.SortOptions,
 	) ([]domain.Expense, error)
 
 	// Categories

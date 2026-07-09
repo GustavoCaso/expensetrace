@@ -42,7 +42,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Test monthly report
-	report, err := Generate(context.Background(), user.ID(), startDate, endDate, s, expenses, "monthly")
+	report, err := generate(context.Background(), user.ID(), startDate, endDate, s, expenses, "monthly")
 
 	if err != nil {
 		t.Fatalf("Got error generating report: %s", err.Error())
@@ -82,7 +82,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Test yearly report
-	yearlyReport, err := Generate(context.Background(), user.ID(), startDate, endDate, s, expenses, "yearly")
+	yearlyReport, err := generate(context.Background(), user.ID(), startDate, endDate, s, expenses, "yearly")
 	if err != nil {
 		t.Fatalf("Got error generating report: %s", err.Error())
 	}

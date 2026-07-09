@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	"github.com/GustavoCaso/expensetrace/internal/filter"
 	"github.com/GustavoCaso/expensetrace/internal/testutil"
 )
 
@@ -29,7 +28,7 @@ func TestList_FiltersByUser(t *testing.T) {
 
 	svc := New(s, logger)
 
-	result, err := svc.List(context.Background(), user.ID(), &filter.ExpenseFilter{}, filter.DefaultSortOptions())
+	result, err := svc.List(context.Background(), user.ID(), &domain.ExpenseFilter{}, domain.DefaultSortOptions())
 	if err != nil {
 		t.Fatalf("List returned error: %v", err)
 	}

@@ -170,7 +170,7 @@ func (r *router) parserStaticFiles() (fs.FS, error) {
 // categoryMatcher builds a matcher from the user's current categories. It is
 // constructed on demand so it always reflects the latest category patterns.
 func (r *router) categoryMatcher(ctx context.Context, userID int64) (*matcher.Matcher, error) {
-	categories, err := r.categoryService.ListWithExclude(ctx, userID)
+	categories, err := r.categoryService.List(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

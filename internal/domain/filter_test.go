@@ -1,4 +1,4 @@
-package filter
+package domain
 
 import (
 	"net/url"

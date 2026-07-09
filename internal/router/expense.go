@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	"github.com/GustavoCaso/expensetrace/internal/filter"
 )
 
 var newAction = "new"
@@ -83,7 +82,7 @@ func (c *expenseHandler) expensesHandler(
 	}()
 
 	// Parse filters from URL
-	expenseFilter, sortOptions, err := filter.ParseExpenseFilters(r.URL.Query())
+	expenseFilter, sortOptions, err := domain.ParseExpenseFilters(r.URL.Query())
 	if err != nil {
 		data.Error = fmt.Sprintf("Invalid filters: %s", err.Error())
 		return

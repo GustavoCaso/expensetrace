@@ -8,18 +8,18 @@ import (
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/domain"
-	pkgStorage "github.com/GustavoCaso/expensetrace/internal/storage"
+	"github.com/GustavoCaso/expensetrace/internal/storage"
 )
 
 const (
 	percentageOfTotal = 100
 )
 
-func Generate(
+func generate(
 	ctx context.Context,
 	userID int64,
 	startDate, endDate time.Time,
-	storage pkgStorage.Storage,
+	storage storage.Storage,
 	expenses []domain.Expense,
 	reportType string,
 ) (domain.Report, error) {
@@ -67,7 +67,7 @@ func Generate(
 func splitByExpenseType(
 	ctx context.Context,
 	userID int64,
-	storage pkgStorage.Storage,
+	storage storage.Storage,
 	expenses []domain.Expense,
 ) ([]domain.CategoryReport, []domain.CategoryReport, int64, int64, error) {
 	var incomeTotal int64
