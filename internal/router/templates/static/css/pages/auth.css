@@ -5,12 +5,12 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: var(--color-gray-50);
+  background-color: transparent;
   padding: var(--spacing-4);
 }
 
 .auth-card {
-  background: white;
+  background: var(--color-surface);
   padding: var(--spacing-10);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-lg);
@@ -72,7 +72,7 @@
 .auth-form .form-group input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px var(--ring-primary);
 }
 
 .auth-form .form-group input::placeholder {
@@ -90,7 +90,7 @@
   width: 100%;
   padding: var(--spacing-3);
   background: var(--color-primary);
-  color: white;
+  color: var(--color-surface);
   border: none;
   border-radius: var(--border-radius);
   font-size: var(--font-size-base);

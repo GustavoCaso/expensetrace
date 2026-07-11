@@ -152,11 +152,11 @@ class DonutChart {
       centerRadius: 80,         // Inner radius (hole size)
       budgetIndicatorWidth: 8,  // Width of budget status indicator
       colors: {
-        expense_base: '#ef4444',  // Red for expenses
-        income_base: '#10b981',   // Green for income
-        budget_under: '#22c55e',  // Green border for under budget
-        budget_near: '#eab308',   // Yellow border for near budget
-        budget_over: '#dc2626',   // Red border for over budget
+        expense_base: '#B3402E',  // Red for expenses
+        income_base: '#177245',   // Green for income
+        budget_under: '#177245',  // Green border for under budget
+        budget_near: '#9A6A0F',   // Yellow border for near budget
+        budget_over: '#8F3221',   // Red border for over budget
         hover_alpha: 0.7
       }
     };
@@ -261,17 +261,17 @@ class DonutChart {
     const hue = (baseHue + hueVariation) % 360;
 
     // Vary saturation and lightness for additional distinction
-    const saturationBase = 65 + (index % 3) * 10;
-    const lightnessBase = 45 + (index % 4) * 8;
+    const saturationBase = 48 + (index % 3) * 8;
+    const lightnessBase = 38 + (index % 4) * 8;
 
     return `hsl(${hue}, ${saturationBase}%, ${lightnessBase}%)`;
   }
 
   generateIncomeColor(index) {
     // Generate shades of green/teal for income
-    const hue = 140 + (index * 15) % 40; // Green to teal range (140-180)
-    const saturation = 60 + (index * 10) % 30;
-    const lightness = 40 + (index * 5) % 20;
+    const hue = 145 + (index * 15) % 40; // Green to petrol range (145-185)
+    const saturation = 42 + (index * 10) % 25;
+    const lightness = 30 + (index * 5) % 20;
     return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   }
 
@@ -303,7 +303,7 @@ class DonutChart {
 
       // Highlight selected segment
       if (this.selectedSegment === index) {
-        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.strokeStyle = '#FCFCFA';
         this.ctx.lineWidth = 3;
         this.ctx.stroke();
       }
@@ -312,7 +312,7 @@ class DonutChart {
     // Draw center circle (creates the donut hole)
     this.ctx.beginPath();
     this.ctx.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI);
-    this.ctx.fillStyle = '#ffffff';
+    this.ctx.fillStyle = '#FCFCFA';
     this.ctx.fill();
 
     // Draw total in center
@@ -327,12 +327,12 @@ class DonutChart {
     this.ctx.textBaseline = 'middle';
 
     // Draw label
-    this.ctx.font = 'bold 16px sans-serif';
-    this.ctx.fillStyle = '#374151';
+    this.ctx.font = "600 16px 'Bricolage Grotesque', sans-serif";
+    this.ctx.fillStyle = '#38453F';
     this.ctx.fillText('Total', centerX, centerY - 15);
 
     // Draw total amount with appropriate color
-    this.ctx.font = 'bold 24px sans-serif';
+    this.ctx.font = "600 24px 'Spline Sans Mono', monospace";
     this.ctx.fillStyle = isExpense
       ? this.config.colors.expense_base
       : this.config.colors.income_base;

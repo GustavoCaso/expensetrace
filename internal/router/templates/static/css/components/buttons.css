@@ -23,7 +23,7 @@ button[hx-get] {
 button[hx-post]:not(.btn-secondary):not(.btn-danger):not(.btn-small):not(.btn-icon),
 button[hx-get]:not(.btn-secondary):not(.btn-danger):not(.btn-small):not(.btn-icon) {
   background-color: var(--color-primary);
-  color: white;
+  color: var(--color-surface);
   border: none;
 }
 
@@ -60,12 +60,12 @@ button[hx-get]:not(.btn-secondary):not(.btn-danger):not(.btn-small):not(.btn-ico
 /* Danger button */
 .btn-danger {
   background-color: var(--color-danger);
-  color: white;
+  color: var(--color-surface);
   border: none;
 }
 
 .btn-danger:hover {
-  background-color: #dc2626;
+  background-color: var(--color-danger-dark);
   /* Darker red */
 }
 

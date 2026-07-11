@@ -43,7 +43,7 @@ select {
   line-height: 1.5;
   border: 1px solid var(--color-gray-300);
   border-radius: var(--border-radius);
-  background-color: white;
+  background-color: var(--color-surface);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   color: var(--color-gray-800);
 }
@@ -53,7 +53,7 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px var(--ring-primary);
 }
 
 /* Radio and checkbox containers */
@@ -85,7 +85,7 @@ textarea.error-input {
 }
 
 .error-input:focus {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  box-shadow: 0 0 0 3px var(--ring-danger);
 }
 
 .form-group-error {

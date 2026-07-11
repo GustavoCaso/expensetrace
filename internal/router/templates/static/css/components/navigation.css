@@ -5,11 +5,44 @@
   margin-bottom: var(--spacing-8);
 }
 
+/* Petrol spine — the app's backbone */
+.nav-spine {
+  background-color: var(--color-spine);
+  color: var(--color-spine-ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-6);
+  padding: var(--spacing-4) var(--spacing-3);
+  position: sticky;
+  top: 0;
+  align-self: stretch;
+  min-height: 100vh;
+}
+
+.nav-wordmark {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-2xl);
+  line-height: 1;
+  color: var(--color-surface);
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(252, 252, 250, 0.35);
+  border-radius: var(--border-radius-md);
+}
+
+.nav-wordmark:hover {
+  border-color: var(--color-surface);
+}
+
 .tabs-vertical {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  gap: 10px;
+  gap: var(--spacing-2);
 }
 
 .tab-link,
@@ -30,6 +63,14 @@
 .tab-icon {
   cursor: pointer;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--border-radius-md);
+  color: var(--color-spine-ink);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 /* Tooltip */
@@ -42,7 +83,7 @@
   margin-left: var(--spacing-2);
   padding: var(--spacing-2) var(--spacing-3);
   background-color: var(--color-gray-900);
-  color: white;
+  color: var(--color-surface);
   font-size: 0.875rem;
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
@@ -75,15 +116,43 @@
 }
 
 .tab-icon:hover {
-  color: var(--color-primary);
+  color: var(--color-surface);
+  background-color: rgba(252, 252, 250, 0.12);
 }
 
 .tab-icon.active {
-  color: var(--color-primary);
+  color: var(--color-spine);
+  background-color: var(--color-surface);
 }
 
 .tab-link.active,
 .tab-btn.active {
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
+}
+
+/* Spine collapses to a top bar on small screens */
+@media (max-width: 640px) {
+  #page {
+    flex-direction: column;
+  }
+
+  .nav-spine {
+    flex-direction: row;
+    justify-content: space-between;
+    min-height: 0;
+    position: static;
+    align-self: auto;
+    padding: var(--spacing-2) var(--spacing-4);
+  }
+
+  .tabs-vertical {
+    flex-direction: row;
+    gap: var(--spacing-1);
+  }
+
+  .tab-icon::before,
+  .tab-icon::after {
+    display: none;
+  }
 }

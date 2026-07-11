@@ -16,6 +16,14 @@
   font-weight: var(--font-weight-semibold);
 }
 
+/* Ledger numerals — money always reads in mono ink */
+.income,
+.expense,
+.amount {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
 .warning {
   background-color: var(--color-warning-light);
   color: var(--color-warning);
@@ -58,7 +66,7 @@
 }
 
 .bg-white {
-  background-color: white;
+  background-color: var(--color-surface);
 }
 
 .bg-success {

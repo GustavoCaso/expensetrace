@@ -16,7 +16,7 @@
 }
 
 .pattern-badge {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--font-size-sm);
   background-color: var(--color-gray-100);
   padding: var(--spacing-1) var(--spacing-3);
