@@ -17,11 +17,6 @@ import (
 	"github.com/GustavoCaso/expensetrace/internal/storage/sqlite"
 )
 
-const (
-	defaultPort    = "8080"
-	defaultTimeout = 5 * time.Second
-)
-
 func main() {
 	conf := config.Parse()
 
@@ -39,27 +34,7 @@ func main() {
 		appLogger.Fatal("Unable to create schema", "error", err.Error())
 	}
 
-	// Initialize configuration from environment variables
-	port := os.Getenv("EXPENSETRACE_PORT")
-	if port == "" {
-		port = defaultPort
-	}
-	var timeout time.Duration
-
-	customTimeout := os.Getenv("EXPENSETRACE_TIMEOUT")
-	if customTimeout != "" {
-		duration, durationErr := time.ParseDuration(customTimeout)
-		if durationErr != nil {
-			fmt.Fprintf(os.Stderr, "Failed to parse custom timeout, using default timeout of 5s")
-			timeout = defaultTimeout
-		} else {
-			timeout = duration
-		}
-	} else {
-		timeout = defaultTimeout
-	}
-
-	err = run(port, timeout, storage, appLogger)
+	err = run(conf.Port, conf.Timeout, storage, appLogger)
 	if err != nil {
 		appLogger.Error("failed to run the expensetrace web service", "error", err)
 		os.Exit(1)
