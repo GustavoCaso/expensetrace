@@ -1,5 +1,5 @@
 {{define "title"}}Expeses{{end}}
-{{define "css"}}/static/css/expenses.css{{end}}
+{{define "css"}}/static/css/pages/expenses.css{{end}}
 
 {{define "main"}}
   {{ template "expenses/nav" "index" }}
@@ -8,7 +8,7 @@
     {{template "banner" .Banner}}
   {{end}}
 
-  <form method="GET" action="/expenses" class="filter-bar">
+  <form method="GET" action="/expenses" class="filter-bar card">
     <div class="filter-grid">
       <div class="filter-row filter-row-main">
         <div>
@@ -61,7 +61,7 @@
   </form>
 
   {{ if eq (len .Error) 0 }}
-    <div class="expenses-container">
+    <div class="expenses-container card">
         {{range $year := .Years}}
           {{$currentYear := (eq $year $.CurrentYear)}}
         

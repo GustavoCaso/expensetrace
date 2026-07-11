@@ -1,7 +1,6 @@
 {{define "nav"}}
 {{if .LoggedIn }}
 <div class="nav-spine">
-  <a class="nav-wordmark" href="/" aria-label="ExpenseTrace home">Σ</a>
   <nav class="tabs-vertical">
     <a class="tab-icon{{if eq .CurrentPage "reports"}} active{{end}}" href='/' aria-label="Reports">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="24" width="24" fill="currentColor">

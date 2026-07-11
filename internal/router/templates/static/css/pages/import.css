@@ -20,36 +20,12 @@
   }
 }
 
-/* Table container for preview */
+/* Table container for preview (table itself uses the global table styles) */
 .table-container {
   overflow-x: auto;
   margin: var(--spacing-4) 0;
   border: 1px solid var(--color-gray-200);
   border-radius: var(--border-radius);
-}
-
-.preview-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--font-size-sm);
-}
-
-.preview-table th {
-  background-color: var(--color-gray-100);
-  padding: var(--spacing-3);
-  text-align: left;
-  font-weight: var(--font-weight-medium);
-  border-bottom: 2px solid var(--color-gray-300);
-  white-space: nowrap;
-}
-
-.preview-table td {
-  padding: var(--spacing-3);
-  border-bottom: 1px solid var(--color-gray-200);
-}
-
-.preview-table tbody tr:hover {
-  background-color: var(--color-gray-50);
 }
 
 /* Error list */

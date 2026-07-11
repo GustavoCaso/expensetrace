@@ -11,12 +11,9 @@
   gap: var(--spacing-8);
 }
 
+/* Surface styling comes from .card in the markup */
 .profile-section {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--border-radius-lg);
   padding: var(--spacing-6);
-  box-shadow: var(--shadow-sm);
 }
 
 .profile-section h2 {

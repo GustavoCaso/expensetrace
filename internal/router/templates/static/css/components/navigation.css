@@ -20,25 +20,6 @@
   min-height: 100vh;
 }
 
-.nav-wordmark {
-  font-family: var(--font-display);
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-2xl);
-  line-height: 1;
-  color: var(--color-surface);
-  width: 2.5rem;
-  height: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1.5px solid rgba(252, 252, 250, 0.35);
-  border-radius: var(--border-radius-md);
-}
-
-.nav-wordmark:hover {
-  border-color: var(--color-surface);
-}
-
 .tabs-vertical {
   display: flex;
   flex-direction: column;

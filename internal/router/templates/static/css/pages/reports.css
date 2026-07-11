@@ -12,28 +12,6 @@
   color: var(--color-gray-900);
 }
 
-/* Chart container */
-.chart-container {
-  background-color: var(--color-surface);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  padding: var(--spacing-6);
-}
-
-.chart-container h3 {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
-  margin-bottom: var(--spacing-4);
-  color: var(--color-gray-800);
-}
-
-.chart-placeholder {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-}
-
 /* Chart legend */
 .chart-legend {
   display: flex;
@@ -66,31 +44,9 @@
 }
 
 .legend-label {
-  font-size: 0.875rem;
-  color: var(--color-gray-600);
   flex: 1;
   font-size: var(--font-size-sm);
   color: var(--color-gray-600);
-}
-
-.legend-value {
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-sm);
-}
-
-/* Categories breakdown section */
-.categories-breakdown {
-  background-color: var(--color-surface);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  padding: var(--spacing-6);
-}
-
-.categories-breakdown h3 {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
-  margin-bottom: var(--spacing-4);
-  color: var(--color-gray-800);
 }
 
 .savings-chart-container {

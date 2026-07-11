@@ -1,20 +1,5 @@
 /* Categories page specific styles */
 
-/* Category form */
-.category-card-form {
-  overflow: hidden;
-  transition: max-height var(--transition-normal) ease-out, opacity var(--transition-normal);
-  max-height: 500px;
-  opacity: 1;
-}
-
-/* Pattern test results */
-.pattern-test-results {
-  border-radius: var(--border-radius);
-  margin-bottom: var(--spacing-6);
-  animation: fadeIn var(--transition-normal) ease-out;
-}
-
 .pattern-badge {
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);

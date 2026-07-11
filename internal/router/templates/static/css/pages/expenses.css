@@ -1,44 +1,6 @@
 /* Expenses page specific styles */
 
-/* Filter bar */
-.filter-bar {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  padding: var(--spacing-4);
-  margin-bottom: var(--spacing-6);
-}
-
-.filter-bar label {
-  display: block;
-  margin-bottom: var(--spacing-1);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-gray-700);
-}
-
-.filter-bar input[type="text"],
-.filter-bar input[type="number"],
-.filter-bar input[type="date"],
-.filter-bar select {
-  width: 100%;
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--color-gray-300);
-  border-radius: var(--border-radius);
-  font-size: var(--font-size-sm);
-  color: var(--color-gray-800);
-  background-color: var(--color-surface);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.filter-bar input:focus,
-.filter-bar select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--ring-primary);
-}
-
+/* Filter bar (surface styling comes from .card in the markup) */
 .filter-grid {
   display: flex;
   flex-direction: column;
@@ -63,14 +25,6 @@
   display: flex;
   gap: var(--spacing-3);
   align-items: center;
-}
-
-/* Expenses container */
-.expenses-container {
-  background-color: var(--color-surface);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  padding: var(--spacing-4);
 }
 
 /* Year sections */
@@ -126,13 +80,6 @@
   margin: 0;
 }
 
-/* Month totals */
-.month-total {
-  display: flex;
-  gap: var(--spacing-4);
-  font-size: var(--font-size-sm);
-}
-
 /* Expense items list */
 .expense-list {
   display: flex;
@@ -147,7 +94,6 @@
 .expense-list.collapsed {
   max-height: 0;
 }
-
 
 /* Individual expense items */
 .expense-item {
@@ -171,20 +117,6 @@
   border-bottom: none;
 }
 
-/* Amount styling */
-.income b,
-.expense b {
-  font-weight: var(--font-weight-semibold);
-}
-
-.income b {
-  color: var(--color-success);
-}
-
-.expense b {
-  color: var(--color-danger);
-}
-
 /* Error message */
 #expenses h2.error {
   color: var(--color-danger);
@@ -192,47 +124,6 @@
   padding: var(--spacing-4);
   border-radius: var(--border-radius);
   margin-top: var(--spacing-4);
-}
-
-/* Empty state */
-.no-expenses {
-  text-align: center;
-  padding: var(--spacing-8) var(--spacing-4);
-  color: var(--color-gray-500);
-}
-
-.no-expenses-icon {
-  font-size: var(--font-size-3xl);
-  margin-bottom: var(--spacing-4);
-  opacity: 0.7;
-}
-
-.expense-info p {
-  margin-bottom: var(--spacing-2);
-  font-size: var(--font-size-sm);
-  line-height: 1.5;
-}
-
-/* Danger zone styling */
-.danger-zone {
-  margin-top: var(--spacing-6);
-  padding: var(--spacing-4);
-  background-color: var(--color-danger-light);
-  border: 1px solid var(--color-danger-light);
-  border-radius: var(--border-radius);
-  border-left: 3px solid var(--color-danger);
-}
-
-.danger-zone h4 {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-danger);
-  margin: 0 0 var(--spacing-2) 0;
-}
-
-.danger-zone p {
-  color: var(--color-gray-600);
-  margin-bottom: var(--spacing-3);
 }
 
 .expense-meta {
@@ -256,19 +147,5 @@
     align-items: flex-start;
     gap: var(--spacing-2);
     padding: var(--spacing-4);
-  }
-
-  .expense-description {
-    margin: 0;
-    width: 100%;
-  }
-
-  .month-total {
-    flex-direction: column;
-    gap: var(--spacing-1);
-  }
-
-  .expense-actions {
-    margin-top: var(--spacing-2);
   }
 }
