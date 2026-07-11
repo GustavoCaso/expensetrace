@@ -1,23 +1,28 @@
 .badge {
-  background-color: var(--color-gray-200);
-  color: var(--color-gray-600);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   padding: var(--spacing-0-5) var(--spacing-2);
-  border-radius: var(--border-radius-full);
+  border-radius: var(--border-radius);
   font-weight: var(--font-weight-medium);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   margin-left: var(--spacing-2);
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
 }
 
+.badge:empty {
+  display: none;
+}
+
 .pattern-code {
   background-color: var(--color-gray-100);
   padding: var(--spacing-2);
   border-radius: var(--border-radius);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--font-size-sm);
   color: var(--color-primary-dark);
   margin-bottom: var(--spacing-3);

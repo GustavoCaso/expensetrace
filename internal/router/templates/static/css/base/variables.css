@@ -1,32 +1,45 @@
 :root {
-  /* Color system */
-  --color-primary: #3b82f6;
-  --color-primary-dark: #2563eb;
-  --color-primary-light: #93c5fd;
+  /* "Private ledger" palette — petrol ink on cool paper */
+  --color-primary: #1d5c56;
+  --color-primary-dark: #123f3b;
+  --color-primary-light: #d7e5e2;
 
-  --color-success: #10b981;
-  --color-success-light: #d1fae5;
+  --color-success: #177245;
+  --color-success-light: #dcebe0;
 
-  --color-danger: #ef4444;
-  --color-danger-light: #fee2e2;
+  --color-danger: #b3402e;
+  --color-danger-dark: #8f3221;
+  --color-danger-light: #f4dfda;
 
-  --color-warning: #f59e0b;
-  --color-warning-light: #fef3c7;
+  --color-warning: #9a6a0f;
+  --color-warning-light: #f2e8cf;
 
-  /* Grayscale */
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
+  /* Field and surfaces */
+  --color-paper: #eef0eb;
+  --color-surface: #fcfcfa;
+  --color-spine: #123f3b;
+  --color-spine-ink: #cfe0dc;
+
+  /* Grayscale — green-cool ink neutrals */
+  --color-gray-50: #f7f8f5;
+  --color-gray-100: #eff1ec;
+  --color-gray-200: #dde2db;
+  --color-gray-300: #c2cac2;
+  --color-gray-400: #93a09a;
+  --color-gray-500: #67766f;
+  --color-gray-600: #4c5a54;
+  --color-gray-700: #38453f;
+  --color-gray-800: #24302b;
+  --color-gray-900: #16211f;
+
+  /* Focus rings */
+  --ring-primary: rgba(29, 92, 86, 0.18);
+  --ring-danger: rgba(179, 64, 46, 0.18);
 
   /* Typography */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-display: 'Bricolage Grotesque', 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   --font-size-xs: 0.75rem;
   /* 12px */
@@ -88,11 +101,11 @@
   /* 12px */
   --border-radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  /* Shadows — soft ink wash */
+  --shadow-sm: 0 1px 2px 0 rgba(22, 33, 31, 0.05);
+  --shadow: 0 1px 3px 0 rgba(22, 33, 31, 0.07), 0 1px 2px 0 rgba(22, 33, 31, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(22, 33, 31, 0.08), 0 2px 4px -1px rgba(22, 33, 31, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(22, 33, 31, 0.09), 0 4px 6px -2px rgba(22, 33, 31, 0.05);
 
   /* Transitions */
   --transition-fast: 150ms;

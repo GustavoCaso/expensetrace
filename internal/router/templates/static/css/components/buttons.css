@@ -1,12 +1,9 @@
 /* Button styles */
 
 /* Base button */
-.btn,
 .btn-primary,
 .btn-secondary,
-.btn-danger,
-button[hx-post],
-button[hx-get] {
+.btn-danger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -19,23 +16,17 @@ button[hx-get] {
 }
 
 /* Primary button */
-.btn-primary,
-button[hx-post]:not(.btn-secondary):not(.btn-danger):not(.btn-small):not(.btn-icon),
-button[hx-get]:not(.btn-secondary):not(.btn-danger):not(.btn-small):not(.btn-icon) {
+.btn-primary {
   background-color: var(--color-primary);
-  color: white;
+  color: var(--color-surface);
   border: none;
 }
 
-.btn-primary:hover,
-button[hx-post]:not(.btn-secondary):not(.btn-danger):not(.btn-small):not(.btn-icon):hover,
-button[hx-get]:not(.btn-secondary):not(.btn-danger):not(.btn-small):not(.btn-icon):hover {
+.btn-primary:hover {
   background-color: var(--color-primary-dark);
 }
 
-.btn-primary:disabled,
-button[hx-post]:not(.btn-secondary):not(.btn-danger):not(.btn-small):not(.btn-icon):disabled,
-button[hx-get]:not(.btn-secondary):not(.btn-danger):not(.btn-small):not(.btn-icon):disabled {
+.btn-primary:disabled {
   background-color: var(--color-primary-light);
   cursor: not-allowed;
 }
@@ -60,13 +51,12 @@ button[hx-get]:not(.btn-secondary):not(.btn-danger):not(.btn-small):not(.btn-ico
 /* Danger button */
 .btn-danger {
   background-color: var(--color-danger);
-  color: white;
+  color: var(--color-surface);
   border: none;
 }
 
 .btn-danger:hover {
-  background-color: #dc2626;
-  /* Darker red */
+  background-color: var(--color-danger-dark);
 }
 
 .btn-danger:disabled {

@@ -40,14 +40,14 @@ export function initializeBarChart() {
     barWidth: 30,
     barGap: 15,
     colors: {
-      income_stroke: '#10b981',
-      expense_stroke: '#ef4444',
-      income_fill: 'rgba(16, 185, 129, 0.5)',
-      expense_fill: 'rgba(239, 68, 68, 0.5)',
-      savings: '#3b82f6',
-      grid: '#e5e7eb',
-      text: '#6b7280',
-      tooltip: 'rgba(31, 41, 55, 0.9)'
+      income_stroke: '#177245',
+      expense_stroke: '#B3402E',
+      income_fill: 'rgba(23, 114, 69, 0.45)',
+      expense_fill: 'rgba(179, 64, 46, 0.45)',
+      savings: '#1D5C56',
+      grid: '#DDE2DB',
+      text: '#67766F',
+      tooltip: 'rgba(22, 33, 31, 0.92)'
     },
     animationDuration: 500,
     visibleMonths: 7 // Number of months visible by default
@@ -109,7 +109,7 @@ export function initializeBarChart() {
       // Value labels
       const value = (i * maxValue / 5) / 100;
       ctx.fillStyle = config.colors.text;
-      ctx.font = '12px Inter, sans-serif';
+      ctx.font = "12px 'Spline Sans Mono', monospace";
       ctx.textAlign = 'right';
       ctx.fillText(value.toFixed(2) + '€', config.padding.left - 10, y + 4);
     }
@@ -129,7 +129,7 @@ export function initializeBarChart() {
 
       // Draw month label
       ctx.fillStyle = config.colors.text;
-      ctx.font = '12px Inter, sans-serif';
+      ctx.font = "12px 'Spline Sans Mono', monospace";
       ctx.textAlign = 'center';
       ctx.fillText(point.Month, x + config.barWidth, config.padding.top + chartHeight + 25);
 
@@ -205,7 +205,7 @@ export function initializeBarChart() {
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fillStyle = point.Savings >= 0 ? config.colors.income_stroke : config.colors.expense_stroke;
       ctx.fill();
-      ctx.strokeStyle = 'white';
+      ctx.strokeStyle = '#FCFCFA';
       ctx.lineWidth = 2;
       ctx.stroke();
     });
