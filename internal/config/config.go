@@ -1,14 +1,18 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 )
 
 type Config struct {
-	DBFile string
-	Logger logger.Config
+	DBFile  string
+	Logger  logger.Config
+	Port    string
+	Timeout time.Duration
 }
 
 const (
@@ -16,6 +20,8 @@ const (
 	defaultLogLevel  = logger.LevelInfo
 	defaultLogFormat = logger.FormatText
 	defaultLogOutput = "stdout"
+	defaultPort      = "8080"
+	defaultTimeout   = 5 * time.Second
 )
 
 func (c *Config) parseEnv() {
@@ -41,6 +47,25 @@ func (c *Config) parseEnv() {
 		c.Logger.Output = output
 	} else {
 		c.Logger.Output = defaultLogOutput
+	}
+
+	// Initialize configuration from environment variables
+	if port := os.Getenv("EXPENSETRACE_PORT"); port != "" {
+		c.Port = port
+	} else {
+		c.Port = defaultPort
+	}
+
+	if customTimeout := os.Getenv("EXPENSETRACE_TIMEOUT"); customTimeout != "" {
+		duration, durationErr := time.ParseDuration(customTimeout)
+		if durationErr != nil {
+			fmt.Fprintf(os.Stderr, "Failed to parse custom timeout, using default timeout of 5s")
+			c.Timeout = defaultTimeout
+		} else {
+			c.Timeout = duration
+		}
+	} else {
+		c.Timeout = defaultTimeout
 	}
 }
 

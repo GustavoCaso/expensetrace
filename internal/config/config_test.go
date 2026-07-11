@@ -23,6 +23,14 @@ func TestParseDefaults(t *testing.T) {
 	if conf.Logger.Output != defaultLogOutput {
 		t.Fatalf("Expected logger output '%s', got '%s'", defaultLogOutput, conf.Logger.Output)
 	}
+
+	if conf.Port != defaultPort {
+		t.Fatalf("Expected port '%s', got '%s'", defaultPort, conf.Port)
+	}
+
+	if conf.Timeout.String() != defaultTimeout.String() {
+		t.Fatalf("Expected timeout '%s', got '%s'", defaultTimeout.String(), conf.Timeout.String())
+	}
 }
 
 func TestParseENV(t *testing.T) {
@@ -30,6 +38,8 @@ func TestParseENV(t *testing.T) {
 	t.Setenv("EXPENSETRACE_LOG_LEVEL", "info")
 	t.Setenv("EXPENSETRACE_LOG_FORMAT", "json")
 	t.Setenv("EXPENSETRACE_LOG_OUTPUT", "discard")
+	t.Setenv("EXPENSETRACE_PORT", "8765")
+	t.Setenv("EXPENSETRACE_TIMEOUT", "10s")
 
 	// Test parsing the config file
 	conf := Parse()
@@ -48,5 +58,13 @@ func TestParseENV(t *testing.T) {
 
 	if conf.Logger.Output != "discard" {
 		t.Fatalf("Expected logger output 'discard', got '%s'", conf.Logger.Output)
+	}
+
+	if conf.Port != "8765" {
+		t.Fatalf("Expected port '%s', got '%s'", "8765", conf.Port)
+	}
+
+	if conf.Timeout.String() != "10s" {
+		t.Fatalf("Expected timeout '%s', got '%s'", "10s", conf.Timeout.String())
 	}
 }
