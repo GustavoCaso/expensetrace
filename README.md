@@ -222,9 +222,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### Developing locally
 
-When working on the web interface you can use `make run_web` to run the web server. This set the ENV variable `EXPENSE_LIVERELOAD=true`. That ensures changes to files in the `router/templates` folder are pickup when reloading the browser.
-
-Making changes to the HTTP hanlder code, requires restarting the server.
+When working on the web interface you can use `make run_web` to run the web server.
 
 ## License
 

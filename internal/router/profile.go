@@ -30,7 +30,7 @@ func (p *profileHandler) profilePage(w http.ResponseWriter, r *http.Request, ban
 		base.Error = err.Error()
 	}
 
-	p.router.templates.Render(w, "pages/profile/index.html", base)
+	p.router.renderHTML(w, http.StatusOK, base, "base", "pages/profile/index.html")
 }
 
 func (p *profileHandler) updateUsername(w http.ResponseWriter, r *http.Request) {

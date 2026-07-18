@@ -115,17 +115,6 @@ func xFrameDenyHeaderMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func liveReloadMiddleware(router *router, handlder http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := router.parseTemplates()
-		if err != nil {
-			router.logger.Warn("Error parsing templates during live reload", "error", err.Error())
-		}
-
-		handlder.ServeHTTP(w, r)
-	})
-}
-
 func authMiddleware(router *router, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Skip authentication for auth endpoints and static files

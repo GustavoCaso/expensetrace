@@ -24,7 +24,7 @@ type importHandler struct {
 func (i *importHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /import", func(w http.ResponseWriter, r *http.Request) {
 		base := viewBaseFromContext(r.Context())
-		i.templates.Render(w, "pages/import/index.html", base)
+		i.renderHTML(w, http.StatusOK, base, "base", "pages/import/index.html")
 	})
 
 	mux.HandleFunc("POST /import", func(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +47,7 @@ func (i *importHandler) importHandler(ctx context.Context, w http.ResponseWriter
 
 	defer func() {
 		if !previewFlow {
-			i.templates.Render(w, "partials/import/form.html", data)
+			i.renderHTML(w, http.StatusOK, data, "import/form")
 		}
 	}()
 
@@ -124,7 +124,7 @@ func (i *importHandler) previewHandler(
 	data := domain.PreviewData{ViewBase: domain.ViewBase{CurrentPage: pageImport, LoggedIn: true}}
 
 	defer func() {
-		i.templates.Render(w, "partials/import/preview.html", data)
+		i.renderHTML(w, http.StatusOK, data, "import/preview")
 	}()
 
 	headers, previewRows, totalRows, sessionID, err := i.importService.Preview(filename, reader)
@@ -145,7 +145,7 @@ func (i *importHandler) mappingHandler(ctx context.Context, w http.ResponseWrite
 	data := domain.MappingData{ViewBase: domain.ViewBase{CurrentPage: pageImport}}
 
 	defer func() {
-		i.templates.Render(w, "partials/import/mapping-preview.html", data)
+		i.renderHTML(w, http.StatusOK, data, "import/mapping-preview")
 	}()
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
@@ -225,7 +225,7 @@ func (i *importHandler) executeImportHandler(ctx context.Context, w http.Respons
 	data.LoggedIn = true
 
 	defer func() {
-		i.templates.Render(w, "partials/import/form.html", data)
+		i.renderHTML(w, http.StatusOK, data, "import/form")
 	}()
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)

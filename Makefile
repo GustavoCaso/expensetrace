@@ -9,7 +9,7 @@ test:
 	go test ./...
 
 run_web:
-	EXPENSE_LIVERELOAD=true go run cmd/main.go
+	go run cmd/main.go
 
 lint:
 	golangci-lint run --fix
@@ -30,7 +30,7 @@ help:
 	@echo "Available targets:"
 	@echo "  build                  - Build the CLI binary"
 	@echo "  test                   - Run all tests"
-	@echo "  run_web                - Run the web server using EXPENSE_LIVERELOAD=true set"
+	@echo "  run_web                - Run the web server"
 	@echo "  generate-test-coverage - Generate coverage report"
 	@echo "  lint                   - Run golangci-lint"
 	@echo "  format                 - Format Go code"

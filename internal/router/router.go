@@ -2,12 +2,11 @@ package router
 
 import (
 	"context"
-	"html/template"
-	"io/fs"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/GustavoCaso/expensetrace/assets"
 	"github.com/GustavoCaso/expensetrace/internal/logger"
 	"github.com/GustavoCaso/expensetrace/internal/matcher"
 	"github.com/GustavoCaso/expensetrace/internal/service/auth"
@@ -31,25 +30,20 @@ type router struct {
 	importService   *importsvc.Service
 	authService     *auth.Service
 	profileService  *profile.Service
-	templates       *templates
 	secureCookie    bool
-	reload          bool
+	html            *htmlRenderer
 }
 
 func New(storage storage.Storage, logger *logger.Logger) http.Handler {
 	router := newRouter(storage, logger)
 
-	staticFS, staticFSError := router.parserStaticFiles()
-
-	if staticFSError != nil {
-		logger.Fatal("error parsing static files", "error", staticFSError.Error())
+	htmlRenderer, err := newHTMLRenderer(assets.HTMLFiles, "base.html", "partials/*.html", "partials/*/*.html")
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
 	}
 
-	parseError := router.parseTemplates()
-
-	if parseError != nil {
-		logger.Fatal("error parsing templates", "error", parseError.Error())
-	}
+	router.html = htmlRenderer
 
 	reports := newReportsHandlder(router)
 
@@ -84,17 +78,17 @@ func New(storage storage.Storage, logger *logger.Logger) http.Handler {
 	categories.RegisterRoutes(mux)
 	profile.RegisterRoutes(mux)
 
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+	// Create a file server that serves the files from assets/static.
+
+	fileserver := http.FileServerFS(assets.StaticFiles)
+
+	mux.Handle("GET /static/", http.StripPrefix("/static/", fileserver))
 
 	allowEmbedding := os.Getenv("EXPENSETRACE_ALLOW_EMBEDDING") == "true"
 
 	// wrap entire mux with middlewares
 	wrappedMux := authMiddleware(router, mux)
 	wrappedMux = loggingMiddleware(logger, wrappedMux)
-
-	if router.reload {
-		wrappedMux = liveReloadMiddleware(router, wrappedMux)
-	}
 
 	if !allowEmbedding {
 		wrappedMux = xFrameDenyHeaderMiddleware(wrappedMux)
@@ -109,7 +103,6 @@ func New(storage storage.Storage, logger *logger.Logger) http.Handler {
 // exercise internal functions directly.
 func newRouter(storage storage.Storage, logger *logger.Logger) *router {
 	router := &router{
-		reload:          os.Getenv("EXPENSE_LIVERELOAD") == "true",
 		secureCookie:    os.Getenv("EXPENSETRACE_SECURE_COOKIES") == "true",
 		logger:          logger,
 		categoryService: category.New(storage, logger),
@@ -123,50 +116,6 @@ func newRouter(storage storage.Storage, logger *logger.Logger) *router {
 	return router
 }
 
-func (r *router) parseTemplates() error {
-	t := &templates{
-		t:      map[string]*template.Template{},
-		logger: r.logger,
-	}
-
-	var fs fs.FS
-	var err error
-	if r.reload {
-		fs, err = localFSDirectory(r.logger, "../templates")
-	} else {
-		fs, err = embeddedFS("templates")
-	}
-
-	if err != nil {
-		return err
-	}
-
-	err = t.parseTemplates(fs)
-
-	if err != nil {
-		return err
-	}
-
-	r.templates = t
-	return nil
-}
-
-func (r *router) parserStaticFiles() (fs.FS, error) {
-	var fs fs.FS
-	var err error
-	if r.reload {
-		fs, err = localFSDirectory(r.logger, "../templates/static")
-		if err != nil {
-			r.logger.Warn("Failed to load local static files, falling back to embedded", "error", err.Error())
-			fs, err = embeddedFS("templates/static")
-		}
-	} else {
-		fs, err = embeddedFS("templates/static")
-	}
-
-	return fs, err
-}
-
 // categoryMatcher builds a matcher from the user's current categories. It is
 // constructed on demand so it always reflects the latest category patterns.
 func (r *router) categoryMatcher(ctx context.Context, userID int64) (*matcher.Matcher, error) {
@@ -176,4 +125,16 @@ func (r *router) categoryMatcher(ctx context.Context, userID int64) (*matcher.Ma
 	}
 
 	return matcher.New(categories), nil
+}
+
+// renderHTML renders the named template writing the result to w, logging any
+// rendering error. render only writes to w on success, so on failure we can
+// still send a plain error response.
+//
+//nolint:unparam // status is always OK today; kept so handlers can return other codes
+func (r *router) renderHTML(w http.ResponseWriter, status int, data any, templateName string, files ...string) {
+	if err := r.html.render(w, status, data, templateName, files...); err != nil {
+		r.logger.Error("Failed to render template", "template", templateName, "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
 }
