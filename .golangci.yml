@@ -412,7 +412,7 @@ linters:
           - cyclop
           - gocyclo
           - staticcheck
-      - path: 'internal/storage/sqlite/migrations\.go'
+      - path: 'storage/sqlite/migrations\.go'
         linters:
           - gocyclo
           - cyclop
