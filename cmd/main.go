@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/GustavoCaso/expensetrace/internal/config"
-	"github.com/GustavoCaso/expensetrace/internal/logger"
-	"github.com/GustavoCaso/expensetrace/internal/router"
-	"github.com/GustavoCaso/expensetrace/internal/storage"
-	"github.com/GustavoCaso/expensetrace/internal/storage/sqlite"
+	"github.com/GustavoCaso/expensetrace/config"
+	"github.com/GustavoCaso/expensetrace/logger"
+	"github.com/GustavoCaso/expensetrace/router"
+	"github.com/GustavoCaso/expensetrace/storage"
+	"github.com/GustavoCaso/expensetrace/storage/sqlite"
 )
 
 func main() {

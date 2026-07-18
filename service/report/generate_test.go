@@ -1,0 +1,249 @@
+package report
+
+import (
+	"context"
+
+	"testing"
+	"time"
+
+	"github.com/GustavoCaso/expensetrace/domain"
+	"github.com/GustavoCaso/expensetrace/testutil"
+)
+
+func TestGenerate(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+	// Create test expenses
+	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
+
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, startDate, domain.ChargeType, nil),
+		domain.NewExpense(
+			0,
+			"Test Source",
+			"Uber ride",
+			"USD",
+			-50000,
+			startDate.Add(24*time.Hour),
+			domain.ChargeType,
+			nil,
+		),
+		domain.NewExpense(
+			0,
+			"Test Source",
+			"Salary",
+			"USD",
+			5000000,
+			startDate.Add(48*time.Hour),
+			domain.IncomeType,
+			nil,
+		),
+	}
+
+	// Test monthly report
+	report, err := generate(context.Background(), user.ID(), startDate, endDate, s, expenses, "monthly")
+
+	if err != nil {
+		t.Fatalf("Got error generating report: %s", err.Error())
+	}
+
+	// Verify report fields
+	if report.Title != "January 2024" {
+		t.Errorf("Report.Title = %v, want January 2024", report.Title)
+	}
+
+	if report.Spending != -173456 {
+		t.Errorf("Report.Spending = %v, want -173456", report.Spending)
+	}
+
+	if report.Income != 5000000 {
+		t.Errorf("Report.Income = %v, want 5000000", report.Income)
+	}
+
+	expectedSavings := int64(5000000 - 173456)
+	if report.Savings != expectedSavings {
+		t.Errorf("Report.Savings = %v, want %v", report.Savings, expectedSavings)
+	}
+
+	expectedSavingsPercentage := (float32(expectedSavings) / float32(5000000)) * 100
+	if report.SavingsPercentage != expectedSavingsPercentage {
+		t.Errorf("Report.SavingsPercentage = %v, want %v", report.SavingsPercentage, expectedSavingsPercentage)
+	}
+
+	expectedEarningsPerDay := int64(5000000 / 30)
+	if report.EarningsPerDay != expectedEarningsPerDay {
+		t.Errorf("Report.EarningsPerDay = %v, want %v", report.EarningsPerDay, expectedEarningsPerDay)
+	}
+
+	expectedSpendingPerDay := int64(173456 / 30)
+	if report.AverageSpendingPerDay != expectedSpendingPerDay {
+		t.Errorf("Report.AverageSpendingPerDay = %v, want %v", report.AverageSpendingPerDay, expectedSpendingPerDay)
+	}
+
+	// Test yearly report
+	yearlyReport, err := generate(context.Background(), user.ID(), startDate, endDate, s, expenses, "yearly")
+	if err != nil {
+		t.Fatalf("Got error generating report: %s", err.Error())
+	}
+
+	if yearlyReport.Title != "2024" {
+		t.Errorf("Report.Title = %v, want 2024", yearlyReport.Title)
+	}
+}
+
+func TestCategories(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	catID, catErr := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery", 0)
+	if catErr != nil {
+		t.Fatalf("Error creating category: %s", catErr.Error())
+	}
+
+	// Test with duplicate expenses
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Restaurant bill", "USD", -123456, startDate, domain.ChargeType, nil),
+		domain.NewExpense(
+			0,
+			"Test Source",
+			"Restaurant bill",
+			"USD",
+			-123456,
+			startDate.Add(24*time.Hour),
+			domain.ChargeType,
+			nil,
+		), // Duplicate description
+		domain.NewExpense(
+			0,
+			"Test Source",
+			"Salary",
+			"USD",
+			5000000,
+			startDate.Add(48*time.Hour),
+			domain.IncomeType,
+			nil,
+		),
+		domain.NewExpense(
+			0,
+			"Test Source",
+			"Expense with category",
+			"USD",
+			-123456,
+			startDate.Add(48*time.Hour),
+			domain.ChargeType,
+			&catID,
+		),
+		domain.NewExpense(
+			0,
+			"Refund from restaurant",
+			"Income with same category as an expense",
+			"USD",
+			678,
+			startDate.Add(48*time.Hour),
+			domain.IncomeType,
+			&catID,
+		),
+	}
+
+	expenseCategories, incomeCategories, totalIncome, totalSpending, err := splitByExpenseType(
+		context.Background(),
+		user.ID(),
+		s,
+		expenses,
+	)
+
+	if err != nil {
+		t.Fatalf("Got error generating categories: %s", err.Error())
+	}
+
+	// Verify income and spending
+	if totalIncome != 5000678 {
+		t.Errorf("income = %v, want 5000678", totalIncome)
+	}
+	if totalSpending != -370368 {
+		t.Errorf("spending = %v, want -370368", totalSpending)
+	}
+
+	// Verify categories
+	// uncategorized charge
+	// Food
+	// income
+
+	if len(incomeCategories) != 1 {
+		t.Fatalf("income categories must be one. got: %d", len(incomeCategories))
+	}
+
+	for _, expense := range incomeCategories[0].Expenses {
+		if expense.Type() != domain.IncomeType {
+			t.Fatal("income category includes expense")
+		}
+	}
+
+	if len(expenseCategories) != 2 {
+		t.Fatalf("income categories must be two. got: %d", len(expenseCategories))
+	}
+
+	validExpenseCategories := map[string]struct{}{
+		"uncategorized charge": {},
+		"Food":                 {},
+	}
+
+	for _, expenseCategory := range expenseCategories {
+		_, ok := validExpenseCategories[expenseCategory.Name]
+		if !ok {
+			t.Fatalf("unexpected expense category %s", expenseCategory.Name)
+		}
+
+		for _, expense := range expenseCategory.Expenses {
+			if expense.Type() != domain.ChargeType {
+				t.Fatal("uncategorized charge category includes income")
+			}
+		}
+	}
+}
+
+func TestCalendarDays(t *testing.T) {
+	testCases := []struct {
+		name     string
+		t1       time.Time
+		t2       time.Time
+		expected int
+	}{
+		{
+			name:     "Same day",
+			t1:       time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			t2:       time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			expected: 0,
+		},
+		{
+			name:     "One day difference",
+			t1:       time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			t2:       time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+			expected: 1,
+		},
+		{
+			name:     "Month difference",
+			t1:       time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			t2:       time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC),
+			expected: 31,
+		},
+		{
+			name:     "Year difference",
+			t1:       time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			t2:       time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			expected: 366,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			days := calendarDays(tc.t1, tc.t2)
+			if days != tc.expected {
+				t.Errorf("calendarDays(%v, %v) = %v, want %v", tc.t1, tc.t2, days, tc.expected)
+			}
+		})
+	}
+}

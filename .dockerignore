@@ -7,3 +7,5 @@ convert
 Makefile
 version.txt
 images
+.claude
+docs
