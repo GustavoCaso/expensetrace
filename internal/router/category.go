@@ -34,7 +34,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 			Action:   newAction,
 			Category: domain.EmptyCategory(),
 		}
-		c.templates.Render(w, "pages/categories/new.html", data)
+		c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/new.html")
 	})
 
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +73,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 
 		if err != nil {
 			data.Error = err.Error()
-			c.templates.Render(w, "pages/categories/uncategorized.html", data)
+			c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
 			return
 		}
 
@@ -81,7 +81,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 
 		if query == "" {
 			data.Error = errSearchCriteria
-			c.templates.Render(w, "pages/categories/uncategorized.html", data)
+			c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
 			return
 		}
 
@@ -102,7 +102,7 @@ func (c *categoryHandler) categoriesHandler(
 	}
 
 	defer func() {
-		c.templates.Render(w, "pages/categories/index.html", data)
+		c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/index.html")
 	}()
 
 	enhancedCategories, categorizedCount, uncategorizedCount, err := c.categoryService.EnhancedList(ctx, userID)
@@ -130,13 +130,14 @@ func (c *categoryHandler) categoryHandler(ctx context.Context, w http.ResponseWr
 	data := domain.CategoryViewData{
 		ViewBase: base,
 		Action:   editAction,
+		Category: domain.EmptyCategory(),
 	}
 	var err error
 	defer func() {
 		if err != nil {
 			data.Error = err.Error()
 		}
-		c.templates.Render(w, "pages/categories/edit.html", data)
+		c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/edit.html")
 	}()
 
 	idStr := r.PathValue("id")
@@ -171,7 +172,7 @@ func (c *categoryHandler) updateCategoryHandler(
 		if err != nil {
 			data.Error = err.Error()
 		}
-		c.templates.Render(w, "pages/categories/edit.html", data)
+		c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/edit.html")
 	}()
 
 	categoryID := r.PathValue("id")
@@ -238,7 +239,7 @@ func (c *categoryHandler) uncategorizedHandler(
 	}
 
 	defer func() {
-		c.templates.Render(w, "pages/categories/uncategorized.html", data)
+		c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
 	}()
 
 	grouped, keys, totalExpenses, totalAmount, err := c.categoryService.GetUncategorized(ctx, userID, query)
@@ -270,7 +271,7 @@ func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http
 
 	defer func() {
 		if data.Error != "" {
-			c.templates.Render(w, "pages/categories/uncategorized.html", data)
+			c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
 		}
 	}()
 
@@ -358,7 +359,7 @@ func (c *categoryHandler) createCategoryHandler(
 	data.Action = newAction
 
 	defer func() {
-		c.templates.Render(w, "pages/categories/new.html", data)
+		c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/new.html")
 	}()
 
 	// Initialize with empty category
@@ -407,7 +408,7 @@ func (c *categoryHandler) testCategoryHandler(
 	data.CurrentPage = pageCategories
 
 	defer func() {
-		c.templates.Render(w, "partials/categories/test_category.html", data)
+		c.renderHTML(w, http.StatusOK, data, "categories/test_category")
 	}()
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
@@ -436,7 +437,7 @@ func (c *categoryHandler) testCategoryHandler(
 func (c *categoryHandler) categoryIndexError(ctx context.Context, w http.ResponseWriter, err error) {
 	data := viewBaseFromContext(ctx)
 	data.Error = err.Error()
-	c.templates.Render(w, "pages/categories/index.html", data)
+	c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/index.html")
 }
 
 // parseCategoryForm parses and validates category form fields from the request.

@@ -51,12 +51,12 @@ func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) 
 		}
 		rep := rh.reportService.ForMonth(userID, selectedMonth, selectedYear)
 		openCategory := query.Get("open_category")
-		rh.templates.Render(w, "partials/reports/card.html", domain.ReportCardData{
+		rh.renderHTML(w, http.StatusOK, domain.ReportCardData{
 			Report:       rep,
 			OpenCategory: openCategory,
 			OpenMonth:    selectedMonth,
 			OpenYear:     selectedYear,
-		})
+		}, "reports/card")
 		return
 	}
 
@@ -84,5 +84,5 @@ func (rh *reportHandler) reportsHandler(w http.ResponseWriter, r *http.Request) 
 		OpenYear:     selectedYear,
 	}
 
-	rh.templates.Render(w, "pages/reports/index.html", data)
+	rh.renderHTML(w, http.StatusOK, data, "base", "pages/reports/index.html")
 }

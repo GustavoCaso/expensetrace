@@ -33,7 +33,7 @@ func (a *authHandler) signupPage(w http.ResponseWriter, _ *http.Request) {
 		LoggedIn: false,
 	}
 
-	a.router.templates.Render(w, "pages/auth/signup.html", data)
+	a.router.renderHTML(w, http.StatusOK, data, "base", "pages/auth/signup.html")
 }
 
 func (a *authHandler) signup(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +84,7 @@ func (a *authHandler) signinPage(w http.ResponseWriter, _ *http.Request) {
 		LoggedIn: false,
 	}
 
-	a.router.templates.Render(w, "pages/auth/signin.html", data)
+	a.router.renderHTML(w, http.StatusOK, data, "base", "pages/auth/signin.html")
 }
 
 func (a *authHandler) signin(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +154,7 @@ func (a *authHandler) renderSignupError(w http.ResponseWriter, errorMsg string) 
 		LoggedIn: false,
 	}
 
-	a.router.templates.Render(w, "pages/auth/signup.html", data)
+	a.router.renderHTML(w, http.StatusOK, data, "base", "pages/auth/signup.html")
 }
 
 func (a *authHandler) renderSigninError(w http.ResponseWriter, errorMsg string) {
@@ -163,5 +163,5 @@ func (a *authHandler) renderSigninError(w http.ResponseWriter, errorMsg string) 
 		LoggedIn: false,
 	}
 
-	a.router.templates.Render(w, "pages/auth/signin.html", data)
+	a.router.renderHTML(w, http.StatusOK, data, "base", "pages/auth/signin.html")
 }

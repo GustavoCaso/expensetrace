@@ -75,10 +75,12 @@ func (c *expenseHandler) expensesHandler(
 	base := viewBaseFromContext(ctx)
 	data := domain.ExpensesViewData{
 		ViewBase: base,
+		Filter:   &domain.ExpenseFilter{},
+		Sort:     &domain.SortOptions{},
 	}
 
 	defer func() {
-		c.templates.Render(w, "pages/expenses/index.html", data)
+		c.renderHTML(w, http.StatusOK, data, "base", "pages/expenses/index.html")
 	}()
 
 	// Parse filters from URL
@@ -126,7 +128,7 @@ func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseW
 	data.Action = newAction
 
 	defer func() {
-		c.templates.Render(w, "pages/expenses/new.html", data)
+		c.renderHTML(w, http.StatusOK, data, "base", "pages/expenses/new.html")
 	}()
 
 	categories, err := c.categoryService.List(ctx, userID)
@@ -158,7 +160,7 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 	}
 
 	defer func() {
-		c.templates.Render(w, "pages/expenses/new.html", data)
+		c.renderHTML(w, http.StatusOK, data, "base", "pages/expenses/new.html")
 	}()
 
 	categories, categoriesErr := c.categoryService.List(ctx, userID)
@@ -210,7 +212,7 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 	}
 
 	defer func() {
-		c.templates.Render(w, "pages/expenses/edit.html", data)
+		c.renderHTML(w, http.StatusOK, data, "base", "pages/expenses/edit.html")
 	}()
 
 	idStr := r.PathValue("id")
@@ -253,7 +255,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	redirected := false
 	defer func() {
 		if !redirected {
-			c.templates.Render(w, "pages/expenses/edit.html", data)
+			c.renderHTML(w, http.StatusOK, data, "base", "pages/expenses/edit.html")
 		}
 	}()
 
@@ -479,7 +481,7 @@ func (c *expenseHandler) deleteExpenseHandler(ctx context.Context, w http.Respon
 		if err != nil {
 			base := viewBaseFromContext(ctx)
 			base.Error = err.Error()
-			c.templates.Render(w, "pages/expenses/edit.html", base)
+			c.renderHTML(w, http.StatusOK, base, "base", "pages/expenses/edit.html")
 		}
 	}()
 
