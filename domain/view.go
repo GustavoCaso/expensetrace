@@ -13,3 +13,15 @@ type ViewBase struct {
 	Username         string
 	UsernameInitials string
 }
+
+// ForgotPasswordView is the view model for the forgot-password page.
+type ForgotPasswordView struct {
+	ViewBase
+	Submitted bool
+}
+
+// ResetPasswordView is the view model for the reset-password page.
+type ResetPasswordView struct {
+	ViewBase
+	Token string
+}

@@ -9,6 +9,14 @@ type Session interface {
 	CreatedAt() time.Time
 }
 
+type PasswordResetToken interface {
+	Token() string
+	UserID() int64
+	ExpiresAt() time.Time
+	UsedAt() *time.Time
+	CreatedAt() time.Time
+}
+
 type User interface {
 	ID() int64
 	Username() string
@@ -76,6 +84,50 @@ func NewSession(id string, userID int64, expiresAt, createdAt time.Time) Session
 		id:        id,
 		userID:    userID,
 		expiresAt: expiresAt,
+		createdAt: createdAt,
+	}
+}
+
+type passwordResetToken struct {
+	token     string
+	userID    int64
+	expiresAt time.Time
+	usedAt    *time.Time
+	createdAt time.Time
+}
+
+func (p *passwordResetToken) Token() string {
+	return p.token
+}
+
+func (p *passwordResetToken) UserID() int64 {
+	return p.userID
+}
+
+func (p *passwordResetToken) ExpiresAt() time.Time {
+	return p.expiresAt
+}
+
+func (p *passwordResetToken) UsedAt() *time.Time {
+	return p.usedAt
+}
+
+func (p *passwordResetToken) CreatedAt() time.Time {
+	return p.createdAt
+}
+
+func NewPasswordResetToken(
+	token string,
+	userID int64,
+	expiresAt time.Time,
+	usedAt *time.Time,
+	createdAt time.Time,
+) PasswordResetToken {
+	return &passwordResetToken{
+		token:     token,
+		userID:    userID,
+		expiresAt: expiresAt,
+		usedAt:    usedAt,
 		createdAt: createdAt,
 	}
 }

@@ -24,6 +24,18 @@ type Storage interface {
 	GetSession(ctx context.Context, sessionID string) (domain.Session, error)
 	DeleteSession(ctx context.Context, sessionID string) error
 	DeleteExpiredSessions(ctx context.Context) error
+	DeleteSessionsForUser(ctx context.Context, userID int64) error
+
+	// Password reset tokens
+	CreatePasswordResetToken(
+		ctx context.Context,
+		userID int64,
+		token string,
+		expiresAt time.Time,
+	) (domain.PasswordResetToken, error)
+	GetPasswordResetToken(ctx context.Context, token string) (domain.PasswordResetToken, error)
+	MarkPasswordResetTokenUsed(ctx context.Context, token string) error
+	InvalidatePasswordResetTokensForUser(ctx context.Context, userID int64) error
 
 	// Expenses
 	GetExpenseByID(ctx context.Context, userID, id int64) (domain.Expense, error)
