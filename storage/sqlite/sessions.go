@@ -73,6 +73,23 @@ func (s *sqliteStorage) DeleteSession(ctx context.Context, sessionID string) err
 	return nil
 }
 
+func (s *sqliteStorage) DeleteSessionsForUser(ctx context.Context, userID int64) error {
+	statement, err := s.db.PrepareContext(ctx, `
+		DELETE FROM sessions WHERE user_id = ?
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare delete sessions for user statement: %w", err)
+	}
+	defer statement.Close()
+
+	_, err = statement.ExecContext(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete sessions for user: %w", err)
+	}
+
+	return nil
+}
+
 func (s *sqliteStorage) DeleteExpiredSessions(ctx context.Context) error {
 	statement, err := s.db.PrepareContext(ctx, `
 		DELETE FROM sessions WHERE expires_at <= ?

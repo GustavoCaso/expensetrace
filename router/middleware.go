@@ -121,6 +121,8 @@ func authMiddleware(router *router, next http.Handler) http.Handler {
 		path := r.URL.Path
 		if strings.HasPrefix(path, "/signin") ||
 			strings.HasPrefix(path, "/signup") ||
+			strings.HasPrefix(path, "/forgot-password") ||
+			strings.HasPrefix(path, "/reset-password") ||
 			strings.HasPrefix(path, "/static/") {
 			next.ServeHTTP(w, r)
 			return

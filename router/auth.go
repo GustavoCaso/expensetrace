@@ -26,6 +26,10 @@ func (a *authHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /signin", a.signinPage)
 	mux.HandleFunc("POST /signin", a.signin)
 	mux.HandleFunc("POST /signout", a.signout)
+	mux.HandleFunc("GET /forgot-password", a.forgotPasswordPage)
+	mux.HandleFunc("POST /forgot-password", a.forgotPassword)
+	mux.HandleFunc("GET /reset-password", a.resetPasswordPage)
+	mux.HandleFunc("POST /reset-password", a.resetPassword)
 }
 
 func (a *authHandler) signupPage(w http.ResponseWriter, _ *http.Request) {

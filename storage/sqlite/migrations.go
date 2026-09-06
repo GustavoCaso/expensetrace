@@ -64,6 +64,15 @@ func DropTables(db *sql.DB) error {
 		return err
 	}
 
+	_, err = tx.ExecContext(ctx, "DROP TABLE IF EXISTS password_reset_tokens;")
+	if err != nil {
+		rErr := tx.Rollback()
+		if rErr != nil {
+			return rErr
+		}
+		return err
+	}
+
 	_, err = tx.ExecContext(ctx, "DROP TABLE IF EXISTS users;")
 	if err != nil {
 		rErr := tx.Rollback()
@@ -562,6 +571,21 @@ func (s *sqliteStorage) ApplyMigrations(ctx context.Context, logger *logger.Logg
 				}
 
 				return nil
+			},
+		},
+		{
+			name: "Create password_reset_tokens table",
+			up: func(tx *sql.Tx) error {
+				_, err := tx.ExecContext(ctx, `
+					CREATE TABLE IF NOT EXISTS password_reset_tokens (
+						token TEXT PRIMARY KEY,
+						user_id INTEGER NOT NULL,
+						expires_at INTEGER NOT NULL,
+						used_at INTEGER,
+						created_at INTEGER NOT NULL,
+						FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+					) STRICT;`)
+				return err
 			},
 		},
 	}
