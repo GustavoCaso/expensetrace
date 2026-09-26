@@ -165,3 +165,64 @@ func TestHomeHandler(t *testing.T) {
 		})
 	}
 }
+
+func TestHomeHandlerCategoryBreakdown(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+	ctx := context.Background()
+
+	categoryID, err := s.CreateCategory(ctx, user.ID(), "Food & Drinks", "restaurant", 10000)
+	if err != nil {
+		t.Fatalf("Failed to create category: %v", err)
+	}
+
+	now := time.Now()
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "Test Source", "Restaurant bill", "USD", -5000, now, domain.ChargeType, &categoryID),
+		domain.NewExpense(0, "Test Source", "Rent", "USD", -123456, now, domain.ChargeType, nil),
+	}
+	if _, err = s.InsertExpenses(ctx, user.ID(), expenses); err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
+	}
+
+	handler := New(s, logger)
+
+	url := fmt.Sprintf(
+		"/?month=%d&year=%d&open_category=Food+%%26+Drinks",
+		int(now.Month()),
+		now.Year(),
+	)
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status OK; got %v", w.Code)
+	}
+
+	body := w.Body.String()
+
+	uncategorized := strings.Index(body, "uncategorized charge")
+	food := strings.Index(body, "Food &amp; Drinks")
+	if uncategorized == -1 || food == -1 {
+		t.Fatalf("Expected both categories in breakdown; got:\n%s", body)
+	}
+	if uncategorized > food {
+		t.Error("Expected categories ordered by amount, largest first")
+	}
+
+	if strings.Count(body, `<details class="category-item" open>`) != 1 {
+		t.Error("Expected exactly one category to be open")
+	}
+	openAt := strings.Index(body, `<details class="category-item" open>`)
+	if openAt > food {
+		t.Error("Expected open_category to be the open category")
+	}
+
+	redirect := "redirect_to=%2f%3fopen_category%3dFood%2b%2526%2bDrinks%26open_month%3d"
+	if !strings.Contains(body, redirect) {
+		t.Errorf("Expected expense link with encoded redirect %q", redirect)
+	}
+}

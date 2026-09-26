@@ -200,7 +200,8 @@ func (s *sqliteStorage) GetExpensesFromDateRange(
 	end time.Time,
 ) ([]domain.Expense, error) {
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT * FROM expenses WHERE date BETWEEN ? and ? AND user_id = ?", start.Unix(), end.Unix(), userID)
+		"SELECT * FROM expenses WHERE date BETWEEN ? and ? AND user_id = ? ORDER BY date DESC, id DESC",
+		start.Unix(), end.Unix(), userID)
 	if err != nil {
 		return []domain.Expense{}, err
 	}

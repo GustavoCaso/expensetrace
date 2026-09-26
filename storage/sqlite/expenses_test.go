@@ -216,3 +216,32 @@ func TestExpenseWithCategories(t *testing.T) {
 		t.Errorf("Expected 0 search results for nonexistent query, got %d", len(noResults))
 	}
 }
+
+func TestGetExpensesFromDateRangeOrderedByDateDesc(t *testing.T) {
+	stor, user := setupTestStorage(t)
+
+	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	testExpenses := []domain.Expense{
+		domain.NewExpense(0, "Test Bank", "First", "USD", -100, start, domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Bank", "Third", "USD", -300, start.AddDate(0, 0, 2), domain.ChargeType, nil),
+		domain.NewExpense(0, "Test Bank", "Second", "USD", -200, start.AddDate(0, 0, 1), domain.ChargeType, nil),
+	}
+	if _, err := stor.InsertExpenses(context.Background(), user.ID(), testExpenses); err != nil {
+		t.Fatalf("Failed to insert expenses: %v", err)
+	}
+
+	expenses, err := stor.GetExpensesFromDateRange(context.Background(), user.ID(), start, start.AddDate(0, 0, 3))
+	if err != nil {
+		t.Fatalf("Failed to get expenses from date range: %v", err)
+	}
+
+	want := []string{"Third", "Second", "First"}
+	if len(expenses) != len(want) {
+		t.Fatalf("Expected %d expenses, got %d", len(want), len(expenses))
+	}
+	for i, description := range want {
+		if expenses[i].Description() != description {
+			t.Errorf("Expected expense %d to be %q, got %q", i, description, expenses[i].Description())
+		}
+	}
+}

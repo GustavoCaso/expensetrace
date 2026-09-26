@@ -24,32 +24,82 @@
         </div>
       </div>
     </div>
-    
+
     {{if or .ExpenseCategories .IncomeCategories}}
       <div class="report-details">
-        <div class="categories-donut">
-          <h2>Categories Breakdown</h2>
-          <div class="donut-charts-grid">
-            {{if .ExpenseCategories}}
-              <div class="donut-chart-section">
-                <h3>Expenses</h3>
-                <div class="donut-chart-container">
-                  <canvas id="expensesDonutChart" data-categories="{{.ExpenseCategories | json}}" data-type="expense" data-open-category="{{.OpenCategory}}" data-open-month="{{.OpenMonth}}" data-open-year="{{.OpenYear}}"></canvas>
-                </div>
-              </div>
-            {{end}}
-            {{if .IncomeCategories}}
-              <div class="donut-chart-section">
-                <h3>Income</h3>
-                <div class="donut-chart-container">
-                  <canvas id="incomeDonutChart" data-categories="{{.IncomeCategories | json}}" data-type="income" data-open-category="{{.OpenCategory}}" data-open-month="{{.OpenMonth}}" data-open-year="{{.OpenYear}}"></canvas>
-                </div>
-              </div>
-            {{end}}
-          </div>
-          <div class="selected-category-details" id="categoryDetails" style="display: none;">
-            <!-- Category details will be injected here via JavaScript -->
-          </div>
+        <h2>Categories Breakdown</h2>
+        <div class="category-breakdown-grid">
+          {{range $section := .CategorySections}}
+            <section class="category-breakdown">
+              <header class="category-breakdown-header">
+                <h3>{{$section.Title}}</h3>
+                <span class="category-breakdown-total {{$section.Kind}}">{{formatMoney (abs $section.Total) "." ","}}€</span>
+              </header>
+              <ol class="category-list">
+                {{range $category := $section.Categories}}
+                  <li>
+                    <details class="category-item"{{if eq $category.Name $.OpenCategory}} open{{end}}>
+                      <summary class="category-row">
+                        <span class="category-row-name">
+                          {{$category.Name}}
+                          {{if ne $category.Budget.Status "no_budget"}}
+                            <span class="budget-dot budget-{{$category.Budget.Status}}" title="{{printf "%.0f" $category.Budget.PercentageUsed}}% of budget used"></span>
+                          {{end}}
+                        </span>
+                        <span class="category-row-amount {{$section.Kind}}">{{formatMoney (abs $category.Amount) "." ","}}€</span>
+                        <span class="category-row-share">{{printf "%.1f" $category.PercentageOfTotal}}%</span>
+                        <span class="category-row-bar"><span class="category-row-bar-fill {{$section.Kind}}-fill" style="width: {{printf "%.1f" $category.PercentageOfTotal}}%"></span></span>
+                      </summary>
+
+                      <div class="category-item-details">
+                        {{if ne $category.Budget.Status "no_budget"}}
+                          <div class="budget-container">
+                            <div class="budget-info">
+                              <span class="budget-spent">{{formatMoney $category.Budget.Spent "." ","}}€</span>
+                              <span class="budget-separator">/</span>
+                              <span class="budget-total">{{formatMoney $category.Budget.Amount "." ","}}€</span>
+                            </div>
+                            <div class="budget-bar">
+                              <div class="budget-progress budget-{{$category.Budget.Status}}" style="width: {{printf "%.1f" $category.Budget.PercentageUsed}}%"></div>
+                            </div>
+                            {{if le $category.Budget.Remaining 0}}
+                              <div class="budget-warning">Over budget by {{formatMoney (abs $category.Budget.Remaining) "." ","}}€</div>
+                            {{else}}
+                              <div class="budget-remaining">{{formatMoney $category.Budget.Remaining "." ","}}€ remaining</div>
+                            {{end}}
+                          </div>
+                        {{end}}
+
+                        <div class="category-stats">
+                          <span>Transactions: {{len $category.Expenses}}</span>
+                          <span>Avg: {{formatMoney (abs $category.AvgAmount) "." ","}}€</span>
+                        </div>
+
+                        <div class="table">
+                          <div class="table-header">
+                            <div class="table-header-cell">Date</div>
+                            <div class="table-header-cell">Description</div>
+                            <div class="table-header-cell source-column">Source</div>
+                            <div class="table-header-cell">Amount</div>
+                          </div>
+                          <div class="table-body">
+                            {{range $category.Expenses}}
+                              <a href="/expense/{{.ID}}?redirect_to={{$.CategoryRedirect $category.Name}}" class="table-row">
+                                <div class="table-cell">{{.Date.Format "Jan 2, 2006"}}</div>
+                                <div class="table-cell">{{.Description}}</div>
+                                <div class="table-cell source-column">{{.Source}}</div>
+                                <div class="table-cell {{if lt .Amount 0}}expense{{else}}income{{end}}">{{formatMoney (abs .Amount) "." ","}}€</div>
+                              </a>
+                            {{end}}
+                          </div>
+                        </div>
+                      </div>
+                    </details>
+                  </li>
+                {{end}}
+              </ol>
+            </section>
+          {{end}}
         </div>
       </div>
     {{end}}

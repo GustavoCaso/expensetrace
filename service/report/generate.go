@@ -1,9 +1,11 @@
 package report
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"time"
 
@@ -157,7 +159,28 @@ func splitByExpenseType(
 		}
 	}
 
+	sortByAmount(expenseCategories)
+	sortByAmount(incomeCategories)
+
 	return expenseCategories, incomeCategories, incomeTotal, spendingTotal, nil
+}
+
+// sortByAmount orders categories by absolute amount, largest first,
+// falling back to name so the order is stable across renders.
+func sortByAmount(categories []domain.CategoryReport) {
+	slices.SortFunc(categories, func(a, b domain.CategoryReport) int {
+		if c := cmp.Compare(absAmount(b.Amount), absAmount(a.Amount)); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.Name, b.Name)
+	})
+}
+
+func absAmount(amount int64) int64 {
+	if amount < 0 {
+		return -amount
+	}
+	return amount
 }
 
 func addExpenseToCategory(categories map[string]domain.CategoryReport, ex domain.Expense, categoryString string) {

@@ -186,6 +186,15 @@ func TestCategories(t *testing.T) {
 		t.Fatalf("income categories must be two. got: %d", len(expenseCategories))
 	}
 
+	// Categories are ordered by amount, largest first
+	if expenseCategories[0].Name != "uncategorized charge" || expenseCategories[1].Name != "Food" {
+		t.Fatalf(
+			"expense categories must be ordered by amount. got: %s, %s",
+			expenseCategories[0].Name,
+			expenseCategories[1].Name,
+		)
+	}
+
 	validExpenseCategories := map[string]struct{}{
 		"uncategorized charge": {},
 		"Food":                 {},
