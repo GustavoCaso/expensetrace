@@ -23,6 +23,12 @@ func newHTMLRenderer(templateFS fs.FS, sharedTemplateFiles ...string) (*htmlRend
 	funcs := template.FuncMap{
 		"formatMoney": util.FormatMoney,
 		"colorOutput": util.ColorOutput,
+		"abs": func(v int64) int64 {
+			if v < 0 {
+				return -v
+			}
+			return v
+		},
 		"sub": func(a, b int) int {
 			return a - b
 		},

@@ -21,13 +21,3 @@ export function formatMoney(amount) {
 
   return `${sign}${intPart},${decPart}€`;
 }
-
-/**
- * Format date string to display format
- * @param {string} dateString - ISO date string
- * @returns {string} Formatted date (e.g., "Jan 15, 2024")
- */
-export function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}

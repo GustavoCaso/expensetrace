@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -74,4 +76,45 @@ type ReportCardData struct {
 	OpenCategory string
 	OpenMonth    int
 	OpenYear     int
+}
+
+// CategorySection groups the categories of one kind (expenses or income)
+// for the report card breakdown.
+type CategorySection struct {
+	Title      string
+	Kind       string // "expense" or "income"; doubles as the CSS color class
+	Total      int64
+	Categories []CategoryReport
+}
+
+// CategorySections returns the non-empty category sections, expenses first.
+func (d ReportCardData) CategorySections() []CategorySection {
+	sections := []CategorySection{}
+	if len(d.ExpenseCategories) > 0 {
+		sections = append(sections, CategorySection{
+			Title:      "Expenses",
+			Kind:       "expense",
+			Total:      d.Spending,
+			Categories: d.ExpenseCategories,
+		})
+	}
+	if len(d.IncomeCategories) > 0 {
+		sections = append(sections, CategorySection{
+			Title:      "Income",
+			Kind:       "income",
+			Total:      d.Income,
+			Categories: d.IncomeCategories,
+		})
+	}
+	return sections
+}
+
+// CategoryRedirect returns the reports URL that reopens this report card with
+// the given category expanded. Used as redirect_to when editing an expense.
+func (d ReportCardData) CategoryRedirect(category string) string {
+	query := url.Values{}
+	query.Set("open_month", strconv.Itoa(d.OpenMonth))
+	query.Set("open_year", strconv.Itoa(d.OpenYear))
+	query.Set("open_category", category)
+	return "/?" + query.Encode()
 }
