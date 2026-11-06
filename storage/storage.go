@@ -37,6 +37,13 @@ type Storage interface {
 	MarkPasswordResetTokenUsed(ctx context.Context, token string) error
 	InvalidatePasswordResetTokensForUser(ctx context.Context, userID int64) error
 
+	// API tokens
+	CreateAPIToken(ctx context.Context, userID int64, name, tokenHash string) (domain.APIToken, error)
+	GetAPITokenByHash(ctx context.Context, tokenHash string) (domain.APIToken, error)
+	GetAPITokens(ctx context.Context, userID int64) ([]domain.APIToken, error)
+	DeleteAPIToken(ctx context.Context, userID, id int64) error
+	TouchAPIToken(ctx context.Context, id int64, usedAt time.Time) error
+
 	// Expenses
 	GetExpenseByID(ctx context.Context, userID, id int64) (domain.Expense, error)
 	UpdateExpense(ctx context.Context, userID int64, expense domain.Expense) (int64, error)

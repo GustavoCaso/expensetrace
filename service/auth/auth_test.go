@@ -46,14 +46,14 @@ func TestSignup_CreatesUserSessionAndExcludeCategory(t *testing.T) {
 		t.Fatalf("Failed to get categories: %v", catErr)
 	}
 
-	found := false
+	excludeCount := 0
 	for _, c := range categories {
 		if c.Name() == domain.ExcludeCategory {
-			found = true
+			excludeCount++
 		}
 	}
-	if !found {
-		t.Fatal("Expected Exclude category to be created for new user")
+	if excludeCount != 1 {
+		t.Fatalf("Expected exactly one Exclude category for new user, got %d", excludeCount)
 	}
 }
 

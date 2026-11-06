@@ -9,6 +9,8 @@ import (
 	"github.com/GustavoCaso/expensetrace/assets"
 	"github.com/GustavoCaso/expensetrace/logger"
 	"github.com/GustavoCaso/expensetrace/matcher"
+	"github.com/GustavoCaso/expensetrace/mcpserver"
+	"github.com/GustavoCaso/expensetrace/service/apitoken"
 	"github.com/GustavoCaso/expensetrace/service/auth"
 	"github.com/GustavoCaso/expensetrace/service/category"
 	"github.com/GustavoCaso/expensetrace/service/expense"
@@ -30,6 +32,7 @@ type router struct {
 	importService   *importsvc.Service
 	authService     *auth.Service
 	profileService  *profile.Service
+	apiTokenService *apitoken.Service
 	secureCookie    bool
 	html            *htmlRenderer
 }
@@ -96,7 +99,21 @@ func New(storage storage.Storage, logger *logger.Logger) http.Handler {
 
 	wrappedMux = csrfProtectionMiddleware(logger, wrappedMux)
 
-	return wrappedMux
+	// The MCP endpoint is mounted outside the browser middleware stack: it
+	// authenticates with bearer API tokens rather than session cookies, so
+	// cookie-based auth redirects and CSRF checks do not apply to it.
+	mcpHandler := mcpserver.NewHandler(mcpserver.Services{
+		Expense:  router.expenseService,
+		Category: router.categoryService,
+		Report:   router.reportService,
+		Tokens:   router.apiTokenService,
+	}, logger)
+
+	root := http.NewServeMux()
+	root.Handle(mcpserver.Path, loggingMiddleware(logger, mcpHandler))
+	root.Handle("/", wrappedMux)
+
+	return root
 }
 
 // newRouter builds the router with its services. Split from New so tests can
@@ -111,6 +128,7 @@ func newRouter(storage storage.Storage, logger *logger.Logger) *router {
 		importService:   importsvc.New(storage, logger, importSessionTTL),
 		authService:     auth.New(storage, logger),
 		profileService:  profile.New(storage, logger),
+		apiTokenService: apitoken.New(storage, logger),
 	}
 
 	return router

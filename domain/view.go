@@ -3,6 +3,9 @@ package domain
 type Banner struct {
 	Icon    string
 	Message string
+	// Code is an optional value rendered verbatim in monospace below the
+	// message, selectable in one click (e.g. a freshly created API token).
+	Code string
 }
 
 type ViewBase struct {

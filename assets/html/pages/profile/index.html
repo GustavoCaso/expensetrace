@@ -17,7 +17,7 @@
       <!-- Update Username Section -->
       <div class="profile-section card">
         <h2>Update Username</h2>
-        <form action="/profile/username" method="POST">
+        <form action="/profile/username" method="POST" hx-post="/profile/username" hx-target="#page" hx-swap="outerHTML show:window:top">
           <div class="form-group">
             <label for="current-username">Current Username</label>
             <input type="text" id="current-username" value="{{.Username}}" disabled>
@@ -37,7 +37,7 @@
       <!-- Update Password Section -->
       <div class="profile-section card">
         <h2>Change Password</h2>
-        <form action="/profile/password" method="POST">
+        <form action="/profile/password" method="POST" hx-post="/profile/password" hx-target="#page" hx-swap="outerHTML show:window:top">
           <div class="form-group">
             <label for="current-password">Current Password</label>
             <input type="password" id="current-password" name="current_password" required>
@@ -57,6 +57,56 @@
             <button type="submit" class="btn-primary">Change Password</button>
           </div>
         </form>
+      </div>
+
+      <!-- API Tokens Section -->
+      <div class="profile-section card" id="api-tokens">
+        <h2>Agent Access (MCP)</h2>
+        <p class="token-intro">
+          API tokens let AI agents read your expenses, categories, reports and budgets through the
+          Model Context Protocol. Access is read-only. Data an agent reads is sent to whichever
+          model provider powers it, so only create a token for agents you trust.
+        </p>
+
+        <dl class="token-endpoint">
+          <dt>Endpoint</dt>
+          <dd><code>{{.MCPURL}}</code></dd>
+          <dt>Header</dt>
+          <dd><code>Authorization: Bearer &lt;token&gt;</code></dd>
+        </dl>
+
+        <form action="/profile/tokens" method="POST" hx-post="/profile/tokens" hx-target="#page" hx-swap="outerHTML show:window:top" class="token-create">
+          <div class="form-group">
+            <label for="token-name">Token name</label>
+            <input type="text" id="token-name" name="name" required maxlength="100" placeholder="e.g. Claude on my laptop">
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Create Token</button>
+          </div>
+        </form>
+
+        {{if .APITokens}}
+          <ul class="token-list">
+            {{range .APITokens}}
+              <li class="token-row">
+                <div class="token-meta">
+                  <span class="token-name">{{.Name}}</span>
+                  <span class="token-dates">
+                    Created {{.CreatedAt.Format "2006-01-02"}} ·
+                    {{if .LastUsedAt}}Last used {{.LastUsedAt.Format "2006-01-02 15:04"}}{{else}}Never used{{end}}
+                  </span>
+                </div>
+                <form action="/profile/tokens/{{.ID}}/revoke" method="POST"
+                      hx-post="/profile/tokens/{{.ID}}/revoke" hx-target="#page" hx-swap="outerHTML show:window:top"
+                      hx-confirm="Revoke this token? Agents using it will lose access immediately.">
+                  <button type="submit" class="btn-danger btn-small">Revoke</button>
+                </form>
+              </li>
+            {{end}}
+          </ul>
+        {{else}}
+          <p class="token-empty">No tokens yet.</p>
+        {{end}}
       </div>
     </div>
   </div>

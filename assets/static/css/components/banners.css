@@ -11,6 +11,15 @@
   margin-bottom: var(--spacing-4);
 }
 
+.banner-code {
+  display: block;
+  margin-top: var(--spacing-2);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  word-break: break-all;
+  user-select: all;
+}
+
 .banner-icon {
   font-size: var(--font-size-xl);
   line-height: 1;
