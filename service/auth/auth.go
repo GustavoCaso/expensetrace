@@ -80,12 +80,8 @@ func (s *Service) Signup(
 		return "", time.Time{}, nil, sessionErr
 	}
 
-	// Create default Exclude category for new user
-	_, excludeErr := s.storage.CreateCategory(ctx, user.ID(), domain.ExcludeCategory, "$a", 0)
-	if excludeErr != nil {
-		s.logger.Error("Failed to create exclude category for new user", "error", excludeErr, "user_id", user.ID())
-	}
-
+	// The Exclude category is created by storage.CreateUser, in the same
+	// transaction as the user, so there is nothing more to set up here.
 	return sessionID, expiresAt, nil, nil
 }
 

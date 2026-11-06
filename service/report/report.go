@@ -139,3 +139,60 @@ func (s *Service) ChartData(userID int64) []domain.ChartDataPoint {
 func (s *Service) ForMonth(userID int64, month, year int) domain.Report {
 	return s.reportsPerUser[userID][fmt.Sprintf("%d-%d", year, month)]
 }
+
+// Month builds the report for the given month/year directly from storage,
+// bypassing the cache used by the web UI. Callers outside the browser flow
+// (e.g. the MCP server) use it so they never see a stale or empty report.
+func (s *Service) Month(ctx context.Context, userID int64, month, year int) (domain.Report, error) {
+	firstDay, lastDay := util.GetMonthDates(month, year)
+
+	expenses, err := s.storage.GetExpensesFromDateRange(ctx, userID, firstDay, lastDay)
+	if err != nil {
+		return domain.Report{}, err
+	}
+
+	return generate(ctx, userID, firstDay, lastDay, s.storage, expenses, "monthly")
+}
+
+// CategoryBudget pairs a budgeted category with its status for a month.
+type CategoryBudget struct {
+	Name   string
+	Budget domain.BudgetInfo
+}
+
+// Budgets returns the budget status for every category with a monthly
+// budget set, for the given month/year. Unlike the report, it includes
+// budgeted categories that had no spending that month.
+func (s *Service) Budgets(ctx context.Context, userID int64, month, year int) ([]CategoryBudget, error) {
+	rep, err := s.Month(ctx, userID, month, year)
+	if err != nil {
+		return nil, err
+	}
+
+	categories, err := s.storage.GetCategories(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	spentByName := make(map[string]int64, len(rep.ExpenseCategories))
+	for _, c := range rep.ExpenseCategories {
+		spentByName[c.Name] = c.Amount
+	}
+
+	budgets := []CategoryBudget{}
+	for _, c := range categories {
+		if c.MonthlyBudget() <= 0 || c.Name() == domain.ExcludeCategory {
+			continue
+		}
+		budgets = append(budgets, CategoryBudget{
+			Name:   c.Name(),
+			Budget: calculateBudgetInfo(c.MonthlyBudget(), spentByName[c.Name()]),
+		})
+	}
+
+	sort.SliceStable(budgets, func(i, j int) bool {
+		return budgets[i].Budget.PercentageUsed > budgets[j].Budget.PercentageUsed
+	})
+
+	return budgets, nil
+}

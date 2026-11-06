@@ -3,6 +3,7 @@
   <div class="banner-icon">{{.Icon}}</div>
   <div>
     <p>{{.Message}}</p>
+    {{if .Code}}<code class="banner-code">{{.Code}}</code>{{end}}
   </div>
 </div>
 {{end}}

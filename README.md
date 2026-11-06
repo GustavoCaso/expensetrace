@@ -30,15 +30,39 @@ In an era where financial data privacy is increasingly important, ExpenseTrace o
 - 👥 Multi-user support with authentication
 - 📝 Import expenses via web interface (CSV, JSON) with automatic or interactive mapping
 - 🏷️ Automatic expense categorization using regex patterns
+- 🤖 Read-only MCP endpoint so AI agents can query your expenses (opt-in, per-user tokens)
 
 ## Data Privacy
 
 ExpenseTrace is designed with privacy in mind:
 
 - All data is stored locally in a SQLite database
-- No external API calls or data sharing
+- No external API calls or data sharing (unless you connect an AI agent over MCP, see below)
 - No bank account connections required
 - Full control over your financial data
+
+## AI Agent Access (MCP)
+
+ExpenseTrace exposes a read-only [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/mcp`
+(Streamable HTTP), so agents can answer questions like "how much did I spend on groceries last month?".
+
+1. Sign in and open **Profile → Agent Access (MCP)**.
+2. Create a token. It is shown once; ExpenseTrace stores only a SHA-256 hash.
+3. Point your agent at `http(s)://<host>/mcp` with the header `Authorization: Bearer <token>`.
+
+For example, with Claude Code:
+
+```bash
+claude mcp add --transport http expensetrace https://expenses.example.com/mcp \
+  --header "Authorization: Bearer et_..."
+```
+
+Available tools: `list_expenses`, `list_categories`, `get_monthly_report`, `get_budget_status`,
+`get_spending_trend`, `list_uncategorized`. All are read-only and scoped to the token's owner. Each call is
+logged with the user and token ID; revoke a token from the profile page to cut off access immediately.
+
+**Privacy note:** anything an agent reads is sent to the model provider powering that agent. Use a local model
+if your data must not leave your machine. No tokens exist until you create one, so the endpoint is inert by default.
 
 ## Security
 

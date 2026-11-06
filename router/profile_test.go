@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -310,5 +311,134 @@ func TestUpdatePasswordHandlerFormParseError(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, "invalid form data") {
 		t.Error("Response should contain error message for form parse error")
+	}
+}
+
+func TestProfileCreateAndRevokeAPIToken(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	handler := New(s, logger)
+
+	formData := url.Values{}
+	formData.Set("name", "my agent")
+
+	req := httptest.NewRequest(http.MethodPost, "/profile/tokens", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status OK; got %v", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, `class="banner-code">et_`) {
+		t.Error("Response should reveal the new token once")
+	}
+	if !strings.Contains(body, "my agent") {
+		t.Error("Response should list the new token")
+	}
+	if !strings.Contains(body, "http://example.com/mcp") {
+		t.Error("Response should show the MCP endpoint URL")
+	}
+
+	tokens, err := s.GetAPITokens(context.Background(), user.ID())
+	if err != nil || len(tokens) != 1 {
+		t.Fatalf("expected one stored token, got %v (%v)", tokens, err)
+	}
+
+	// A plain page load must never show a token value again.
+	req = httptest.NewRequest(http.MethodGet, "/profile", nil)
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if strings.Contains(w.Body.String(), "banner-code") {
+		t.Error("Token value should only be shown right after creation")
+	}
+
+	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/profile/tokens/%d/revoke", tokens[0].ID()), nil)
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if !strings.Contains(w.Body.String(), "API token revoked") {
+		t.Error("Response should confirm revocation")
+	}
+
+	tokens, err = s.GetAPITokens(context.Background(), user.ID())
+	if err != nil || len(tokens) != 0 {
+		t.Fatalf("expected no tokens after revoke, got %v (%v)", tokens, err)
+	}
+}
+
+func TestProfileCreateAPITokenResubmitDoesNotDuplicate(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	handler := New(s, logger)
+
+	// Simulates the browser re-posting the form on refresh.
+	var body string
+	for range 2 {
+		req := httptest.NewRequest(http.MethodPost, "/profile/tokens", strings.NewReader("name=laptop"))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		body = w.Body.String()
+	}
+
+	if !strings.Contains(body, "already exists") {
+		t.Error("Resubmission should show an already-exists error")
+	}
+	if strings.Contains(body, "banner-code") {
+		t.Error("Resubmission must not reveal a token")
+	}
+
+	tokens, err := s.GetAPITokens(context.Background(), user.ID())
+	if err != nil || len(tokens) != 1 {
+		t.Fatalf("expected exactly one token, got %d (%v)", len(tokens), err)
+	}
+}
+
+func TestProfileCreateAPITokenRequiresName(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	handler := New(s, logger)
+
+	req := httptest.NewRequest(http.MethodPost, "/profile/tokens", strings.NewReader("name="))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if !strings.Contains(w.Body.String(), "Token name is required") {
+		t.Error("Response should show validation error")
+	}
+}
+
+func TestMCPEndpointUsesBearerAuthNotSession(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	handler := New(s, logger)
+
+	// A browser session cookie alone must not grant MCP access, and the
+	// endpoint must answer 401 rather than redirecting to the signin page.
+	req := httptest.NewRequest(http.MethodPost, "/mcp",
+		strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
+	req.Header.Set("Content-Type", "application/json")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected 401 for /mcp without bearer token; got %d", w.Code)
 	}
 }
