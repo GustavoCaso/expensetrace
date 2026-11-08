@@ -588,6 +588,23 @@ func (s *sqliteStorage) ApplyMigrations(ctx context.Context, logger *logger.Logg
 				return err
 			},
 		},
+		{
+			name: "Create api_tokens table",
+			up: func(tx *sql.Tx) error {
+				_, err := tx.ExecContext(ctx, `
+					CREATE TABLE IF NOT EXISTS api_tokens (
+						id INTEGER PRIMARY KEY,
+						user_id INTEGER NOT NULL,
+						name TEXT NOT NULL,
+						token_hash TEXT NOT NULL UNIQUE,
+						created_at INTEGER NOT NULL,
+						last_used_at INTEGER,
+						FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+						UNIQUE(user_id, name)
+					) STRICT;`)
+				return err
+			},
+		},
 	}
 
 	// Apply pending migrations
