@@ -33,7 +33,7 @@ func (s *server) registerTools(mcpServer *mcp.Server) {
 		Title: "List expenses",
 		Description: "List the user's transactions, newest first by default. All filters are optional and " +
 			"combine with AND. Results are capped by limit; check truncated and total_matching to know " +
-			"whether more exist, and use total_amount for sums over every match rather than adding rows.",
+			"whether more exist.",
 	}, s.listExpenses)
 
 	addTool(s, mcpServer, &mcp.Tool{
@@ -81,7 +81,7 @@ type listExpensesInput struct {
 	DateFrom    string   `json:"date_from,omitempty"   jsonschema:"earliest date, inclusive, YYYY-MM-DD"`
 	DateTo      string   `json:"date_to,omitempty"     jsonschema:"latest date, inclusive, YYYY-MM-DD"`
 	Type        string   `json:"type,omitempty"        jsonschema:"only return charge or income transactions"`
-	Category    string   `json:"category,omitempty"    jsonschema:"exact category name; use uncategorized for none"`
+	Category    string   `json:"category,omitempty"    jsonschema:"exact category name; omit to return expenses from all categories"`
 	Sort        string   `json:"sort,omitempty"        jsonschema:"one of date:desc (default), date:asc, amount:asc, amount:desc"`
 	Limit       int      `json:"limit,omitempty"       jsonschema:"maximum rows to return, default 50, max 500"`
 }
@@ -94,18 +94,15 @@ type expenseOutput struct {
 	Amount      float64 `json:"amount"`
 	Currency    string  `json:"currency"`
 	Type        string  `json:"type"`
-	Category    string  `json:"category,omitempty"`
+	Category    string  `json:"category"    jsonschema:"an empty category means the expense does not belong to any category"`
 }
 
 type listExpensesOutput struct {
 	Expenses      []expenseOutput `json:"expenses"`
 	Returned      int             `json:"returned"`
 	TotalMatching int             `json:"total_matching"`
-	TotalAmount   float64         `json:"total_amount"   jsonschema:"signed sum over all matching rows, not just those returned"`
 	Truncated     bool            `json:"truncated"`
 }
-
-const uncategorizedFilter = "uncategorized"
 
 func (s *server) listExpenses(ctx context.Context, userID int64, in listExpensesInput) (listExpensesOutput, error) {
 	filter, sortOpts, err := buildFilter(in)
@@ -127,7 +124,7 @@ func (s *server) listExpenses(ctx context.Context, userID int64, in listExpenses
 		return listExpensesOutput{}, err
 	}
 
-	if in.Category != "" && in.Category != uncategorizedFilter && !containsValue(categoryNames, in.Category) {
+	if in.Category != "" && !containsValue(categoryNames, in.Category) {
 		return listExpensesOutput{}, invalidArg(
 			fmt.Sprintf("unknown category %q; call list_categories for valid names", in.Category),
 		)
@@ -139,7 +136,6 @@ func (s *server) listExpenses(ctx context.Context, userID int64, in listExpenses
 	}
 
 	out := listExpensesOutput{Expenses: []expenseOutput{}}
-	var totalCents int64
 
 	for _, ex := range expenses {
 		row := toExpenseOutput(ex, categoryNames)
@@ -151,7 +147,6 @@ func (s *server) listExpenses(ctx context.Context, userID int64, in listExpenses
 		}
 
 		out.TotalMatching++
-		totalCents += ex.Amount()
 
 		if len(out.Expenses) < limit {
 			out.Expenses = append(out.Expenses, row)
@@ -159,7 +154,6 @@ func (s *server) listExpenses(ctx context.Context, userID int64, in listExpenses
 	}
 
 	out.Returned = len(out.Expenses)
-	out.TotalAmount = toUnits(totalCents)
 	out.Truncated = out.TotalMatching > out.Returned
 
 	return out, nil
@@ -169,8 +163,6 @@ func matchesCategory(rowCategory, want string) bool {
 	switch want {
 	case "":
 		return true
-	case uncategorizedFilter:
-		return rowCategory == ""
 	default:
 		return rowCategory == want
 	}
@@ -586,7 +578,7 @@ func clampLimit(value, def, maximum int) (int, error) {
 }
 
 func parseDate(s string) (time.Time, error) {
-	return time.ParseInLocation(dateLayout, s, time.Local)
+	return time.Parse(dateLayout, s)
 }
 
 func monthKey(year, month int) string {

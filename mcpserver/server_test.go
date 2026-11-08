@@ -217,9 +217,6 @@ func TestListExpenses(t *testing.T) {
 	if charges.TotalMatching != 3 {
 		t.Fatalf("expected 3 charges, got %d", charges.TotalMatching)
 	}
-	if charges.TotalAmount != -89.00 {
-		t.Errorf("expected total -89.00, got %v", charges.TotalAmount)
-	}
 	if first := charges.Expenses[0]; first.Amount != -45.50 || first.Category != "Groceries" ||
 		first.Currency != "EUR" {
 		t.Errorf("unexpected first charge: %+v", first)
@@ -228,14 +225,6 @@ func TestListExpenses(t *testing.T) {
 	limited := call[listExpensesOutput](t, session, "list_expenses", map[string]any{"limit": 1})
 	if limited.Returned != 1 || !limited.Truncated || limited.TotalMatching != 4 {
 		t.Errorf("expected truncated single row: %+v", limited)
-	}
-
-	uncategorized := call[listExpensesOutput](t, session, "list_expenses", map[string]any{
-		"category": "uncategorized",
-		"type":     "charge",
-	})
-	if uncategorized.TotalMatching != 1 || uncategorized.Expenses[0].Description != "Coffee shop" {
-		t.Errorf("unexpected uncategorized result: %+v", uncategorized)
 	}
 
 	big := call[listExpensesOutput](t, session, "list_expenses", map[string]any{"amount_max": -40})
