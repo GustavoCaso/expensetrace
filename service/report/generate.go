@@ -17,21 +17,26 @@ const (
 	percentageOfTotal = 100
 )
 
+// generate builds a report for the expenses between startDate and endDate.
+// The range may span several months: monthly budgets are scaled by the
+// number of calendar months covered, and the title reflects the range.
 func generate(
 	ctx context.Context,
 	userID int64,
 	startDate, endDate time.Time,
 	storage storage.Storage,
 	expenses []domain.Expense,
-	reportType string,
 ) (domain.Report, error) {
 	var report domain.Report
+
+	months := monthsInRange(startDate, endDate)
 
 	expenseCategories, incomeCategories, totalIncome, totalSpending, err := splitByExpenseType(
 		ctx,
 		userID,
 		storage,
 		expenses,
+		months,
 	)
 
 	if err != nil {
@@ -50,20 +55,45 @@ func generate(
 	} else {
 		report.SavingsPercentage = savingsPercentage
 	}
-	numberOfDaysPerMonth := calendarDays(startDate, endDate)
-	report.AverageSpendingPerDay = (totalSpending) * -1 / int64(numberOfDaysPerMonth)
-	report.EarningsPerDay = totalIncome / int64(numberOfDaysPerMonth)
+	// The range is inclusive of both days: January 1–31 is 31 days, not the
+	// 30-day difference calendarDays reports.
+	daysInRange := int64(calendarDays(startDate, endDate) + 1)
+	report.AverageSpendingPerDay = (totalSpending) * -1 / daysInRange
+	report.EarningsPerDay = totalIncome / daysInRange
 
 	report.ExpenseCategories = expenseCategories
 	report.IncomeCategories = incomeCategories
-
-	if reportType == "monthly" {
-		report.Title = fmt.Sprintf("%s %d", startDate.Month().String(), startDate.Year())
-	} else {
-		report.Title = strconv.Itoa(startDate.Year())
-	}
+	report.MonthCount = months
+	report.Title = reportTitle(startDate, endDate)
 
 	return report, nil
+}
+
+// monthsInRange counts the calendar months touched by [start, end], inclusive.
+// It never returns less than 1.
+func monthsInRange(start, end time.Time) int {
+	months := (end.Year()-start.Year())*monthsInYear + int(end.Month()) - int(start.Month()) + 1
+	return max(months, 1)
+}
+
+const monthsInYear = 12
+
+// reportTitle names a report after its range: "November 2026" for a single
+// month, "2026" for a full calendar year, "Jan – Nov 2026" within one year,
+// and "Mar 2025 – Feb 2026" across years.
+func reportTitle(start, end time.Time) string {
+	sameYear := start.Year() == end.Year()
+
+	switch {
+	case sameYear && start.Month() == end.Month():
+		return fmt.Sprintf("%s %d", start.Month(), start.Year())
+	case sameYear && start.Month() == time.January && end.Month() == time.December:
+		return strconv.Itoa(start.Year())
+	case sameYear:
+		return fmt.Sprintf("%s – %s %d", start.Format("Jan"), end.Format("Jan"), end.Year())
+	default:
+		return fmt.Sprintf("%s – %s", start.Format("Jan 2006"), end.Format("Jan 2006"))
+	}
 }
 
 func splitByExpenseType(
@@ -71,6 +101,7 @@ func splitByExpenseType(
 	userID int64,
 	storage storage.Storage,
 	expenses []domain.Expense,
+	months int,
 ) ([]domain.CategoryReport, []domain.CategoryReport, int64, int64, error) {
 	var incomeTotal int64
 	var spendingTotal int64
@@ -81,13 +112,23 @@ func splitByExpenseType(
 	// internal map to keep track of expense categories
 	expenseCategoryMap := map[string]domain.CategoryReport{}
 
+	// Load categories once; multi-month ranges can hold thousands of expenses.
+	allCategories, err := storage.GetCategories(ctx, userID)
+	if err != nil {
+		return expenseCategories, incomeCategories, incomeTotal, spendingTotal, err
+	}
+	categoriesByID := make(map[int64]domain.Category, len(allCategories))
+	for _, c := range allCategories {
+		categoriesByID[c.ID()] = c
+	}
+
 	for _, ex := range expenses {
 		categoryName := ""
 		if ex.CategoryID() != nil {
-			category, categoryError := storage.GetCategory(ctx, userID, *ex.CategoryID())
-
-			if categoryError != nil {
-				return expenseCategories, incomeCategories, incomeTotal, spendingTotal, categoryError
+			category, found := categoriesByID[*ex.CategoryID()]
+			if !found {
+				return expenseCategories, incomeCategories, incomeTotal, spendingTotal,
+					fmt.Errorf("category %d not found", *ex.CategoryID())
 			}
 
 			if category.Name() == domain.ExcludeCategory {
@@ -95,8 +136,8 @@ func splitByExpenseType(
 			}
 
 			categoryName = category.Name()
-			// Store budget for this category
-			categoryBudgets[categoryName] = category.MonthlyBudget()
+			// Store the budget for the whole range, not just one month.
+			categoryBudgets[categoryName] = category.MonthlyBudget() * int64(months)
 		}
 
 		switch ex.Type() {
@@ -113,6 +154,9 @@ func splitByExpenseType(
 		if category.Amount < 0 && spendingTotal < 0 {
 			// For expense categories
 			category.PercentageOfTotal = float64(category.Amount*-percentageOfTotal) / float64(spendingTotal*-1)
+			if incomeTotal > 0 {
+				category.PercentageOfIncome = float64(category.Amount*-percentageOfTotal) / float64(incomeTotal)
+			}
 		} else if category.Amount > 0 && incomeTotal > 0 {
 			// For income categories
 			category.PercentageOfTotal = float64(category.Amount*percentageOfTotal) / float64(incomeTotal)

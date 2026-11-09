@@ -1,10 +1,11 @@
 /**
  * Financial bar chart with savings line overlay
  *
- * Visualizes income, spending, and savings over time with:
+ * Visualizes income, spending, and savings for the selected report range:
  * - Bar chart for income and spending
  * - Line graph for savings trend
- * - Interactive tooltips and navigation
+ * - Interactive tooltips; clicking a month loads its report card
+ * - Every month in the range fits the available width (no scrolling)
  * - Responsive design with high-DPI support
  */
 
@@ -32,13 +33,14 @@ export function initializeBarChart() {
     console.error('Error parsing chart data:', error);
     return;
   }
-
+  if (!Array.isArray(chartData) || chartData.length === 0) return;
 
   // Chart configuration
   const config = {
     padding: { top: 40, right: 40, bottom: 60, left: 80 },
-    barWidth: 30,
-    barGap: 15,
+    maxBarWidth: 30,
+    maxBarGap: 15,
+    labelFont: "12px 'Spline Sans Mono', monospace",
     colors: {
       income_stroke: '#177245',
       expense_stroke: '#B3402E',
@@ -48,31 +50,29 @@ export function initializeBarChart() {
       grid: '#DDE2DB',
       text: '#67766F',
       tooltip: 'rgba(22, 33, 31, 0.92)'
-    },
-    animationDuration: 500,
-    visibleMonths: 7 // Number of months visible by default
+    }
   };
 
-  // Derived values
-  const monthWidth = (config.barWidth * 2) + (config.barGap * 3);
-
   // State management
-  let currentOffset = 0; // Index of first visible month
-  let animating = false;
   let hoverPoint = null;
 
-  // Find maximum values for scaling
-  function calculateScales(visibleData) {
-    let maxIncome = 0;
-    let maxSpending = 0;
+  // "November 2026" -> "Nov 26"; keeps the axis readable when many months show.
+  function shortLabel(month) {
+    const [name, year] = month.split(' ');
+    if (!name || !year) return month;
+    return `${name.slice(0, 3)} ${year.slice(-2)}`;
+  }
 
-    visibleData.forEach(point => {
-      maxIncome = Math.max(maxIncome, point.Income);
-      maxSpending = Math.max(maxSpending, Math.abs(point.Spending));
+  // Find maximum values for scaling
+  function calculateScales(data) {
+    let maxValue = 0;
+
+    data.forEach(point => {
+      maxValue = Math.max(maxValue, point.Income, Math.abs(point.Spending));
     });
 
-    const maxValue = Math.max(maxIncome, maxSpending) * 1.1; // Add 10% margin
-    return maxValue;
+    // Add 10% margin; avoid a zero scale when the range has no data.
+    return (maxValue || 100) * 1.1;
   }
 
   // Draw function
@@ -83,13 +83,13 @@ export function initializeBarChart() {
     const chartWidth = canvas.width / dpr - config.padding.left - config.padding.right;
     const chartHeight = canvas.height / dpr - config.padding.top - config.padding.bottom;
 
-    // Determine visible data
-    const visibleData = chartData.slice(
-      currentOffset,
-      Math.min(currentOffset + config.visibleMonths, chartData.length)
-    );
+    // Split the width evenly between months, then size bars to fit their slot.
+    const slotWidth = chartWidth / chartData.length;
+    const barWidth = Math.min(config.maxBarWidth, slotWidth * 0.32);
+    const barGap = Math.min(config.maxBarGap, slotWidth * 0.1);
+    const groupWidth = barWidth * 2 + barGap;
 
-    const maxValue = calculateScales(visibleData);
+    const maxValue = calculateScales(chartData);
 
     // Calculate scale for the y-axis
     const yScale = chartHeight / maxValue;
@@ -109,7 +109,7 @@ export function initializeBarChart() {
       // Value labels
       const value = (i * maxValue / 5) / 100;
       ctx.fillStyle = config.colors.text;
-      ctx.font = "12px 'Spline Sans Mono', monospace";
+      ctx.font = config.labelFont;
       ctx.textAlign = 'right';
       ctx.fillText(value.toFixed(2) + '€', config.padding.left - 10, y + 4);
     }
@@ -123,19 +123,28 @@ export function initializeBarChart() {
     ctx.lineTo(config.padding.left + chartWidth, config.padding.top + chartHeight);
     ctx.stroke();
 
+    // Show every Nth month label so labels never overlap.
+    ctx.font = config.labelFont;
+    const labelWidth = ctx.measureText('Mmm 00').width + 8;
+    const labelStep = Math.max(1, Math.ceil(labelWidth / slotWidth));
+
     // Draw month labels and bars
-    visibleData.forEach((point, index) => {
-      const x = config.padding.left + (index * monthWidth) + config.barGap;
+    chartData.forEach((point, index) => {
+      const slotCenter = config.padding.left + (index + 0.5) * slotWidth;
+      const x = slotCenter - groupWidth / 2;
 
       // Draw month label
-      ctx.fillStyle = config.colors.text;
-      ctx.font = "12px 'Spline Sans Mono', monospace";
-      ctx.textAlign = 'center';
-      ctx.fillText(point.Month, x + config.barWidth, config.padding.top + chartHeight + 25);
+      if (index % labelStep === 0) {
+        ctx.fillStyle = config.colors.text;
+        ctx.font = config.labelFont;
+        ctx.textAlign = 'center';
+        ctx.fillText(shortLabel(point.Month), slotCenter, config.padding.top + chartHeight + 25);
+      }
 
       // Calculate bar heights
       const incomeHeight = point.Income * yScale;
       const spendingHeight = Math.abs(point.Spending) * yScale;
+      const radius = Math.min(10, barWidth / 2);
 
       // Draw income bar
       ctx.beginPath();
@@ -143,28 +152,29 @@ export function initializeBarChart() {
       const incomeBar = {
         x: x,
         y: config.padding.top + chartHeight - incomeHeight,
-        width: config.barWidth,
+        width: barWidth,
         height: incomeHeight
       };
-      ctx.roundRect(incomeBar.x, incomeBar.y, incomeBar.width, incomeBar.height, [10, 10, 0, 0]);
+      ctx.roundRect(incomeBar.x, incomeBar.y, incomeBar.width, incomeBar.height, [radius, radius, 0, 0]);
       ctx.fill();
 
       // Draw spending bar
       ctx.beginPath();
       ctx.fillStyle = config.colors.expense_fill;
       const spendingBar = {
-        x: x + config.barWidth + config.barGap,
+        x: x + barWidth + barGap,
         y: config.padding.top + chartHeight - spendingHeight,
-        width: config.barWidth,
+        width: barWidth,
         height: spendingHeight
       };
-      ctx.roundRect(spendingBar.x, spendingBar.y, spendingBar.width, spendingBar.height, [10, 10, 0, 0]);
+      ctx.roundRect(spendingBar.x, spendingBar.y, spendingBar.width, spendingBar.height, [radius, radius, 0, 0]);
       ctx.fill();
 
       // Store these for hit detection
       point.bars = {
         income: incomeBar,
-        spending: spendingBar
+        spending: spendingBar,
+        radius
       };
     });
 
@@ -174,8 +184,8 @@ export function initializeBarChart() {
     ctx.lineWidth = 3;
     ctx.lineJoin = 'round';
 
-    visibleData.forEach((point, index) => {
-      const x = config.padding.left + (index * monthWidth) + config.barWidth + config.barGap;
+    chartData.forEach((point, index) => {
+      const x = config.padding.left + (index + 0.5) * slotWidth;
       // Calculate y coordinate with bounds checking
       // Ensure savings point stays within the chart area
       const rawY = config.padding.top + chartHeight - (point.Savings * yScale);
@@ -193,12 +203,12 @@ export function initializeBarChart() {
       }
 
       // Store point position for hit detection
-      point.savingsPoint = { x, y, radius: 6 };
+      point.savingsPoint = { x, y, radius: Math.min(6, Math.max(3, slotWidth / 6)) };
     });
     ctx.stroke();
 
     // Draw savings points
-    visibleData.forEach(point => {
+    chartData.forEach(point => {
       const { x, y, radius } = point.savingsPoint;
 
       ctx.beginPath();
@@ -219,26 +229,17 @@ export function initializeBarChart() {
       if (type === 'savings') {
         const { x, y, radius } = point.savingsPoint;
         ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
-        ctx.strokeStyle = point.Savings >= 0 ? config.colors.income : config.colors.expense;
+        ctx.strokeStyle = point.Savings >= 0 ? config.colors.income_stroke : config.colors.expense_stroke;
         ctx.lineWidth = 2;
       } else {
         const bar = point.bars[type];
+        const r = point.bars.radius;
         ctx.strokeStyle = type === 'income' ? config.colors.income_stroke : config.colors.expense_stroke;
         ctx.lineWidth = 2;
-        ctx.roundRect(bar.x, bar.y, bar.width, bar.height, [10, 10, 0, 0]);
+        ctx.roundRect(bar.x, bar.y, bar.width, bar.height, [r, r, 0, 0]);
       }
       ctx.stroke();
     }
-
-    // Update period display
-    const periodText = visibleData.length > 0 ?
-      `${visibleData[0].Month} - ${visibleData[visibleData.length - 1].Month}` : '';
-    document.getElementById('current-period').textContent = periodText;
-
-    // Update navigation buttons
-    document.getElementById('prev-period').disabled = currentOffset <= 0;
-    document.getElementById('next-period').disabled =
-      currentOffset + config.visibleMonths >= chartData.length;
   }
 
   // Handle mouse movement for tooltips
@@ -247,16 +248,10 @@ export function initializeBarChart() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Get visible data
-    const visibleData = chartData.slice(
-      currentOffset,
-      Math.min(currentOffset + config.visibleMonths, chartData.length)
-    );
-
     let found = false;
 
     // Check each data point
-    for (const point of visibleData) {
+    for (const point of chartData) {
       // Check savings point
       const sp = point.savingsPoint;
       const distance = Math.sqrt((x - sp.x) ** 2 + (y - sp.y) ** 2);
@@ -318,7 +313,7 @@ export function initializeBarChart() {
     drawChart();
   }
 
-  function hanldeClickEvent(e) {
+  function hanldeClickEvent() {
     if (hoverPoint) {
       const point = hoverPoint.point;
 
@@ -337,112 +332,27 @@ export function initializeBarChart() {
     drawChart();
   }
 
-  // Handle navigation
-  function navigatePrevious() {
-    if (currentOffset > 0 && !animating) {
-      animating = true;
+  // Size the canvas to its container with high-DPI support. The container's
+  // CSS height shrinks on small screens, so read it rather than the canvas
+  // attribute; otherwise the canvas overflows onto the legend.
+  function resizeCanvas(container) {
+    const displayWidth = container.clientWidth;
+    const displayHeight = container.clientHeight || 400;
 
-      // Animate the transition
-      const startOffset = currentOffset;
-      const targetOffset = Math.max(0, currentOffset - config.visibleMonths);
-      const startTime = performance.now();
+    canvas.style.width = displayWidth + 'px';
+    canvas.style.height = displayHeight + 'px';
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
 
-      function animate(time) {
-        const elapsed = time - startTime;
-        const progress = Math.min(1, elapsed / config.animationDuration);
-
-        // Easing function for smoother animation
-        const easeProgress = 1 - Math.pow(1 - progress, 3);
-
-        currentOffset = startOffset - easeProgress * (startOffset - targetOffset);
-        drawChart();
-
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          currentOffset = targetOffset;
-          animating = false;
-          drawChart();
-        }
-      }
-
-      requestAnimationFrame(animate);
-    }
-  }
-
-  function navigateNext() {
-    if (currentOffset + config.visibleMonths < chartData.length && !animating) {
-      animating = true;
-
-      // Animate the transition
-      const startOffset = currentOffset;
-      const targetOffset = Math.min(
-        chartData.length - config.visibleMonths,
-        currentOffset + config.visibleMonths
-      );
-      const startTime = performance.now();
-
-      function animate(time) {
-        const elapsed = time - startTime;
-        const progress = Math.min(1, elapsed / config.animationDuration);
-
-        // Easing function for smoother animation
-        const easeProgress = 1 - Math.pow(1 - progress, 3);
-
-        currentOffset = startOffset + easeProgress * (targetOffset - startOffset);
-        drawChart();
-
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          currentOffset = targetOffset;
-          animating = false;
-          drawChart();
-        }
-      }
-
-      requestAnimationFrame(animate);
-    }
+    // Resizing the canvas resets the context transform
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   // Initialize the chart
   function initChart() {
-    // Set canvas dimensions based on container with high-DPI support
     const container = canvas.parentElement;
-    const displayWidth = container.clientWidth;
-    const displayHeight = canvas.height;
 
-    // Set the canvas size in CSS pixels
-    canvas.style.width = displayWidth + 'px';
-    canvas.style.height = displayHeight + 'px';
-
-    // Set actual size in memory (scaled for DPI)
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
-
-    // Set the most appropiate number of visible months
-    config.visibleMonths = Math.floor((canvas.width / dpr - config.padding.left - config.padding.right) / monthWidth);
-
-    // Scale the context to ensure correct drawing operations
-    ctx.scale(dpr, dpr);
-
-    // Set initial offset to show the most recent months
-    if (chartData.length > config.visibleMonths) {
-      currentOffset = chartData.length - config.visibleMonths;
-    }
-
-    // If open_month/open_year specified, scroll to that month instead
-    const openMonth = canvas.getAttribute('data-open-month');
-    const openYear = canvas.getAttribute('data-open-year');
-    if (openMonth && openYear) {
-      const targetUrl = `/?month=${openMonth}&year=${openYear}`;
-      const idx = chartData.findIndex(p => p.URL === targetUrl);
-      if (idx !== -1) {
-        currentOffset = Math.max(0, Math.min(idx, chartData.length - config.visibleMonths));
-      }
-    }
-
-    // Initial draw
+    resizeCanvas(container);
     drawChart();
 
     // Add event listeners
@@ -450,22 +360,9 @@ export function initializeBarChart() {
     canvas.addEventListener('mouseleave', handleMouseLeave);
     canvas.addEventListener('click', hanldeClickEvent);
 
-    document.getElementById('prev-period').addEventListener('click', navigatePrevious);
-    document.getElementById('next-period').addEventListener('click', navigateNext);
-
     // Handle window resize
     window.addEventListener('resize', () => {
-      // Update canvas dimensions with high-DPI support on resize
-      const displayWidth = container.clientWidth;
-
-      canvas.style.width = displayWidth + 'px';
-      canvas.width = displayWidth * dpr;
-
-      config.visibleMonths = Math.floor((canvas.width / dpr - config.padding.left - config.padding.right) / monthWidth);
-
-      // Reset the scale
-      ctx.scale(dpr, dpr);
-
+      resizeCanvas(container);
       drawChart();
     });
   }

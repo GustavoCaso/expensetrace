@@ -1,0 +1,20 @@
+{{define "reports/period"}}
+  <div class="period-bar" role="group" aria-label="Report period">
+    <div class="year-tabs">
+      {{range .Years}}
+        <a href="{{.URL}}" class="year-tab{{if .Active}} active{{end}}"{{if .Active}} aria-current="page"{{end}}>{{.Year}}</a>
+      {{end}}
+    </div>
+    <form class="range-form" method="get" action="/">
+      <label>
+        <span>From</span>
+        <input type="month" name="from" value="{{.From}}" max="{{.Max}}" required>
+      </label>
+      <label>
+        <span>To</span>
+        <input type="month" name="to" value="{{.To}}" max="{{.Max}}" required>
+      </label>
+      <button type="submit" class="btn-primary range-submit">Show</button>
+    </form>
+  </div>
+{{end}}

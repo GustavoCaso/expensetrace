@@ -1,0 +1,109 @@
+{{/* Category breakdown shared by the month card and the range card.
+     Expects data with CategorySections, OpenCategory, CategoryRedirect,
+     MonthCount and PerMonth (ReportCardData or SelectionCardData). */}}
+{{define "reports/categories"}}
+  {{if or .ExpenseCategories .IncomeCategories}}
+    <div class="report-details">
+      <h2>Categories Breakdown</h2>
+      <div class="category-breakdown-grid">
+        {{range $section := .CategorySections}}
+          {{/* Expense shares can be shown against spending or income; the
+               choice lives on <html data-share-basis> (see share-toggle.js). */}}
+          {{$dual := and (eq $section.Kind "expense") (gt $.Income 0)}}
+          <section class="category-breakdown">
+            <header class="category-breakdown-header">
+              <h3>{{$section.Title}}</h3>
+              <span class="category-breakdown-total {{$section.Kind}}">{{formatMoney (abs $section.Total) "." ","}}€</span>
+            </header>
+            {{if $dual}}
+              <div class="share-toggle-row">
+                <span class="share-toggle-label">Share of</span>
+                <div class="share-toggle" role="group" aria-label="Show category share of">
+                  <button type="button" class="share-toggle-btn" data-share-basis="spending" aria-pressed="true">spending</button>
+                  <button type="button" class="share-toggle-btn" data-share-basis="income" aria-pressed="false">income</button>
+                </div>
+              </div>
+            {{end}}
+            <ol class="category-list">
+              {{range $category := $section.Categories}}
+                <li>
+                  <details class="category-item"{{if eq $category.Name $.OpenCategory}} open{{end}}>
+                    <summary class="category-row">
+                      <span class="category-row-name">
+                        {{$category.Name}}
+                        {{if ne $category.Budget.Status "no_budget"}}
+                          <span class="budget-dot budget-{{$category.Budget.Status}}" title="{{printf "%.0f" $category.Budget.PercentageUsed}}% of budget used"></span>
+                        {{end}}
+                      </span>
+                      <span class="category-row-amount {{$section.Kind}}">{{formatMoney (abs $category.Amount) "." ","}}€</span>
+                      {{if $dual}}
+                        <span class="category-row-share">
+                          <span class="share-of-spending" title="Share of total spending">{{printf "%.1f" $category.PercentageOfTotal}}%</span>
+                          <span class="share-of-income" title="Share of total income">{{printf "%.1f" $category.PercentageOfIncome}}%</span>
+                        </span>
+                        <span class="category-row-bar">
+                          <span class="category-row-bar-fill {{$section.Kind}}-fill share-of-spending" style="width: {{printf "%.1f" $category.PercentageOfTotal}}%"></span>
+                          <span class="category-row-bar-fill {{$section.Kind}}-fill share-of-income" style="width: {{printf "%.1f" $category.IncomeBarWidth}}%"></span>
+                        </span>
+                      {{else}}
+                        <span class="category-row-share">{{printf "%.1f" $category.PercentageOfTotal}}%</span>
+                        <span class="category-row-bar"><span class="category-row-bar-fill {{$section.Kind}}-fill" style="width: {{printf "%.1f" $category.PercentageOfTotal}}%"></span></span>
+                      {{end}}
+                    </summary>
+
+                    <div class="category-item-details">
+                      {{if ne $category.Budget.Status "no_budget"}}
+                        <div class="budget-container">
+                          <div class="budget-info">
+                            <span class="budget-spent">{{formatMoney $category.Budget.Spent "." ","}}€</span>
+                            <span class="budget-separator">/</span>
+                            <span class="budget-total">{{formatMoney $category.Budget.Amount "." ","}}€</span>
+                          </div>
+                          <div class="budget-bar">
+                            <div class="budget-progress budget-{{$category.Budget.Status}}" style="width: {{printf "%.1f" $category.Budget.PercentageUsed}}%"></div>
+                          </div>
+                          {{if le $category.Budget.Remaining 0}}
+                            <div class="budget-warning">Over budget by {{formatMoney (abs $category.Budget.Remaining) "." ","}}€</div>
+                          {{else}}
+                            <div class="budget-remaining">{{formatMoney $category.Budget.Remaining "." ","}}€ remaining</div>
+                          {{end}}
+                        </div>
+                      {{end}}
+
+                      <div class="category-stats">
+                        <span>Transactions: {{len $category.Expenses}}</span>
+                        <span>Avg: {{formatMoney (abs $category.AvgAmount) "." ","}}€</span>
+                        {{if gt $.MonthCount 1}}
+                          <span>Per month: {{formatMoney (abs ($.PerMonth $category.Amount)) "." ","}}€</span>
+                        {{end}}
+                      </div>
+
+                      <div class="table">
+                        <div class="table-header">
+                          <div class="table-header-cell">Date</div>
+                          <div class="table-header-cell">Description</div>
+                          <div class="table-header-cell source-column">Source</div>
+                          <div class="table-header-cell">Amount</div>
+                        </div>
+                        <div class="table-body">
+                          {{range $category.Expenses}}
+                            <a href="/expense/{{.ID}}?redirect_to={{$.CategoryRedirect $category.Name}}" class="table-row">
+                              <div class="table-cell">{{.Date.Format "Jan 2, 2006"}}</div>
+                              <div class="table-cell">{{.Description}}</div>
+                              <div class="table-cell source-column">{{.Source}}</div>
+                              <div class="table-cell {{if lt .Amount 0}}expense{{else}}income{{end}}">{{formatMoney (abs .Amount) "." ","}}€</div>
+                            </a>
+                          {{end}}
+                        </div>
+                      </div>
+                    </div>
+                  </details>
+                </li>
+              {{end}}
+            </ol>
+          </section>
+        {{end}}
+      </div>
+    </div>
+  {{end}}
+{{end}}

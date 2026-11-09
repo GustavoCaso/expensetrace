@@ -4,14 +4,20 @@
 {{define "main"}}
   {{ if eq (len .Error) 0 }}
     <div id="report-content">
+      {{template "reports/period" .Period}}
+
       {{if .ChartData}}
         <div class="mb-8">
           {{template "reports/chart" .}}
         </div>
       {{end}}
-      
+
       <div class="mb-8">
-        {{template "reports/card" .ReportCard}}
+        {{if .Selection}}
+          {{template "reports/selection" .Selection}}
+        {{else}}
+          {{template "reports/card" .ReportCard}}
+        {{end}}
       </div>
     </div>
   {{ else }}

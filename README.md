@@ -57,8 +57,8 @@ claude mcp add --transport http expensetrace https://expenses.example.com/mcp \
   --header "Authorization: Bearer et_..."
 ```
 
-Available tools: `list_expenses`, `list_categories`, `get_monthly_report`, `get_budget_status`,
-`get_spending_trend`, `list_uncategorized`. All are read-only and scoped to the token's owner. Each call is
+Available tools: `list_expenses`, `list_categories`, `get_monthly_report`, `get_range_report`,
+`get_budget_status`, `get_spending_trend`, `list_uncategorized`. All are read-only and scoped to the token's owner. Each call is
 logged with the user and token ID; revoke a token from the profile page to cut off access immediately.
 
 **Privacy note:** anything an agent reads is sent to the model provider powering that agent. Use a local model

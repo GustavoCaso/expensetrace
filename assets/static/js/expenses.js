@@ -5,12 +5,14 @@
  * - Toggle system for collapsible UI elements
  * - Tab switching for category patterns
  * - Financial bar chart with savings visualization
+ * - Category share toggle (spending vs income) on reports
  */
 
 // Import all modules
 import { initializeToggleSystem } from './toggle.js';
 import { initializeTabSystem } from './tabs.js';
 import { initializeBarChart } from './charts/bar-chart.js';
+import { initializeShareToggle } from './share-toggle.js';
 
 
 // Initialize all systems when DOM is ready
@@ -18,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Core UI systems
   initializeToggleSystem();
   initializeTabSystem();
+  initializeShareToggle();
 
   // Charts (these check for their containers before initializing)
   initializeBarChart();

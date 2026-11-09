@@ -42,7 +42,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Test monthly report
-	report, err := generate(context.Background(), user.ID(), startDate, endDate, s, expenses, "monthly")
+	report, err := generate(context.Background(), user.ID(), startDate, endDate, s, expenses)
 
 	if err != nil {
 		t.Fatalf("Got error generating report: %s", err.Error())
@@ -71,24 +71,89 @@ func TestGenerate(t *testing.T) {
 		t.Errorf("Report.SavingsPercentage = %v, want %v", report.SavingsPercentage, expectedSavingsPercentage)
 	}
 
-	expectedEarningsPerDay := int64(5000000 / 30)
+	expectedEarningsPerDay := int64(5000000 / 31)
 	if report.EarningsPerDay != expectedEarningsPerDay {
 		t.Errorf("Report.EarningsPerDay = %v, want %v", report.EarningsPerDay, expectedEarningsPerDay)
 	}
 
-	expectedSpendingPerDay := int64(173456 / 30)
+	expectedSpendingPerDay := int64(173456 / 31)
 	if report.AverageSpendingPerDay != expectedSpendingPerDay {
 		t.Errorf("Report.AverageSpendingPerDay = %v, want %v", report.AverageSpendingPerDay, expectedSpendingPerDay)
 	}
 
-	// Test yearly report
-	yearlyReport, err := generate(context.Background(), user.ID(), startDate, endDate, s, expenses, "yearly")
+	// A full calendar year is titled by its year and covers 12 months.
+	endOfYear := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
+	yearlyReport, err := generate(context.Background(), user.ID(), startDate, endOfYear, s, expenses)
 	if err != nil {
 		t.Fatalf("Got error generating report: %s", err.Error())
 	}
 
 	if yearlyReport.Title != "2024" {
 		t.Errorf("Report.Title = %v, want 2024", yearlyReport.Title)
+	}
+
+	if yearlyReport.MonthCount != 12 {
+		t.Errorf("Report.MonthCount = %d, want 12", yearlyReport.MonthCount)
+	}
+}
+
+func TestReportTitle(t *testing.T) {
+	date := func(year int, month time.Month) time.Time {
+		return time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
+	}
+
+	tests := []struct {
+		name       string
+		start, end time.Time
+		want       string
+	}{
+		{"single month", date(2026, time.November), date(2026, time.November), "November 2026"},
+		{"full year", date(2026, time.January), date(2026, time.December), "2026"},
+		{"within a year", date(2026, time.January), date(2026, time.November), "Jan – Nov 2026"},
+		{"across years", date(2025, time.March), date(2026, time.February), "Mar 2025 – Feb 2026"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := reportTitle(tt.start, tt.end); got != tt.want {
+				t.Errorf("reportTitle() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGenerate_ScalesBudgetByMonths(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	// 100.00 monthly budget; 250.00 spent over three months is under the
+	// 300.00 range budget, but would be "over" against a single month.
+	catID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "food", 10000)
+	if err != nil {
+		t.Fatalf("Error creating category: %s", err.Error())
+	}
+
+	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2024, 3, 31, 23, 59, 59, 0, time.UTC)
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "src", "food", "EUR", -25000, start, domain.ChargeType, &catID),
+	}
+
+	rep, err := generate(context.Background(), user.ID(), start, end, s, expenses)
+	if err != nil {
+		t.Fatalf("generate: %v", err)
+	}
+
+	if len(rep.ExpenseCategories) != 1 {
+		t.Fatalf("expected 1 expense category, got %d", len(rep.ExpenseCategories))
+	}
+
+	budget := rep.ExpenseCategories[0].Budget
+	if budget.Amount != 30000 {
+		t.Errorf("Budget.Amount = %d, want 30000", budget.Amount)
+	}
+	if budget.Status != domain.BudgetStatusNear {
+		t.Errorf("Budget.Status = %q, want %q", budget.Status, domain.BudgetStatusNear)
 	}
 }
 
@@ -153,6 +218,7 @@ func TestCategories(t *testing.T) {
 		user.ID(),
 		s,
 		expenses,
+		1,
 	)
 
 	if err != nil {
@@ -252,6 +318,64 @@ func TestCalendarDays(t *testing.T) {
 			days := calendarDays(tc.t1, tc.t2)
 			if days != tc.expected {
 				t.Errorf("calendarDays(%v, %v) = %v, want %v", tc.t1, tc.t2, days, tc.expected)
+			}
+		})
+	}
+}
+
+func TestGenerate_PercentageOfIncome(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
+
+	tests := []struct {
+		name     string
+		expenses []domain.Expense
+		want     float64
+	}{
+		{
+			name: "share of income",
+			expenses: []domain.Expense{
+				domain.NewExpense(0, "src", "salary", "EUR", 400000, start, domain.IncomeType, nil),
+				domain.NewExpense(0, "src", "rent", "EUR", -100000, start, domain.ChargeType, nil),
+			},
+			want: 25,
+		},
+		{
+			name: "can exceed 100 when spending outruns income",
+			expenses: []domain.Expense{
+				domain.NewExpense(0, "src", "salary", "EUR", 100000, start, domain.IncomeType, nil),
+				domain.NewExpense(0, "src", "rent", "EUR", -150000, start, domain.ChargeType, nil),
+			},
+			want: 150,
+		},
+		{
+			name: "zero without income",
+			expenses: []domain.Expense{
+				domain.NewExpense(0, "src", "rent", "EUR", -100000, start, domain.ChargeType, nil),
+			},
+			want: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rep, err := generate(context.Background(), user.ID(), start, end, s, tt.expenses)
+			if err != nil {
+				t.Fatalf("generate: %v", err)
+			}
+			if len(rep.ExpenseCategories) != 1 {
+				t.Fatalf("expected 1 expense category, got %d", len(rep.ExpenseCategories))
+			}
+
+			got := rep.ExpenseCategories[0].PercentageOfIncome
+			if got != tt.want {
+				t.Errorf("PercentageOfIncome = %v, want %v", got, tt.want)
+			}
+			if bar := rep.ExpenseCategories[0].IncomeBarWidth(); bar > 100 {
+				t.Errorf("IncomeBarWidth = %v, must be capped at 100", bar)
 			}
 		})
 	}
