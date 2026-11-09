@@ -192,7 +192,7 @@ func TestListToolsAreReadOnly(t *testing.T) {
 
 	for _, want := range []string{
 		"list_expenses", "list_categories", "get_monthly_report",
-		"get_budget_status", "get_spending_trend", "list_uncategorized",
+		"get_budget_status", "get_spending_trend", "list_uncategorized", "get_range_report",
 	} {
 		if !slices.Contains(names, want) {
 			t.Errorf("missing tool %s (have %v)", want, names)
@@ -359,5 +359,92 @@ func TestDataIsIsolatedPerToken(t *testing.T) {
 		if !c.Excluded {
 			t.Errorf("other user should not see category %+v", c)
 		}
+	}
+}
+
+func TestRangeReport(t *testing.T) {
+	f := setup(t)
+	today := f.seed(t, f.user)
+
+	// Older data two months back; the month in between stays empty.
+	twoMonthsAgo := today.AddDate(0, -2, 0)
+	older := []domain.Expense{
+		domain.NewExpense(0, "bank", "Salary", "EUR", 300000, twoMonthsAgo, domain.IncomeType, nil),
+		domain.NewExpense(0, "bank", "Rent", "EUR", -100000, twoMonthsAgo, domain.ChargeType, nil),
+	}
+	if _, err := f.storage.InsertExpenses(t.Context(), f.user.ID(), older); err != nil {
+		t.Fatalf("insert expenses: %v", err)
+	}
+
+	session := f.connect(t, f.token(t, f.user))
+
+	// Ask for far more than exists: the range is clamped to the data.
+	rep := call[rangeReportOutput](t, session, "get_range_report", map[string]any{
+		"from": today.AddDate(-5, 0, 0).Format("2006-01"),
+		"to":   today.AddDate(1, 0, 0).Format("2006-01"),
+	})
+
+	if rep.From != twoMonthsAgo.Format("2006-01") || rep.To != today.Format("2006-01") {
+		t.Errorf("range = %s..%s, want clamped to %s..%s",
+			rep.From, rep.To, twoMonthsAgo.Format("2006-01"), today.Format("2006-01"))
+	}
+	if rep.MonthsCounted != 3 {
+		t.Errorf("months_counted = %d, want 3", rep.MonthsCounted)
+	}
+	if rep.Income != 6000 || rep.Spending != 1089 || rep.Savings != 4911 {
+		t.Errorf("unexpected totals: income=%v spending=%v savings=%v", rep.Income, rep.Spending, rep.Savings)
+	}
+	if rep.AverageMonthlyIncome != 2000 || rep.AverageMonthlySpending != 363 {
+		t.Errorf("unexpected averages: income=%v spending=%v", rep.AverageMonthlyIncome, rep.AverageMonthlySpending)
+	}
+	if rep.BestMonth == nil || rep.BestMonth.Month != today.Format("2006-01") {
+		t.Errorf("best_month = %+v, want current month", rep.BestMonth)
+	}
+	if rep.WorstMonth == nil || rep.WorstMonth.Month != twoMonthsAgo.Format("2006-01") {
+		t.Errorf("worst_month = %+v, want two months ago", rep.WorstMonth)
+	}
+
+	var groceries *rangeCategoryOutput
+	for i := range rep.ExpenseCategories {
+		if rep.ExpenseCategories[i].Name == "Groceries" {
+			groceries = &rep.ExpenseCategories[i]
+		}
+	}
+	if groceries == nil {
+		t.Fatalf("Groceries missing from report: %+v", rep.ExpenseCategories)
+	}
+	if groceries.PerMonth != 28.5 {
+		t.Errorf("groceries per_month = %v, want 28.5", groceries.PerMonth)
+	}
+	// 85.50 of 6000 income.
+	if groceries.PercentageOfIncome < 1.42 || groceries.PercentageOfIncome > 1.43 {
+		t.Errorf("groceries percentage_of_income = %v, want ~1.425", groceries.PercentageOfIncome)
+	}
+	// 100.00 monthly budget over 3 months.
+	if groceries.Budget == nil || groceries.Budget.Budget != 300 {
+		t.Errorf("groceries budget = %+v, want 300 (scaled by 3 months)", groceries.Budget)
+	}
+}
+
+func TestRangeReportInvalidArguments(t *testing.T) {
+	f := setup(t)
+	session := f.connect(t, f.token(t, f.user))
+
+	for name, args := range map[string]map[string]any{
+		"bad from": {"from": "2025/01"},
+		"bad to":   {"to": "2025-13"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			res, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: "get_range_report", Arguments: args})
+			if err != nil {
+				t.Fatalf("CallTool: %v", err)
+			}
+			if !res.IsError {
+				t.Errorf("expected tool error for %v", args)
+			}
+			if text := toolText(res); !strings.Contains(text, "YYYY-MM") {
+				t.Errorf("validation error should explain the format, got %q", text)
+			}
+		})
 	}
 }

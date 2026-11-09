@@ -2,6 +2,7 @@ package report
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -62,7 +63,7 @@ func (s *Service) Generate(ctx context.Context, userID int64) {
 			return
 		}
 
-		result, reportErr := generate(ctx, userID, firstDay, lastDay, s.storage, expenses, "monthly")
+		result, reportErr := generate(ctx, userID, firstDay, lastDay, s.storage, expenses)
 
 		if reportErr != nil {
 			s.logger.Warn("Failed to generate reports", "error", reportErr, "userID", userID)
@@ -88,52 +89,6 @@ func (s *Service) Generate(ctx context.Context, userID int64) {
 	s.reportsPerUser[userID] = reports
 }
 
-// ChartData returns the user's cached reports as chart data points, ordered
-// oldest-to-newest.
-func (s *Service) ChartData(userID int64) []domain.ChartDataPoint {
-	reports := s.reportsPerUser[userID]
-	reportKeys := slices.Collect(maps.Keys(reports))
-
-	sort.SliceStable(reportKeys, func(i, j int) bool {
-		s1 := strings.Split(reportKeys[i], "-")
-		s2 := strings.Split(reportKeys[j], "-")
-		year1, _ := strconv.Atoi(s1[0])
-		month1, _ := strconv.Atoi(s1[1])
-
-		year2, _ := strconv.Atoi(s2[0])
-		month2, _ := strconv.Atoi(s2[1])
-
-		if year1 == year2 {
-			return time.Month(month1) > time.Month(month2)
-		}
-
-		return year1 > year2
-	})
-
-	chartData := make([]domain.ChartDataPoint, 0, len(reports))
-
-	for _, key := range reportKeys {
-		parts := strings.Split(key, "-")
-		rep := reports[key]
-
-		chartData = append(chartData, domain.ChartDataPoint{
-			Month:             rep.Title,
-			Income:            rep.Income,
-			URL:               fmt.Sprintf("/?month=%s&year=%s", parts[1], parts[0]),
-			Spending:          rep.Spending,
-			Savings:           rep.Savings,
-			SavingsPercentage: rep.SavingsPercentage,
-		})
-	}
-
-	// Reverse the order to have oldest months first (better for chart visualization)
-	for i, j := 0, len(chartData)-1; i < j; i, j = i+1, j-1 {
-		chartData[i], chartData[j] = chartData[j], chartData[i]
-	}
-
-	return chartData
-}
-
 // ForMonth returns the cached report for the given month/year, or a
 // zero-value report if none has been generated.
 func (s *Service) ForMonth(userID int64, month, year int) domain.Report {
@@ -151,7 +106,166 @@ func (s *Service) Month(ctx context.Context, userID int64, month, year int) (dom
 		return domain.Report{}, err
 	}
 
-	return generate(ctx, userID, firstDay, lastDay, s.storage, expenses, "monthly")
+	return generate(ctx, userID, firstDay, lastDay, s.storage, expenses)
+}
+
+// Range builds a report covering every month from the month of `from` to
+// the month of `to`, inclusive, plus a summary of each month in between.
+// Like Month, it reads from storage rather than the UI cache. The arguments
+// are swapped if `to` is before `from`.
+//
+// The range is clamped to months that can hold data: it starts no earlier
+// than the user's first transaction and ends no later than the current
+// month, so empty months don't drag down averages or inflate budgets.
+func (s *Service) Range(ctx context.Context, userID int64, from, to time.Time) (domain.SelectionReport, error) {
+	if to.Before(from) {
+		from, to = to, from
+	}
+
+	from, to, err := s.clampToData(ctx, userID, from, to)
+	if err != nil {
+		return domain.SelectionReport{}, err
+	}
+
+	firstDay, _ := util.GetMonthDates(int(from.Month()), from.Year())
+	_, lastDay := util.GetMonthDates(int(to.Month()), to.Year())
+
+	expenses, err := s.storage.GetExpensesFromDateRange(ctx, userID, firstDay, lastDay)
+	if err != nil {
+		return domain.SelectionReport{}, err
+	}
+
+	total, err := generate(ctx, userID, firstDay, lastDay, s.storage, expenses)
+	if err != nil {
+		return domain.SelectionReport{}, err
+	}
+
+	// Bucket the already-loaded expenses by month instead of querying again.
+	type monthKey struct {
+		year  int
+		month time.Month
+	}
+	byMonth := map[monthKey][]domain.Expense{}
+	for _, ex := range expenses {
+		d := ex.Date().In(firstDay.Location())
+		key := monthKey{d.Year(), d.Month()}
+		byMonth[key] = append(byMonth[key], ex)
+	}
+
+	selection := domain.SelectionReport{Report: total}
+	for monthStart := firstDay; !monthStart.After(lastDay); monthStart = monthStart.AddDate(0, 1, 0) {
+		start, end := util.GetMonthDates(int(monthStart.Month()), monthStart.Year())
+		monthExpenses := byMonth[monthKey{start.Year(), start.Month()}]
+
+		rep, monthErr := generate(ctx, userID, start, end, s.storage, monthExpenses)
+		if monthErr != nil {
+			return domain.SelectionReport{}, monthErr
+		}
+
+		selection.Months = append(selection.Months, domain.MonthSummary{
+			Title:             rep.Title,
+			Month:             int(start.Month()),
+			Year:              start.Year(),
+			Income:            rep.Income,
+			Spending:          rep.Spending,
+			Savings:           rep.Savings,
+			SavingsPercentage: rep.SavingsPercentage,
+			HasData:           rep.Income != 0 || rep.Spending != 0,
+		})
+	}
+
+	selection.Best, selection.Worst = bestAndWorstMonths(selection.Months)
+
+	return selection, nil
+}
+
+// clampToData narrows [from, to] to the months between the user's first
+// transaction and the current month. If the range doesn't overlap that span
+// at all (e.g. a year before any data) it is returned unchanged, so the
+// report shows the requested months as empty rather than failing.
+func (s *Service) clampToData(
+	ctx context.Context,
+	userID int64,
+	from, to time.Time,
+) (time.Time, time.Time, error) {
+	start, end := monthStart(from), monthStart(to)
+
+	if current := monthStart(time.Now()); end.After(current) {
+		end = current
+	}
+
+	first, err := s.storage.GetFirstExpense(ctx, userID)
+	var notFoundErr *domain.NotFoundError
+	switch {
+	case errors.As(err, &notFoundErr):
+		// No transactions yet; nothing to clamp the start to.
+	case err != nil:
+		return from, to, err
+	default:
+		if firstMonth := monthStart(first.Date()); start.Before(firstMonth) {
+			start = firstMonth
+		}
+	}
+
+	if end.Before(start) {
+		return from, to, nil
+	}
+
+	return start, end, nil
+}
+
+// monthStart returns midnight on the first day of t's month, in local time.
+func monthStart(t time.Time) time.Time {
+	t = t.In(time.Local)
+	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.Local)
+}
+
+// bestAndWorstMonths returns the months with the highest and lowest savings,
+// ignoring months without data. Both are nil when fewer than two months have
+// data, since a single month is trivially both.
+func bestAndWorstMonths(months []domain.MonthSummary) (*domain.MonthSummary, *domain.MonthSummary) {
+	var best, worst *domain.MonthSummary
+	withData := 0
+
+	for i := range months {
+		m := &months[i]
+		if !m.HasData {
+			continue
+		}
+		withData++
+		if best == nil || m.Savings > best.Savings {
+			best = m
+		}
+		if worst == nil || m.Savings < worst.Savings {
+			worst = m
+		}
+	}
+
+	if withData < 2 { //nolint:mnd // need two months to compare
+		return nil, nil
+	}
+
+	return best, worst
+}
+
+// Years returns the years covered by the user's cached reports, newest
+// first, always including the current year. Call Generate first.
+func (s *Service) Years(userID int64) []int {
+	currentYear := time.Now().Year()
+	seen := map[int]bool{currentYear: true}
+
+	for key := range s.reportsPerUser[userID] {
+		yearPart, _, _ := strings.Cut(key, "-")
+		if year, err := strconv.Atoi(yearPart); err == nil {
+			seen[year] = true
+		}
+	}
+
+	years := slices.Collect(maps.Keys(seen))
+	slices.Sort(years)
+	slices.Reverse(years)
+
+	return years
 }
 
 // CategoryBudget pairs a budgeted category with its status for a month.

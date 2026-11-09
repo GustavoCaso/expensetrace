@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	dateLayout = "2006-01-02"
+	dateLayout  = "2006-01-02"
+	monthLayout = "2006-01"
 
 	defaultExpenseLimit       = 50
 	maxExpenseLimit           = 500
@@ -48,6 +49,17 @@ func (s *server) registerTools(mcpServer *mcp.Server) {
 		Description: "Income, spending and savings for one month, broken down by category with budget status. " +
 			"Defaults to the current month.",
 	}, s.monthlyReport)
+
+	addTool(s, mcpServer, &mcp.Tool{
+		Name:  "get_range_report",
+		Title: "Get range report",
+		Description: "Income, spending and savings over a range of months (from/to as YYYY-MM, default the " +
+			"current year to date), with monthly averages, best and worst month, and a category breakdown " +
+			"with per-month amounts. Budgets are scaled by the months counted. The range is clamped to start " +
+			"no earlier than the user's first transaction and end no later than the current month; from/to " +
+			"in the response show the months actually counted. For month-by-month figures use " +
+			"get_spending_trend.",
+	}, s.rangeReport)
 
 	addTool(s, mcpServer, &mcp.Tool{
 		Name:  "get_budget_status",
@@ -303,13 +315,14 @@ type budgetOutput struct {
 }
 
 type categorySummaryOutput struct {
-	Name              string        `json:"name"`
-	Amount            float64       `json:"amount"              jsonschema:"total for the month as a positive amount"`
-	PercentageOfTotal float64       `json:"percentage_of_total"`
-	Transactions      int           `json:"transactions"`
-	AverageAmount     float64       `json:"average_amount"`
-	LastTransaction   string        `json:"last_transaction"`
-	Budget            *budgetOutput `json:"budget,omitempty"    jsonschema:"present only when the category has a budget"`
+	Name               string        `json:"name"`
+	Amount             float64       `json:"amount"                         jsonschema:"total for the period as a positive amount"`
+	PercentageOfTotal  float64       `json:"percentage_of_total"            jsonschema:"share of total spending (expense categories) or total income (income categories)"`
+	PercentageOfIncome float64       `json:"percentage_of_income,omitempty" jsonschema:"expense categories only: share of total income; can exceed 100; omitted when there was no income"`
+	Transactions       int           `json:"transactions"`
+	AverageAmount      float64       `json:"average_amount"`
+	LastTransaction    string        `json:"last_transaction"`
+	Budget             *budgetOutput `json:"budget,omitempty"               jsonschema:"present only when the category has a budget"`
 }
 
 type monthlyReportOutput struct {
@@ -354,11 +367,12 @@ func toCategorySummaries(categories []domain.CategoryReport) []categorySummaryOu
 	out := make([]categorySummaryOutput, 0, len(categories))
 	for _, c := range categories {
 		summary := categorySummaryOutput{
-			Name:              c.Name,
-			Amount:            toUnits(abs(c.Amount)),
-			PercentageOfTotal: round2(c.PercentageOfTotal),
-			Transactions:      len(c.Expenses),
-			AverageAmount:     toUnits(abs(c.AvgAmount)),
+			Name:               c.Name,
+			Amount:             toUnits(abs(c.Amount)),
+			PercentageOfTotal:  round2(c.PercentageOfTotal),
+			PercentageOfIncome: round2(c.PercentageOfIncome),
+			Transactions:       len(c.Expenses),
+			AverageAmount:      toUnits(abs(c.AvgAmount)),
 		}
 		if !c.LastTransaction.IsZero() {
 			summary.LastTransaction = c.LastTransaction.Format(dateLayout)
@@ -380,6 +394,108 @@ func toBudgetOutput(b domain.BudgetInfo) budgetOutput {
 		PercentageUsed: round2(b.PercentageUsed),
 		Status:         string(b.Status),
 	}
+}
+
+// --- get_range_report ------------------------------------------------------
+
+type rangeInput struct {
+	From string `json:"from,omitempty" jsonschema:"first month YYYY-MM, defaults to January of the current year"`
+	To   string `json:"to,omitempty"   jsonschema:"last month YYYY-MM, defaults to the current month"`
+}
+
+type monthHighlightOutput struct {
+	Month             string  `json:"month"              jsonschema:"YYYY-MM"`
+	Savings           float64 `json:"savings"`
+	SavingsPercentage float64 `json:"savings_percentage"`
+}
+
+type rangeCategoryOutput struct {
+	categorySummaryOutput
+	PerMonth float64 `json:"per_month" jsonschema:"amount divided by months_counted"`
+}
+
+type rangeReportOutput struct {
+	From                   string                `json:"from"                     jsonschema:"first month counted, YYYY-MM; may be later than requested"`
+	To                     string                `json:"to"                       jsonschema:"last month counted, YYYY-MM; may be earlier than requested"`
+	Title                  string                `json:"title"`
+	MonthsCounted          int                   `json:"months_counted"`
+	Income                 float64               `json:"income"`
+	Spending               float64               `json:"spending"                 jsonschema:"total charges as a positive amount"`
+	Savings                float64               `json:"savings"                  jsonschema:"income minus spending"`
+	SavingsPercentage      float64               `json:"savings_percentage"`
+	AverageMonthlyIncome   float64               `json:"average_monthly_income"`
+	AverageMonthlySpending float64               `json:"average_monthly_spending" jsonschema:"positive amount"`
+	BestMonth              *monthHighlightOutput `json:"best_month,omitempty"     jsonschema:"month with the highest savings; omitted when fewer than two months have data"`
+	WorstMonth             *monthHighlightOutput `json:"worst_month,omitempty"    jsonschema:"month with the lowest savings; omitted when fewer than two months have data"`
+	ExpenseCategories      []rangeCategoryOutput `json:"expense_categories"`
+	IncomeCategories       []rangeCategoryOutput `json:"income_categories"`
+}
+
+func (s *server) rangeReport(ctx context.Context, userID int64, in rangeInput) (rangeReportOutput, error) {
+	now := s.now()
+	from := time.Date(now.Year(), time.January, 1, 0, 0, 0, 0, time.Local)
+	to := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local)
+
+	var err error
+	if in.From != "" {
+		if from, err = time.ParseInLocation(monthLayout, in.From, time.Local); err != nil {
+			return rangeReportOutput{}, invalidArg("from must be a month in YYYY-MM format")
+		}
+	}
+	if in.To != "" {
+		if to, err = time.ParseInLocation(monthLayout, in.To, time.Local); err != nil {
+			return rangeReportOutput{}, invalidArg("to must be a month in YYYY-MM format")
+		}
+	}
+
+	sel, err := s.Report.Range(ctx, userID, from, to)
+	if err != nil {
+		return rangeReportOutput{}, err
+	}
+
+	out := rangeReportOutput{
+		Title:                  sel.Title,
+		MonthsCounted:          sel.MonthCount,
+		Income:                 toUnits(sel.Income),
+		Spending:               toUnits(abs(sel.Spending)),
+		Savings:                toUnits(sel.Savings),
+		SavingsPercentage:      round2(float64(sel.SavingsPercentage)),
+		AverageMonthlyIncome:   toUnits(sel.PerMonth(sel.Income)),
+		AverageMonthlySpending: toUnits(abs(sel.PerMonth(sel.Spending))),
+		BestMonth:              toMonthHighlight(sel.Best),
+		WorstMonth:             toMonthHighlight(sel.Worst),
+		ExpenseCategories:      toRangeCategories(sel.Report, sel.ExpenseCategories),
+		IncomeCategories:       toRangeCategories(sel.Report, sel.IncomeCategories),
+	}
+	if n := len(sel.Months); n > 0 {
+		out.From = monthKey(sel.Months[0].Year, sel.Months[0].Month)
+		out.To = monthKey(sel.Months[n-1].Year, sel.Months[n-1].Month)
+	}
+
+	return out, nil
+}
+
+func toMonthHighlight(m *domain.MonthSummary) *monthHighlightOutput {
+	if m == nil {
+		return nil
+	}
+	return &monthHighlightOutput{
+		Month:             monthKey(m.Year, m.Month),
+		Savings:           toUnits(m.Savings),
+		SavingsPercentage: round2(float64(m.SavingsPercentage)),
+	}
+}
+
+func toRangeCategories(rep domain.Report, categories []domain.CategoryReport) []rangeCategoryOutput {
+	summaries := toCategorySummaries(categories)
+	out := make([]rangeCategoryOutput, 0, len(summaries))
+	for i, summary := range summaries {
+		out = append(out, rangeCategoryOutput{
+			categorySummaryOutput: summary,
+			PerMonth:              toUnits(abs(rep.PerMonth(categories[i].Amount))),
+		})
+	}
+	return out
 }
 
 // --- get_budget_status -----------------------------------------------------

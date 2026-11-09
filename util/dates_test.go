@@ -68,19 +68,19 @@ func TestGetYearDates(t *testing.T) {
 			name:          "2024",
 			year:          2024,
 			expectedStart: time.Date(2024, time.January, 1, 0, 0, 0, 0, time.Local),
-			expectedEnd:   time.Date(2024, time.December, 31, 0, 0, 0, 0, time.Local),
+			expectedEnd:   time.Date(2024, time.December, 31, 23, 59, 59, 999999999, time.Local),
 		},
 		{
 			name:          "2023",
 			year:          2023,
 			expectedStart: time.Date(2023, time.January, 1, 0, 0, 0, 0, time.Local),
-			expectedEnd:   time.Date(2023, time.December, 31, 0, 0, 0, 0, time.Local),
+			expectedEnd:   time.Date(2023, time.December, 31, 23, 59, 59, 999999999, time.Local),
 		},
 		{
 			name:          "2020 (leap year)",
 			year:          2020,
 			expectedStart: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.Local),
-			expectedEnd:   time.Date(2020, time.December, 31, 0, 0, 0, 0, time.Local),
+			expectedEnd:   time.Date(2020, time.December, 31, 23, 59, 59, 999999999, time.Local),
 		},
 	}
 

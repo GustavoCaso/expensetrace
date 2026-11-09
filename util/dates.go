@@ -26,7 +26,9 @@ func GetYearDates(year int) (time.Time, time.Time) {
 	currentLocation := today.Location()
 
 	firstOfYear := time.Date(year, 1, 1, 0, 0, 0, 0, currentLocation)
-	lastOfYear := time.Date(year, 12, 31, 0, 0, 0, 0, currentLocation)
+	// Last nanosecond of Dec 31, matching GetMonthDates, so the whole final
+	// day is included in range queries.
+	lastOfYear := firstOfYear.AddDate(1, 0, 0).Add(time.Nanosecond * -1)
 
 	return firstOfYear, lastOfYear
 }

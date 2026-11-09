@@ -1,0 +1,66 @@
+{{define "reports/selection"}}
+  <div id="report">
+    <h2>{{.Title}} Summary</h2>
+    <div class="card-grid">
+      <div class="card ta-center">
+        <h3 class="card-title">Income</h3>
+        <div class="income">{{formatMoney .Income "." ","}}€</div>
+        <div class="card-subtitle">{{formatMoney (.PerMonth .Income) "." ","}}€ / month</div>
+      </div>
+
+      <div class="card ta-center">
+        <h3 class="card-title">Spending</h3>
+        <div class="expense">{{formatMoney .Spending "." ","}}€</div>
+        <div class="card-subtitle">{{formatMoney (abs (.PerMonth .Spending)) "." ","}}€ / month</div>
+      </div>
+
+      <div class="card ta-center">
+        <h3 class="card-title">Savings</h3>
+        <div class="{{if gt .Savings 0}}income{{else}}expense{{end}}">{{formatMoney .Savings "." ","}}€</div>
+        <div>
+          <span class="{{if gt .Savings 0}}income{{else}}expense{{end}}">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
+        </div>
+      </div>
+    </div>
+
+    <section class="month-breakdown">
+      <header class="category-breakdown-header">
+        <h3>Months</h3>
+        <span class="month-breakdown-count">{{.MonthCount}} {{if eq .MonthCount 1}}month{{else}}months{{end}}</span>
+      </header>
+      <div class="month-table" role="table">
+        <div class="month-table-row month-table-head" role="row">
+          <span role="columnheader">Month</span>
+          <span role="columnheader">Income</span>
+          <span role="columnheader">Spending</span>
+          <span role="columnheader">Savings</span>
+          <span role="columnheader">Rate</span>
+        </div>
+        {{range $m := .Months}}
+          <a class="month-table-row{{if not $m.HasData}} month-empty{{end}}"
+             role="row"
+             href="/?open_month={{$m.Month}}&open_year={{$m.Year}}"
+             hx-get="/?month={{$m.Month}}&year={{$m.Year}}"
+             hx-target="#report"
+             hx-swap="outerHTML">
+            <span class="month-name" role="cell">
+              {{$m.Title}}
+              {{if $.IsBest $m}}<span class="month-tag month-tag-best">Best</span>{{end}}
+              {{if $.IsWorst $m}}<span class="month-tag month-tag-worst">Worst</span>{{end}}
+            </span>
+            {{if $m.HasData}}
+              <span class="income" role="cell">{{formatMoney $m.Income "." ","}}€</span>
+              <span class="expense" role="cell">{{formatMoney (abs $m.Spending) "." ","}}€</span>
+              <span class="{{if ge $m.Savings 0}}income{{else}}expense{{end}}" role="cell">{{formatMoney $m.Savings "." ","}}€</span>
+              <span class="month-rate" role="cell">{{printf "%.1f%%" $m.SavingsPercentage}}</span>
+            {{else}}
+              <span class="month-nodata" role="cell">No transactions</span>
+            {{end}}
+          </a>
+        {{end}}
+      </div>
+    </section>
+
+    {{template "reports/categories" .}}
+  </div>
+{{end}}

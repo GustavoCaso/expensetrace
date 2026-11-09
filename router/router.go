@@ -148,8 +148,6 @@ func (r *router) categoryMatcher(ctx context.Context, userID int64) (*matcher.Ma
 // renderHTML renders the named template writing the result to w, logging any
 // rendering error. render only writes to w on success, so on failure we can
 // still send a plain error response.
-//
-//nolint:unparam // status is always OK today; kept so handlers can return other codes
 func (r *router) renderHTML(w http.ResponseWriter, status int, data any, templateName string, files ...string) {
 	if err := r.html.render(w, status, data, templateName, files...); err != nil {
 		r.logger.Error("Failed to render template", "template", templateName, "error", err)
