@@ -227,3 +227,33 @@ func TestExport_WritesCSV(t *testing.T) {
 		t.Fatalf("Expected CSV output to contain expense description, got: %s", buf.String())
 	}
 }
+
+func TestSummarize(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, _ := testutil.SetupTestStorage(t, logger)
+	svc := New(s, logger)
+
+	now := time.Now()
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "visa", "coffee", "EUR", -550, now, domain.ChargeType, nil),
+		domain.NewExpense(0, "visa", "lunch", "EUR", -1500, now, domain.ChargeType, nil),
+		domain.NewExpense(0, "employer", "salary", "EUR", 200000, now, domain.IncomeType, nil),
+	}
+
+	got := svc.Summarize(expenses)
+	want := domain.ExpensesSummary{
+		Count:       3,
+		IncomeCount: 1,
+		ChargeCount: 2,
+		Income:      200000,
+		Spending:    -2050,
+	}
+	if got != want {
+		t.Errorf("Summarize() = %+v, want %+v", got, want)
+	}
+
+	empty := svc.Summarize(nil)
+	if empty != (domain.ExpensesSummary{}) {
+		t.Errorf("Summarize(nil) = %+v, want zero value", empty)
+	}
+}

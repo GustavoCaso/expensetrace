@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -169,6 +170,54 @@ func TestFilteringEndToEnd(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFilterSummary(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	st, user := testutil.SetupTestStorage(t, logger)
+	ctx := context.Background()
+
+	date := time.Date(2024, 1, 15, 10, 0, 0, 0, time.UTC)
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "visa", "Starbucks coffee", "EUR", -550, date, domain.ChargeType, nil),
+		domain.NewExpense(0, "visa", "Local cafe coffee", "EUR", -450, date.AddDate(0, 0, 1), domain.ChargeType, nil),
+		domain.NewExpense(0, "visa", "Coffee refund", "EUR", 300, date.AddDate(0, 0, 2), domain.IncomeType, nil),
+		domain.NewExpense(0, "employer", "Salary", "EUR", 500000, date, domain.IncomeType, nil),
+	}
+	if _, err := st.InsertExpenses(ctx, user.ID(), expenses); err != nil {
+		t.Fatalf("failed to insert expenses: %v", err)
+	}
+
+	handler := New(st, logger)
+
+	get := func(query string) string {
+		req := httptest.NewRequest(http.MethodGet, "/expenses"+query, nil)
+		testutil.SetupAuthCookie(t, st, req, user, sessionCookieName, sessionDuration)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", w.Code)
+		}
+		return w.Body.String()
+	}
+
+	t.Run("no filter hides summary", func(t *testing.T) {
+		if body := get(""); strings.Contains(body, "filter-summary") {
+			t.Error("expected no summary without filters")
+		}
+	})
+
+	t.Run("filter shows totals", func(t *testing.T) {
+		body := get("?source=visa")
+		if !strings.Contains(body, "filter-summary") {
+			t.Fatal("expected summary section when filtering")
+		}
+		for _, want := range []string{"Income · 1", "Spending · 2", "3,00€", "-10,00€"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("expected body to contain %q", want)
+			}
+		}
+	})
 }
 
 func contains(s, substr string) bool {

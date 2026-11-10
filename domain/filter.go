@@ -20,6 +20,16 @@ type ExpenseFilter struct {
 	DateTo      *time.Time // End date (inclusive)
 }
 
+// IsActive reports whether any filter criterion is set.
+func (f *ExpenseFilter) IsActive() bool {
+	if f == nil {
+		return false
+	}
+	return f.Description != nil || f.Source != nil ||
+		f.AmountMin != nil || f.AmountMax != nil ||
+		f.DateFrom != nil || f.DateTo != nil
+}
+
 // SortField represents a field that can be sorted on.
 type SortField string
 

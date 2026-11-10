@@ -61,6 +61,23 @@
   </form>
 
   {{ if eq (len .Error) 0 }}
+    {{with .Summary}}
+      <section class="filter-summary card" aria-label="Filtered totals">
+        <div class="filter-summary-item">
+          <span class="filter-summary-label">Transactions</span>
+          <span class="filter-summary-value">{{.Count}}</span>
+        </div>
+        <div class="filter-summary-item">
+          <span class="filter-summary-label">Income · {{.IncomeCount}}</span>
+          <span class="filter-summary-value income">{{formatMoney .Income "." ","}}€</span>
+        </div>
+        <div class="filter-summary-item">
+          <span class="filter-summary-label">Spending · {{.ChargeCount}}</span>
+          <span class="filter-summary-value expense">{{formatMoney .Spending "." ","}}€</span>
+        </div>
+      </section>
+    {{end}}
+
     <div class="expenses-container card">
         {{range $year := .Years}}
           {{$currentYear := (eq $year $.CurrentYear)}}

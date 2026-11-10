@@ -48,6 +48,17 @@ type ExpensesViewData struct {
 	CurrentMonth string
 	Filter       *ExpenseFilter
 	Sort         *SortOptions
+	Summary      *ExpensesSummary
+}
+
+// ExpensesSummary aggregates a set of expenses. Amounts are in cents;
+// Spending is negative (charges), Income positive.
+type ExpensesSummary struct {
+	Count       int
+	IncomeCount int
+	ChargeCount int
+	Income      int64
+	Spending    int64
 }
 
 type ExpenseViewData struct {
