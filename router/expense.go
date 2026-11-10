@@ -114,6 +114,11 @@ func (c *expenseHandler) expensesHandler(
 	data.Filter = expenseFilter
 	data.Sort = sortOptions
 
+	if expenseFilter.IsActive() {
+		summary := c.expenseService.Summarize(expenses)
+		data.Summary = &summary
+	}
+
 	if banner != nil {
 		data.Banner = *banner
 	}

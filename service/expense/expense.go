@@ -39,6 +39,22 @@ func (s *Service) List(
 	return expenses, nil
 }
 
+// Summarize totals income and spending across the given expenses.
+func (s *Service) Summarize(expenses []domain.Expense) domain.ExpensesSummary {
+	summary := domain.ExpensesSummary{Count: len(expenses)}
+	for _, exp := range expenses {
+		switch exp.Type() {
+		case domain.IncomeType:
+			summary.IncomeCount++
+			summary.Income += exp.Amount()
+		case domain.ChargeType:
+			summary.ChargeCount++
+			summary.Spending += exp.Amount()
+		}
+	}
+	return summary
+}
+
 // GroupByYearAndMonth groups expenses by year and month, enriching each with
 // its category.
 func (s *Service) GroupByYearAndMonth(
