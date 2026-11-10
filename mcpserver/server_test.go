@@ -120,7 +120,7 @@ func (f *fixture) seed(t *testing.T, user domain.User) time.Time {
 	t.Helper()
 	ctx := t.Context()
 
-	groceriesID, err := f.storage.CreateCategory(ctx, user.ID(), "Groceries", "market", 10000)
+	groceriesID, err := f.storage.CreateCategory(ctx, user.ID(), "Groceries", "market", 10000, domain.ChargeCategory)
 	if err != nil {
 		t.Fatalf("create category: %v", err)
 	}
@@ -263,7 +263,14 @@ func TestMonthlyReportAndBudgets(t *testing.T) {
 	today := f.seed(t, f.user)
 
 	// A budgeted category with no spending this month must still show up.
-	if _, err := f.storage.CreateCategory(t.Context(), f.user.ID(), "Travel", "flight", 50000); err != nil {
+	if _, err := f.storage.CreateCategory(
+		t.Context(),
+		f.user.ID(),
+		"Travel",
+		"flight",
+		50000,
+		domain.ChargeCategory,
+	); err != nil {
 		t.Fatal(err)
 	}
 
@@ -319,9 +326,13 @@ func TestSpendingTrendAndUncategorized(t *testing.T) {
 	}
 
 	uncategorized := call[listUncategorizedOutput](t, session, "list_uncategorized", nil)
-	// Only charges count as uncategorized; the uncategorized salary is income.
-	if uncategorized.TotalExpenses != 1 || len(uncategorized.Groups) != 1 ||
-		uncategorized.Groups[0].Description != "Coffee shop" {
+	// Income can be categorized too, so the uncategorized salary is listed.
+	descriptions := map[string]bool{}
+	for _, g := range uncategorized.Groups {
+		descriptions[g.Description] = true
+	}
+	if uncategorized.TotalExpenses != 2 || len(uncategorized.Groups) != 2 ||
+		!descriptions["Coffee shop"] || !descriptions["Salary"] {
 		t.Errorf("unexpected uncategorized: %+v", uncategorized)
 	}
 

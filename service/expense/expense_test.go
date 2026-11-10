@@ -42,7 +42,14 @@ func TestGroupByYearAndMonth_GroupsCorrectly(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food", 0)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Food",
+		"restaurant|food",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}
@@ -255,5 +262,39 @@ func TestSummarize(t *testing.T) {
 	empty := svc.Summarize(nil)
 	if empty != (domain.ExpensesSummary{}) {
 		t.Errorf("Summarize(nil) = %+v, want zero value", empty)
+	}
+}
+
+func TestServiceRejectsCategoryOfOtherType(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+	ctx := context.Background()
+
+	chargeID, err := s.CreateCategory(ctx, user.ID(), "Food", "food", 0, domain.ChargeCategory)
+	if err != nil {
+		t.Fatalf("Failed to create category: %v", err)
+	}
+	exclude, err := s.GetExcludeCategory(ctx, user.ID())
+	if err != nil {
+		t.Fatalf("Failed to get exclude category: %v", err)
+	}
+	excludeID := exclude.ID()
+
+	svc := New(s, logger)
+	now := time.Now()
+
+	income := domain.NewExpense(0, "bank", "refund", "EUR", 500, now, domain.IncomeType, &chargeID)
+	if _, err = svc.Create(ctx, user.ID(), income); err == nil {
+		t.Fatal("Expected error creating income in a charge category")
+	}
+
+	excluded := domain.NewExpense(0, "bank", "transfer", "EUR", 500, now, domain.IncomeType, &excludeID)
+	if _, err = svc.Create(ctx, user.ID(), excluded); err != nil {
+		t.Fatalf("Expected income in the exclude category to be allowed: %v", err)
+	}
+
+	moved := domain.NewExpense(1, "bank", "transfer", "EUR", 500, now, domain.IncomeType, &chargeID)
+	if _, err = svc.Update(ctx, user.ID(), moved); err == nil {
+		t.Fatal("Expected error moving income into a charge category")
 	}
 }

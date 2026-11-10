@@ -148,6 +148,10 @@ func (s *Service) Get(ctx context.Context, userID, id int64) (*domain.ExpenseVie
 
 // Create inserts a new expense.
 func (s *Service) Create(ctx context.Context, userID int64, e domain.Expense) (domain.Expense, error) {
+	if err := s.checkCategoryType(ctx, userID, e); err != nil {
+		return nil, err
+	}
+
 	created, err := s.storage.InsertExpenses(ctx, userID, []domain.Expense{e})
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("error InsertExpenses %s", err.Error()))
@@ -164,12 +168,38 @@ func (s *Service) Create(ctx context.Context, userID int64, e domain.Expense) (d
 
 // Update updates an expense's fields.
 func (s *Service) Update(ctx context.Context, userID int64, e domain.Expense) (int64, error) {
+	if err := s.checkCategoryType(ctx, userID, e); err != nil {
+		return 0, err
+	}
+
 	updated, err := s.storage.UpdateExpense(ctx, userID, e)
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("error UpdateExpense %s", err.Error()))
 		return 0, err
 	}
 	return updated, nil
+}
+
+// checkCategoryType fails if the expense's category cannot hold expenses of
+// the expense's type (e.g. income assigned to a charge category).
+func (s *Service) checkCategoryType(ctx context.Context, userID int64, e domain.Expense) error {
+	if e.CategoryID() == nil {
+		return nil
+	}
+
+	category, err := s.storage.GetCategory(ctx, userID, *e.CategoryID())
+	if err != nil {
+		return err
+	}
+
+	if !category.Type().Accepts(e.Type()) {
+		return fmt.Errorf(
+			"category %q is a %s category and cannot hold this expense",
+			category.Name(), category.Type(),
+		)
+	}
+
+	return nil
 }
 
 // Delete deletes an expense.

@@ -11,11 +11,12 @@
     
     <form class='search-form'>
       <div class="form-group">
-        <input type='search' name='q' required>
+        <input type='search' name='q' value="{{.Query}}" required>
       </div>
       <button 
         class="btn-primary"
         hx-post="/category/uncategorized/search" 
+        hx-include=".uncategorized-filter"
         hx-target="#page" 
         hx-swap="outerHTML"
         type="submit">
@@ -52,13 +53,31 @@
           <p>These expenses haven't been automatically categorized. Select a category to organize them.</p>
         </div>
 
+        {{/* Client-side filter: pure CSS, see .uncategorized-filter in categories.css.
+             Search and assign send the selection (hx-include) so it survives the swap. */}}
+          <div class="uncategorized-filter" role="radiogroup" aria-label="Show uncategorized">
+            <label>
+              <input type="radio" name="filter" value="all" {{if or (eq .Filter "all") (eq .Filter "")}}checked{{end}}>
+              <span>All <span class="filter-count">{{len .Keys}}</span></span>
+            </label>
+            <label>
+              <input type="radio" name="filter" value="charge" {{if eq .Filter "charge"}}checked{{end}}>
+              <span>Expenses <span class="filter-count">{{.ChargeGroups}}</span></span>
+            </label>
+            <label>
+              <input type="radio" name="filter" value="income" {{if eq .Filter "income"}}checked{{end}}>
+              <span>Income <span class="filter-count">{{.IncomeGroups}}</span></span>
+            </label>
+          </div>
+
         <div class="card-grid">
           {{range $key := .Keys}}
             {{$uncategorized := index $.UncategorizeInfo $key}}
-            <div class="card">
+            {{$isIncome := eq $uncategorized.Type 1}}
+            <div class="card uncategorized-group" data-type="{{if $isIncome}}income{{else}}charge{{end}}">
               <div class="card-header">
                 <h3 class="card-title">{{$key}}</h3>
-                  {{if gt $uncategorized.Total 0}}
+                  {{if $isIncome}}
                     <span class="badge income">Income</span>
                   {{else}}
                     <span class="badge expense">Expense</span>
@@ -125,6 +144,7 @@
               
               <div class="card-actions">
                 <form hx-post="/category/uncategorized/update" 
+                      hx-include=".uncategorized-filter"
                       hx-target="#page" 
                       hx-swap="outerHTML show:window:top">
                   <input name="description" value="{{$key}}" type="hidden">
@@ -136,7 +156,9 @@
                               name="category_id">
                         <option value="">-- Select a category --</option>
                         {{ range $category := $.Categories }}
-                          <option value={{$category.ID}}>{{$category.Name}}</option>
+                          {{ if $category.Type.Accepts $uncategorized.Type }}
+                            <option value={{$category.ID}}>{{$category.Name}}</option>
+                          {{ end }}
                         {{ end }}
                       </select>
                       <button type="submit" class="btn-primary btn-assign">

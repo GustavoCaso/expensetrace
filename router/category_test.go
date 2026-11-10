@@ -39,7 +39,14 @@ func TestCategoryHandler(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	// Create a test category
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "cinema|movie", 10000)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Entertainment",
+		"cinema|movie",
+		10000,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -261,7 +268,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 
 	handler := New(s, logger)
 
-	body := strings.NewReader("name=Entertainment&pattern=cinema|movie|theater&type=0&monthly_budget=100")
+	body := strings.NewReader("name=Entertainment&pattern=cinema|movie|theater&type=charge&monthly_budget=100")
 	req := httptest.NewRequest(http.MethodPost, "/category", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
@@ -416,6 +423,7 @@ func TestUpdateHandler(t *testing.T) {
 				"Entertainment",
 				"restaurant|bars|cinema",
 				0,
+				domain.ChargeCategory,
 			)
 			if err != nil {
 				t.Fatalf("Failed to create Category: %v", err)
@@ -483,6 +491,7 @@ func TestUpdateCategoryPatternDoesNotAffectExcludeCategory(t *testing.T) {
 		"Entertainment",
 		"cinema|movie",
 		0,
+		domain.ChargeCategory,
 	)
 	if err != nil {
 		t.Fatalf("Failed to create Entertainment category: %v", err)
@@ -659,7 +668,14 @@ func TestUpdateUncategorizedHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "restaurant|bars", 0)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Entertainment",
+		"restaurant|bars",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
@@ -734,12 +750,12 @@ func TestResetCategoryHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	cat1ID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant", 0)
+	cat1ID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant", 0, domain.ChargeCategory)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	cat2ID, err := s.CreateCategory(context.Background(), user.ID(), "Transport", "uber|taxi", 0)
+	cat2ID, err := s.CreateCategory(context.Background(), user.ID(), "Transport", "uber|taxi", 0, domain.ChargeCategory)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -988,5 +1004,79 @@ func TestParseCategoryForm(t *testing.T) {
 				t.Errorf("Expected budget %d, got %d", tt.expectedData.MonthlyBudget, result.MonthlyBudget)
 			}
 		})
+	}
+}
+
+func TestUncategorizedSearchKeepsFilter(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	_, err := s.InsertExpenses(context.Background(), user.ID(), []domain.Expense{
+		domain.NewExpense(0, "bank", "Coffee shop", "EUR", -500, time.Now(), domain.ChargeType, nil),
+		domain.NewExpense(0, "bank", "Coffee refund", "EUR", 500, time.Now(), domain.IncomeType, nil),
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
+	}
+
+	handler := New(s, logger)
+
+	tests := []struct {
+		name        string
+		filter      string
+		wantChecked string
+	}{
+		{"income kept", "income", "income"},
+		{"charge kept", "charge", "charge"},
+		{"unknown falls back to all", "bogus", "all"},
+		{"missing falls back to all", "", "all"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := "q=Coffee"
+			if tt.filter != "" {
+				body += "&filter=" + tt.filter
+			}
+			req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/search", strings.NewReader(body))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			html := w.Body.String()
+			for _, value := range []string{"all", "charge", "income"} {
+				checked := strings.Contains(html, fmt.Sprintf(`name="filter" value="%s" checked`, value))
+				if checked != (value == tt.wantChecked) {
+					t.Errorf("filter %q checked = %v, want %v", value, checked, value == tt.wantChecked)
+				}
+			}
+		})
+	}
+}
+
+func TestUncategorizedSearchKeepsQuery(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	_, err := s.InsertExpenses(context.Background(), user.ID(), []domain.Expense{
+		domain.NewExpense(0, "bank", "Coffee shop", "EUR", -500, time.Now(), domain.ChargeType, nil),
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
+	}
+
+	handler := New(s, logger)
+
+	req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/search", strings.NewReader("q=Coffee"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if !strings.Contains(w.Body.String(), `name='q' value="Coffee"`) {
+		t.Error("Expected search box to keep the query")
 	}
 }

@@ -130,3 +130,68 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Income categories have no budget */
+.category-form:has(input[name="type"][value="income"]:checked) .budget-group {
+  display: none;
+}
+
+/* Uncategorized page: expense/income filter (segmented control, no JS).
+   The checked radio hides groups of the other type via :has(). */
+.uncategorized-filter {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-0-5);
+  margin-bottom: var(--spacing-4);
+  padding: var(--spacing-0-5);
+  background-color: var(--color-gray-100);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--border-radius);
+}
+
+.uncategorized-filter label {
+  position: relative;
+  cursor: pointer;
+}
+
+.uncategorized-filter input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.uncategorized-filter label > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+}
+
+.uncategorized-filter label:hover > span {
+  color: var(--color-gray-800);
+}
+
+.uncategorized-filter input:checked + span {
+  background-color: var(--color-surface);
+  color: var(--color-gray-900);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-sm);
+}
+
+.uncategorized-filter input:focus-visible + span {
+  box-shadow: 0 0 0 3px var(--ring-primary);
+}
+
+.uncategorized-filter .filter-count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-500);
+}
+
+#uncategorized:has(.uncategorized-filter input[value="charge"]:checked) .uncategorized-group[data-type="income"],
+#uncategorized:has(.uncategorized-filter input[value="income"]:checked) .uncategorized-group[data-type="charge"] {
+  display: none;
+}

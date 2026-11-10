@@ -168,7 +168,7 @@ func (c *Service) UpdateCategoryPattern(
 		return err
 	}
 
-	err = c.storage.UpdateCategory(ctx, userID, cat.ID(), cat.Name(), extendedRegex, cat.MonthlyBudget())
+	err = c.storage.UpdateCategory(ctx, userID, cat.ID(), cat.Name(), extendedRegex, cat.MonthlyBudget(), cat.Type())
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("error UpdateCategory %s", err.Error()))
 		return err
@@ -183,6 +183,11 @@ func (c *Service) UpdateCategoryPattern(
 
 		return err
 	}
+
+	// Only expenses the category can hold are moved into it.
+	expenses = slices.DeleteFunc(expenses, func(ex domain.Expense) bool {
+		return !cat.Type().Accepts(ex.Type())
+	})
 
 	updatedExpenses := make([]domain.Expense, len(expenses))
 
@@ -236,18 +241,24 @@ func (c *Service) Create(
 	toUpdated := []domain.Expense{}
 
 	for _, ex := range expenses {
-		if re.MatchString(ex.Description()) {
+		if form.Type.Accepts(ex.Type()) && re.MatchString(ex.Description()) {
 			toUpdated = append(toUpdated, ex)
 		}
 	}
 
-	categoryID, err := c.storage.CreateCategory(ctx, userID, form.Name, form.Pattern, form.MonthlyBudget)
+	monthlyBudget := form.MonthlyBudget
+	if form.Type == domain.IncomeCategory {
+		// Budgets only make sense for spending.
+		monthlyBudget = 0
+	}
+
+	categoryID, err := c.storage.CreateCategory(ctx, userID, form.Name, form.Pattern, monthlyBudget, form.Type)
 	if err != nil {
 		c.logger.Error("Failed to create category", "error", err)
 		return 0, nil, err
 	}
 
-	c.logger.Info("Category created", "name", form.Name, "pattern", form.Pattern)
+	c.logger.Info("Category created", "name", form.Name, "pattern", form.Pattern, "type", form.Type.String())
 
 	if len(toUpdated) > 0 {
 		updatedExpenses := make([]domain.Expense, len(toUpdated))
@@ -282,20 +293,22 @@ func (c *Service) Create(
 	return categoryID, toUpdated, nil
 }
 
-// Update updates a category's name, pattern and/or monthly budget, given the
-// raw form values (empty name/pattern/budgetStr means "keep existing"). It
+// Update updates a category's name, pattern, monthly budget and/or type, given
+// the raw form values (empty name/pattern/budgetStr/typeStr means "keep
+// existing"). Changing the type fails while the category holds expenses the
+// new type cannot accept. It
 // resolves defaults and computes whether anything actually changed
 // internally, so callers do not need to pre-fetch the category or duplicate
 // the diff logic. If nothing changed, no storage write is performed and
-// changed=false is returned. If the pattern changes, it re-sweeps the user's
-// uncategorized and current-category expenses, recategorizing them based on
-// the new pattern set. It returns the updated category, whether anything
-// changed, and whether the pattern specifically changed (so the caller can
-// decide whether to refresh its own matcher).
+// changed=false is returned. If the pattern or type changes, it re-sweeps the
+// user's uncategorized and current-category expenses, recategorizing them
+// based on the new pattern set. It returns the updated category, whether
+// anything changed, and whether matching specifically changed (so the caller
+// can decide whether to refresh its own matcher).
 func (c *Service) Update(
 	ctx context.Context,
 	userID, categoryID int64,
-	name, pattern, budgetStr string,
+	name, pattern, budgetStr, typeStr string,
 ) (domain.Category, bool, bool, error) {
 	existingCategory, err := c.storage.GetCategory(ctx, userID, categoryID)
 	if err != nil {
@@ -325,15 +338,37 @@ func (c *Service) Update(
 		return domain.EmptyCategory(), false, false, compileErr
 	}
 
+	categoryType := existingCategory.Type()
+	// The exclude category always accepts every expense type.
+	if typeStr != "" && categoryType != domain.AnyCategory {
+		categoryType, err = domain.ParseCategoryType(typeStr)
+		if err != nil {
+			return domain.EmptyCategory(), false, false, err
+		}
+	}
+
+	if categoryType == domain.IncomeCategory {
+		monthlyBudget = 0
+	}
+
 	nameChanged := existingCategory.Name() != name
 	patternChanged := existingCategory.Pattern() != pattern
 	budgetChanged := monthlyBudget != existingCategory.MonthlyBudget()
+	typeChanged := categoryType != existingCategory.Type()
 
-	if !nameChanged && !patternChanged && !budgetChanged {
+	if !nameChanged && !patternChanged && !budgetChanged && !typeChanged {
 		return existingCategory, false, false, nil
 	}
 
-	err = c.storage.UpdateCategory(ctx, userID, categoryID, name, pattern, monthlyBudget)
+	if typeChanged {
+		if typeErr := c.checkTypeChange(ctx, userID, categoryID, categoryType); typeErr != nil {
+			return domain.EmptyCategory(), false, false, typeErr
+		}
+	}
+
+	matchingChanged := patternChanged || typeChanged
+
+	err = c.storage.UpdateCategory(ctx, userID, categoryID, name, pattern, monthlyBudget, categoryType)
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("error UpdateCategory %s", err.Error()))
 		return domain.EmptyCategory(), false, false, err
@@ -344,17 +379,24 @@ func (c *Service) Update(
 	updatedCategory, err := c.storage.GetCategory(ctx, userID, categoryID)
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("error GetCategory %s", err.Error()))
-		return domain.EmptyCategory(), true, patternChanged, err
+		return domain.EmptyCategory(), true, matchingChanged, err
 	}
 
-	if !patternChanged {
+	if !matchingChanged {
 		return updatedCategory, true, false, nil
 	}
 
+	return updatedCategory, true, true, c.recategorize(ctx, userID, categoryID)
+}
+
+// recategorize re-matches the user's uncategorized expenses and those in
+// categoryID against the current category set, after categoryID's matching
+// rules changed.
+func (c *Service) recategorize(ctx context.Context, userID, categoryID int64) error {
 	categories, err := c.storage.GetCategories(ctx, userID)
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("error GetCategories %s", err.Error()))
-		return updatedCategory, true, patternChanged, err
+		return err
 	}
 
 	m := matcher.New(categories)
@@ -362,13 +404,13 @@ func (c *Service) Update(
 	uncategorizedExpenses, err := c.storage.GetExpensesWithoutCategory(ctx, userID)
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("error GetExpensesWithoutCategory %s", err.Error()))
-		return updatedCategory, true, patternChanged, err
+		return err
 	}
 
 	currentCategoryExpenses, err := c.storage.GetExpensesByCategory(ctx, userID, categoryID)
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("error GetExpensesByCategory %s", err.Error()))
-		return updatedCategory, true, patternChanged, err
+		return err
 	}
 
 	// Combine both sets of expenses to process
@@ -378,7 +420,7 @@ func (c *Service) Update(
 	toUpdated := []domain.Expense{}
 
 	for _, ex := range expensesToProcess {
-		id, _ := m.Match(ex.Description())
+		id, _ := m.Match(ex.Description(), ex.Type())
 
 		// 1. match && expense does not have a category OR the existing category is different
 		// 2. no match && expense is part of the category we are updating
@@ -402,7 +444,7 @@ func (c *Service) Update(
 		updatedCount, updatedErr := c.storage.UpdateExpenses(ctx, userID, toUpdated)
 		if updatedErr != nil {
 			c.logger.Error(fmt.Sprintf("error UpdateExpenses %s", updatedErr.Error()))
-			return updatedCategory, true, patternChanged, updatedErr
+			return updatedErr
 		}
 
 		c.logger.Info("Category's expenses updated successfully", "id", categoryID, "total", updatedCount)
@@ -412,7 +454,36 @@ func (c *Service) Update(
 		}
 	}
 
-	return updatedCategory, true, patternChanged, nil
+	return nil
+}
+
+// checkTypeChange fails if the category holds expenses that a category of
+// type newType cannot accept.
+func (c *Service) checkTypeChange(
+	ctx context.Context,
+	userID, categoryID int64,
+	newType domain.CategoryType,
+) error {
+	expenses, err := c.storage.GetExpensesByCategory(ctx, userID, categoryID)
+	if err != nil {
+		return err
+	}
+
+	mismatched := 0
+	for _, ex := range expenses {
+		if !newType.Accepts(ex.Type()) {
+			mismatched++
+		}
+	}
+
+	if mismatched > 0 {
+		return fmt.Errorf(
+			"cannot change category type to %s: it holds %d expenses of the other type",
+			newType, mismatched,
+		)
+	}
+
+	return nil
 }
 
 func expenseBelongsToCategoryWeAreUpdating(ex domain.Expense, categoryID int64) bool {
@@ -456,6 +527,7 @@ func (c *Service) GetUncategorized(
 				Total:    ex.Amount(),
 				Expenses: []domain.Expense{ex},
 				Slug:     slugify(ex.Description()),
+				Type:     ex.Type(),
 			}
 		}
 
@@ -495,9 +567,14 @@ func slugify(s string) string {
 	return s
 }
 
-// Test returns the uncategorized expenses that would match the given
-// pattern, without writing anything to storage.
-func (c *Service) Test(ctx context.Context, userID int64, pattern string) ([]domain.Expense, error) {
+// Test returns the uncategorized expenses of a type categoryType accepts that
+// would match the given pattern, without writing anything to storage.
+func (c *Service) Test(
+	ctx context.Context,
+	userID int64,
+	pattern string,
+	categoryType domain.CategoryType,
+) ([]domain.Expense, error) {
 	expenses, err := c.storage.GetExpensesWithoutCategory(ctx, userID)
 	if err != nil {
 		c.logger.Error("Failed to get expenses without category", "error", err)
@@ -512,7 +589,7 @@ func (c *Service) Test(ctx context.Context, userID int64, pattern string) ([]dom
 	matched := []domain.Expense{}
 
 	for _, ex := range expenses {
-		if re.MatchString(ex.Description()) {
+		if categoryType.Accepts(ex.Type()) && re.MatchString(ex.Description()) {
 			matched = append(matched, ex)
 		}
 	}

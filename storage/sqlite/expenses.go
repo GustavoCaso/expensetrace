@@ -211,7 +211,7 @@ func (s *sqliteStorage) GetExpensesFromDateRange(
 
 func (s *sqliteStorage) GetExpensesWithoutCategory(ctx context.Context, userID int64) ([]domain.Expense, error) {
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT * FROM expenses WHERE category_id IS NULL AND expense_type = 0 AND user_id = ?", userID)
+		"SELECT * FROM expenses WHERE category_id IS NULL AND user_id = ?", userID)
 	if err != nil {
 		return []domain.Expense{}, err
 	}
@@ -252,7 +252,7 @@ func (s *sqliteStorage) GetExpensesWithoutCategoryWithQuery(
 ) ([]domain.Expense, error) {
 	rows, err := s.db.QueryContext(
 		ctx,
-		"SELECT * FROM expenses WHERE category_id IS NULL AND expense_type = 0 AND description LIKE ? AND user_id = ?",
+		"SELECT * FROM expenses WHERE category_id IS NULL AND description LIKE ? AND user_id = ?",
 		"%"+keyword+"%",
 		userID,
 	)

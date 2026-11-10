@@ -22,6 +22,11 @@
         <code class="pattern-code">{{.Pattern}}</code>
       </div>
       <div class="meta-item">
+        <span class="meta-label">Type:</span>
+        <span class="meta-value">{{if eq .Type.String "income"}}Income{{else if eq .Type.String "any"}}Expense &amp; income{{else}}Expense{{end}}</span>
+      </div>
+      {{if eq .Type.String "charge"}}
+      <div class="meta-item">
         <span class="meta-label">Monthly Budget:</span>
         <span class="meta-value">
           {{if gt .MonthlyBudget 0}}
@@ -31,6 +36,7 @@
           {{end}}
         </span>
       </div>
+      {{end}}
       <div class="meta-item">
         <span class="meta-label">Expenses:</span>
         <span class="meta-value">{{.Total}}</span>

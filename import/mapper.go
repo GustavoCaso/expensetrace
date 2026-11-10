@@ -122,7 +122,7 @@ func mapRow(
 	}
 
 	// Match category
-	categoryID, _ := categoryMatcher.Match(description)
+	categoryID, _ := categoryMatcher.Match(description, expenseType)
 
 	// Create expense
 	expense := domain.NewExpense(

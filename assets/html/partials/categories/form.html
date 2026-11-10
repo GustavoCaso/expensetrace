@@ -29,7 +29,26 @@
           <div id="pattern-validation" class="validation-feedback"></div>
         </div>
 
+        {{if ne .Category.Type.String "any"}}
         <div class="form-group">
+          <label>Type</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="type" value="charge" {{if ne .Category.Type.String "income"}}checked{{end}}>
+              <span class="radio-text">Expense</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="type" value="income" {{if eq .Category.Type.String "income"}}checked{{end}}>
+              <span class="radio-text">Income</span>
+            </label>
+          </div>
+          <div class="input-help">
+            <span>Expense categories match charges; income categories match income.</span>
+          </div>
+        </div>
+        {{end}}
+
+        <div class="form-group budget-group">
           <label for="category-budget">Monthly Budget (Optional)</label>
           <div class="input-help">
             <span>Set a monthly spending limit for this category. Leave empty for no budget.</span>

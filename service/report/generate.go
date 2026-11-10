@@ -135,9 +135,14 @@ func splitByExpenseType(
 				continue
 			}
 
-			categoryName = category.Name()
-			// Store the budget for the whole range, not just one month.
-			categoryBudgets[categoryName] = category.MonthlyBudget() * int64(months)
+			// A category only groups expenses of a type it accepts. Anything
+			// else (legacy data) is reported as uncategorized, so income never
+			// nets against spending in a charge category.
+			if category.Type().Accepts(ex.Type()) {
+				categoryName = category.Name()
+				// Store the budget for the whole range, not just one month.
+				categoryBudgets[categoryName] = category.MonthlyBudget() * int64(months)
+			}
 		}
 
 		switch ex.Type() {
@@ -250,14 +255,14 @@ func addExpenseToCategory(categories map[string]domain.CategoryReport, ex domain
 }
 
 func expeseCategoryName(ex domain.Expense, categoryName string) string {
-	if ex.Type() == domain.IncomeType {
-		return "income"
+	if categoryName != "" {
+		return categoryName
 	}
 
-	if categoryName == "" {
-		return "uncategorized charge"
+	if ex.Type() == domain.IncomeType {
+		return "uncategorized income"
 	}
-	return categoryName
+	return "uncategorized charge"
 }
 
 const (

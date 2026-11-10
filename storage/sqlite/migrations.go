@@ -605,6 +605,35 @@ func (s *sqliteStorage) ApplyMigrations(ctx context.Context, logger *logger.Logg
 				return err
 			},
 		},
+		{
+			name: "Add type column to categories for income categories",
+			up: func(tx *sql.Tx) error {
+				// Every existing category is a charge category (type 0).
+				if _, err := tx.ExecContext(ctx, `
+					ALTER TABLE categories ADD COLUMN type INTEGER NOT NULL DEFAULT 0;
+				`); err != nil {
+					return err
+				}
+
+				// The exclude category accepts both charges and income.
+				if _, err := tx.ExecContext(ctx,
+					"UPDATE categories SET type = ? WHERE name = ?",
+					domain.AnyCategory, domain.ExcludeCategory,
+				); err != nil {
+					return err
+				}
+
+				// The matcher used to ignore expense type, so income may be linked to
+				// charge categories. Unlink it; reports grouped all income together
+				// anyway, so nothing visible is lost.
+				_, err := tx.ExecContext(ctx, `
+					UPDATE expenses SET category_id = NULL
+					WHERE expense_type = ?
+					  AND category_id IN (SELECT id FROM categories WHERE type = ?);
+				`, domain.IncomeType, domain.ChargeCategory)
+				return err
+			},
+		},
 	}
 
 	// Apply pending migrations

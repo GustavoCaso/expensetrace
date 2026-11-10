@@ -22,12 +22,12 @@ func TestExpensesHandler(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 
 	categories := []domain.Category{
-		domain.NewCategory(1, "Food", "restaurant|food|grocery", 0),
-		domain.NewCategory(2, "Transport", "uber|taxi|transit", 0),
+		domain.NewCategory(1, "Food", "restaurant|food|grocery", 0, domain.ChargeCategory),
+		domain.NewCategory(2, "Transport", "uber|taxi|transit", 0, domain.ChargeCategory),
 	}
 	categoryIDs := make([]int64, 2)
 	for i, c := range categories {
-		id, err := s.CreateCategory(context.Background(), user.ID(), c.Name(), c.Pattern(), 0)
+		id, err := s.CreateCategory(context.Background(), user.ID(), c.Name(), c.Pattern(), 0, domain.ChargeCategory)
 		if err != nil {
 			t.Fatalf("Failed to create category: %v", err)
 		}
@@ -134,7 +134,14 @@ func TestExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Test Category", "test", 0)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Test Category",
+		"test",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -226,7 +233,14 @@ func TestUpdateExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Updated Category", "updated", 0)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Updated Category",
+		"updated",
+		0,
+		domain.IncomeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -296,7 +310,14 @@ func TestUpdateExpenseHandlerUpdatesCategoryPattern(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Groceries", "grocery", 0)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Groceries",
+		"grocery",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -352,7 +373,14 @@ func TestUpdateExpenseHandlerDoesNotUpdateCategoryPatternWhenUnchecked(t *testin
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Groceries", "grocery", 0)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Groceries",
+		"grocery",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -582,9 +610,29 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Integration Category", "integration", 0)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Integration Category",
+		"integration",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
+	}
+
+	// Switching the expense to income also needs an income category.
+	incomeCategoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Integration Income",
+		"integration income",
+		0,
+		domain.IncomeCategory,
+	)
+	if err != nil {
+		t.Fatalf("Failed to create test income category: %v", err)
 	}
 
 	handler := New(s, logger)
@@ -625,7 +673,7 @@ func TestExpenseHandlersIntegration(t *testing.T) {
 	formData.Set("currency", "USD")
 	formData.Set("date", now.Format("2006-01-02"))
 	formData.Set("type", "1")
-	formData.Set("category_id", strconv.FormatInt(categoryID, 10))
+	formData.Set("category_id", strconv.FormatInt(incomeCategoryID, 10))
 
 	req = httptest.NewRequest(http.MethodPut, "/expense/1", strings.NewReader(formData.Encode()))
 	req.SetPathValue("id", "1")
@@ -677,7 +725,14 @@ func TestCreateExpenseHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Test Category", "test", 0)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Test Category",
+		"test",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}

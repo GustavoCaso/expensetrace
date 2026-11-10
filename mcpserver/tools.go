@@ -267,6 +267,7 @@ type categoryOutput struct {
 	ID            int64   `json:"id"`
 	Name          string  `json:"name"`
 	Pattern       string  `json:"pattern"        jsonschema:"regex matched against expense descriptions"`
+	Type          string  `json:"type"           jsonschema:"charge or income; any for the excluded category"`
 	MonthlyBudget float64 `json:"monthly_budget" jsonschema:"monthly budget in major units, 0 means no budget"`
 	Excluded      bool    `json:"excluded"       jsonschema:"true for the category whose expenses are left out of reports"`
 }
@@ -291,6 +292,7 @@ func (s *server) listCategories(
 			ID:            c.ID(),
 			Name:          c.Name(),
 			Pattern:       c.Pattern(),
+			Type:          c.Type().String(),
 			MonthlyBudget: toUnits(c.MonthlyBudget()),
 			Excluded:      c.Name() == domain.ExcludeCategory,
 		})

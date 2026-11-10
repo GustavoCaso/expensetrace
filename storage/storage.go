@@ -75,8 +75,20 @@ type Storage interface {
 	GetCategories(ctx context.Context, userID int64) ([]domain.Category, error)
 	GetCategory(ctx context.Context, userID, categoryID int64) (domain.Category, error)
 	DeleteCategory(ctx context.Context, userID, categoryID int64) (int64, error)
-	UpdateCategory(ctx context.Context, userID, categoryID int64, name, pattern string, monthlyBudget int64) error
-	CreateCategory(ctx context.Context, userID int64, name, pattern string, monthlyBudget int64) (int64, error)
+	UpdateCategory(
+		ctx context.Context,
+		userID, categoryID int64,
+		name, pattern string,
+		monthlyBudget int64,
+		categoryType domain.CategoryType,
+	) error
+	CreateCategory(
+		ctx context.Context,
+		userID int64,
+		name, pattern string,
+		monthlyBudget int64,
+		categoryType domain.CategoryType,
+	) (int64, error)
 	DeleteCategories(ctx context.Context, userID int64) (int64, error)
 	GetExcludeCategory(ctx context.Context, userID int64) (domain.Category, error)
 
