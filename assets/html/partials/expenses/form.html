@@ -1,5 +1,5 @@
 {{define "expenses/form"}}
-<form class="expense-form">  
+<form class="expense-form form-sheet">
   <div class="form-group">
     <label for="expense-source">Source</label>
     {{if index .FormErrors "source"}}
@@ -69,15 +69,15 @@
   </div>
   
   <div class="form-group">
-    <label for="expense-type">Type</label>
-    <div class="radio-group">
-      <label class="radio-label">
+    <span class="form-label" id="expense-type-label">Type</span>
+    <div class="type-filter" role="radiogroup" aria-labelledby="expense-type-label">
+      <label>
         <input type="radio" name="type" value="0" {{if eq .Expense.Type 0}}checked{{end}}>
-        <span class="radio-text">Expense</span>
+        <span>Expense</span>
       </label>
-      <label class="radio-label">
+      <label>
         <input type="radio" name="type" value="1" {{if eq .Expense.Type 1}}checked{{end}}>
-        <span class="radio-text">Income</span>
+        <span>Income</span>
       </label>
     </div>
   </div>
@@ -107,12 +107,10 @@
       </optgroup>
     </select>
     {{if eq .Action "edit"}}
-      <div class="radio-group">
-        <label class="radio-label">
-          <input type="checkbox" name="update_category" value="true"/>
-          <span class="radio-text">Update Category's Pattern</span>
-        </label>
-      </div>
+      <label class="radio-label mt-2">
+        <input type="checkbox" name="update_category" value="true"/>
+        <span>Add this description to the category's pattern</span>
+      </label>
     {{end}}
   </div>
   
@@ -125,7 +123,7 @@
               hx-put="/expense/{{.Expense.ID}}"
               hx-target="#page"
               hx-swap="outerHTML show:window:top">
-        Update
+        Save changes
       </button>
     </div>
   {{else}}
@@ -134,7 +132,7 @@
               hx-post="/expense" 
               hx-target="#page" 
               hx-swap="outerHTML show:window:top">
-        Create
+        Create expense
       </button>
     </div>        
   {{end}}

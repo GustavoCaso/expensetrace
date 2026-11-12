@@ -1,15 +1,15 @@
 {{define "categories/nav"}}
   <div class="category-nav">
     <nav class="tabs">
-        <a href="/categories" hx-get="/categories" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "index"}}active{{end}}' hx-replace-url="true">All Categories</a>
+        <a href="/categories" hx-get="/categories" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "index"}}active{{end}}' hx-replace-url="true">All categories</a>
         <a href="/category/uncategorized" hx-get="/category/uncategorized" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "uncategorized"}}active{{end}}' hx-replace-url="true">Uncategorized</a>
-        <a href="/category/new" hx-get="/category/new" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "new"}}active{{end}}' hx-replace-url="true">New Category</a>
-        <a class="btn-danger ml-auto mb-2" 
+        <a href="/category/new" hx-get="/category/new" hx-target="#page" hx-swap="outerHTML" class='tab-link {{if eq . "new"}}active{{end}}' hx-replace-url="true">New category</a>
+        <a class="btn-quiet-danger tabs-action" 
                 hx-post="/category/reset" 
                 hx-target="#page" 
                 hx-swap="outerHTML" 
-                hx-confirm="Are you sure you want to delete all categories? This action cannot be undone.">
-          Delete All Categories
+                hx-confirm="Delete all categories? This cannot be undone.">
+          Delete all categories
         </a>
     </nav>
   </div>

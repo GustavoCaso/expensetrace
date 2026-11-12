@@ -1,8 +1,14 @@
 /* Tab navigation */
 .tabs {
   display: flex;
+  align-items: center;
   border-bottom: 1px solid var(--color-gray-200);
   margin-bottom: var(--spacing-8);
+}
+
+/* A page-level action at the end of the tab row. */
+.tabs-action {
+  margin-left: auto;
 }
 
 /* Petrol spine — the app's backbone */
@@ -135,5 +141,14 @@
   .tab-icon::before,
   .tab-icon::after {
     display: none;
+  }
+
+  .tab-link {
+    padding: var(--spacing-3) var(--spacing-2);
+    white-space: nowrap;
+  }
+
+  .tabs-action {
+    white-space: nowrap;
   }
 }

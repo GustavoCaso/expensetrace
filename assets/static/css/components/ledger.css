@@ -1,0 +1,394 @@
+/* ---------------------------------------------------------------------------
+   Ledger primitives shared by every page: ink on paper. Sections are a display
+   title over a 2px ink rule, rows are hairlines, numbers are right-aligned mono
+   and color is reserved for meaning (income, expense, budget state).
+   --------------------------------------------------------------------------- */
+
+/* Expense/income filter (segmented control, no JS). Also used as a form
+   control for choosing a type. */
+.type-filter {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-0-5);
+  padding: var(--spacing-0-5);
+  background-color: var(--color-gray-100);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--border-radius);
+}
+
+.type-filter label {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  margin: 0;
+  padding: var(--spacing-0-5);
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.type-filter input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.type-filter label>span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-gray-600);
+}
+
+.type-filter label:hover>span {
+  color: var(--color-gray-800);
+}
+
+.type-filter input:checked+span {
+  background-color: var(--color-surface);
+  color: var(--color-gray-900);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-sm);
+}
+
+.type-filter input:focus-visible+span {
+  box-shadow: 0 0 0 3px var(--ring-primary);
+}
+
+.type-filter .filter-count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-500);
+}
+
+/* Toolbar above a ledger: filter on the left, context or search on the right. */
+.ledger-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3) var(--spacing-6);
+  margin-bottom: var(--spacing-6);
+}
+
+/* Section titles */
+.ledger-title {
+  margin: 0 0 var(--spacing-2);
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--color-gray-900);
+}
+
+/* A smaller title that sits directly on the ink rule. */
+.ledger-subtitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  margin: 0;
+  padding-bottom: var(--spacing-2);
+  border-bottom: 2px solid var(--color-gray-800);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+}
+
+.ledger-subtitle .ledger-meta {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-gray-500);
+}
+
+.ledger-lede {
+  max-width: 70ch;
+  margin: 0 0 var(--spacing-6);
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+}
+
+.ledger-section + .ledger-section {
+  margin-top: var(--spacing-10);
+}
+
+/* Rows and tables hidden by search set display elsewhere, which beats the UA
+   [hidden] rule. */
+.ledger-section[hidden],
+.ledger tr[hidden] {
+  display: none;
+}
+
+/* Ledger table */
+.ledger {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.ledger th {
+  background-color: transparent;
+}
+
+.ledger thead th {
+  padding: var(--spacing-2) var(--spacing-3);
+  border-bottom: 2px solid var(--color-gray-800);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-500);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ledger tbody th,
+.ledger tbody td {
+  padding: var(--spacing-3);
+  border-bottom: 1px solid var(--color-gray-200);
+  vertical-align: middle;
+  text-align: left;
+}
+
+/* The global table style drops the last row's rule; a ledger closes with one. */
+.ledger tbody tr:last-child th,
+.ledger tbody tr:last-child td {
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.ledger tbody tr:hover {
+  background-color: var(--color-gray-50);
+}
+
+.ledger .num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ledger thead th.num {
+  font-family: inherit;
+}
+
+/* Transaction amounts take the app's expense/income colors. */
+.ledger .num.expense {
+  color: var(--color-danger);
+}
+
+.ledger .num.income {
+  color: var(--color-success);
+}
+
+.ledger .is-muted {
+  color: var(--color-gray-400);
+}
+
+/* Row-level delete: appears with the row it belongs to (always on touch). */
+.ledger-delete {
+  opacity: 0;
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 0;
+  border-radius: var(--border-radius-sm);
+  background: none;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  cursor: pointer;
+}
+
+.ledger tr:hover .ledger-delete,
+.ledger tr:focus-within .ledger-delete {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .ledger-delete {
+    opacity: 1;
+  }
+}
+
+.ledger-delete:hover {
+  color: var(--color-danger);
+  background-color: var(--color-danger-light);
+}
+
+.ledger-delete:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring-primary);
+}
+
+/* Notes around a ledger */
+.ledger-summary,
+.ledger-done {
+  max-width: 70ch;
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+}
+
+.ledger-summary {
+  margin: 0 0 var(--spacing-6);
+}
+
+.ledger-summary:empty {
+  display: none;
+}
+
+.ledger-empty {
+  margin: 0;
+  padding: var(--spacing-4) 0;
+  border-top: 2px solid var(--color-gray-800);
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
+}
+
+.ledger-done a,
+.ledger-empty a,
+.ledger-lede a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Totals strip: a row of figures between an ink rule and a hairline. */
+.ledger-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  margin: 0 0 var(--spacing-8);
+  border-top: 2px solid var(--color-gray-800);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.ledger-total {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  min-width: 0;
+  padding: var(--spacing-4) var(--spacing-5) var(--spacing-4) 0;
+}
+
+.ledger-total + .ledger-total {
+  padding-left: var(--spacing-5);
+  border-left: 1px solid var(--color-gray-200);
+}
+
+.ledger-total-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
+}
+
+.ledger-total-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.02em;
+  color: var(--color-gray-900);
+  overflow-wrap: anywhere;
+}
+
+.ledger-total-note {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+}
+
+.ledger-total-note.income,
+.ledger-total-note.expense {
+  font-weight: var(--font-weight-medium);
+}
+
+/* Form sheet: one narrow column of fields, closed by an ink rule over the
+   actions. */
+.form-sheet {
+  max-width: 30rem;
+  gap: var(--spacing-5);
+}
+
+.form-sheet .form-actions {
+  justify-content: flex-start;
+  gap: var(--spacing-2);
+  margin-top: 0;
+  padding-top: var(--spacing-4);
+  border-top: 2px solid var(--color-gray-800);
+}
+
+.input-help {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1) var(--spacing-3);
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+}
+
+.money-input {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  max-width: 12rem;
+}
+
+.money-input input {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.money-input span {
+  color: var(--color-gray-500);
+}
+
+@media (max-width: 640px) {
+  .ledger-total,
+  .ledger-total + .ledger-total {
+    padding-inline: 0;
+    border-left: 0;
+  }
+
+  .ledger-total + .ledger-total {
+    border-top: 1px solid var(--color-gray-200);
+  }
+
+  .ledger-total-value {
+    font-size: var(--font-size-xl);
+  }
+
+  /* Narrow screens: each ledger row becomes a two-column block. Pages place
+     their own cells in the grid. */
+  .ledger,
+  .ledger tbody {
+    display: block;
+  }
+
+  .ledger colgroup {
+    display: none;
+  }
+
+  .ledger thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .ledger tbody tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--spacing-1) var(--spacing-3);
+    padding: var(--spacing-3) 0;
+    border-bottom: 1px solid var(--color-gray-200);
+  }
+
+  .ledger tbody th,
+  .ledger tbody td,
+  .ledger tbody tr:last-child th,
+  .ledger tbody tr:last-child td {
+    padding: 0;
+    border: 0;
+  }
+}

@@ -1,29 +1,21 @@
 {{define "reports/card" }}
   <div id="report">
-    <h2>{{.Title}} Summary</h2>
-    <div class="card-grid">
-      <div class="card ta-center">
-        <h3 class="card-title">Income</h3>
-        <div class="income">{{formatMoney .Income "." ","}}€</div>
+    <h2 class="ledger-title">{{.Title}} Summary</h2>
+    <section class="ledger-totals report-totals" aria-label="Totals">
+      <div class="ledger-total">
+        <span class="ledger-total-label">Income</span>
+        <span class="ledger-total-value income">{{formatMoney .Income "." ","}}€</span>
       </div>
-
-      <div class="card ta-center">
-        <h3 class="card-title">Spending</h3>
-        <div class="expense">{{formatMoney .Spending "." ","}}€</div>
+      <div class="ledger-total">
+        <span class="ledger-total-label">Spending</span>
+        <span class="ledger-total-value expense">{{formatMoney .Spending "." ","}}€</span>
       </div>
-
-      <div class="card ta-center">
-        <h3 class="card-title">Savings</h3>
-        <div class="{{if gt .Savings 0}}income{{else}}expense{{end}}">{{formatMoney .Savings "." ","}}€</div>
-        <div>
-          {{if gt .Savings 0}}
-            <span class="income">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
-          {{else}}
-            <span class="expense">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
-          {{end}}
-        </div>
+      <div class="ledger-total">
+        <span class="ledger-total-label">Savings</span>
+        <span class="ledger-total-value {{if gt .Savings 0}}income{{else}}expense{{end}}">{{formatMoney .Savings "." ","}}€</span>
+        <span class="ledger-total-note {{if gt .Savings 0}}income{{else}}expense{{end}}">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
       </div>
-    </div>
+    </section>
 
     {{template "reports/categories" .}}
   </div>

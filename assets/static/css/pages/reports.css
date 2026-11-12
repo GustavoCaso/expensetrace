@@ -5,18 +5,16 @@
   margin-bottom: var(--spacing-8);
 }
 
-#report h2 {
-  margin-bottom: var(--spacing-6);
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-gray-900);
+#report > .ledger-title {
+  margin-bottom: var(--spacing-4);
 }
 
 /* Chart legend */
 .chart-legend {
   display: flex;
-  width: 100%;
-  justify-content: space-evenly;
+  flex-wrap: wrap;
+  gap: var(--spacing-2) var(--spacing-6);
+  justify-content: center;
 }
 
 .legend-item {
@@ -26,8 +24,8 @@
 }
 
 .legend-color {
-  width: 1rem;
-  height: 1rem;
+  width: 0.75rem;
+  height: 0.75rem;
   border-radius: var(--border-radius-sm);
 }
 
@@ -50,11 +48,8 @@
 }
 
 .savings-chart-container {
-  background-color: var(--color-surface);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+  padding-bottom: var(--spacing-6);
+  border-bottom: 1px solid var(--color-gray-200);
 }
 
 .savings-chart-container h3 {
@@ -115,14 +110,6 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .savings-chart-container {
-    padding: 1rem;
-  }
-
-  .chart-legend {
-    flex-wrap: wrap;
-  }
-
   .canvas-container {
     height: 350px;
   }
@@ -133,10 +120,6 @@
     height: 300px;
   }
 
-  .chart-legend {
-    flex-direction: column;
-    align-items: center;
-  }
 }
 
 /* Category list items */
@@ -148,6 +131,7 @@
 
 /* Budget Container */
 .budget-container {
+  max-width: 24rem;
   margin-top: 0.5rem;
 }
 
@@ -155,6 +139,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 0.875rem;
   margin-bottom: 0.25rem;
 }
@@ -173,9 +159,9 @@
 
 /* Budget Progress Bar */
 .budget-bar {
-  height: 8px;
-  background-color: var(--color-gray-200);
-  border-radius: 4px;
+  height: 6px;
+  background-color: var(--color-gray-100);
+  border-radius: var(--border-radius-full);
   overflow: hidden;
   margin-bottom: 0.5rem;
 }
@@ -211,41 +197,22 @@
 
 /* Categories breakdown */
 .report-details {
-  margin-top: var(--spacing-8);
+  margin-top: var(--spacing-10);
+}
+
+.report-details > .ledger-title {
+  margin-bottom: var(--spacing-4);
 }
 
 .category-breakdown-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
-  gap: var(--spacing-6);
+  gap: var(--spacing-8) var(--spacing-10);
   align-items: start;
 }
 
-.category-breakdown {
-  background: var(--color-surface);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-}
-
-.category-breakdown-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: var(--spacing-4) var(--spacing-5);
-  border-bottom: 1px solid var(--color-gray-200);
-}
-
-.category-breakdown-header h3 {
-  font-family: var(--font-display);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-gray-800);
-}
-
 .category-breakdown-total {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-base);
 }
 
 .category-list {
@@ -254,8 +221,8 @@
   padding: 0;
 }
 
-.category-list>li+li {
-  border-top: 1px solid var(--color-gray-100);
+.category-list>li {
+  border-bottom: 1px solid var(--color-gray-200);
 }
 
 /* Category row (the <summary> of each <details>) */
@@ -265,7 +232,7 @@
   column-gap: var(--spacing-4);
   row-gap: var(--spacing-2);
   align-items: baseline;
-  padding: var(--spacing-3) var(--spacing-5);
+  padding: var(--spacing-3);
   cursor: pointer;
   list-style: none;
   transition: background-color var(--transition-fast);
@@ -290,20 +257,24 @@
   align-items: center;
   gap: var(--spacing-2);
   min-width: 0;
-  color: var(--color-gray-800);
-  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-900);
+  font-weight: var(--font-weight-semibold);
   overflow-wrap: anywhere;
 }
 
 .category-row-name::before {
-  content: "▸";
-  color: var(--color-gray-400);
-  font-size: var(--font-size-xs);
+  content: "";
+  flex: none;
+  width: 0.4em;
+  height: 0.4em;
+  border-right: 2px solid var(--color-gray-400);
+  border-bottom: 2px solid var(--color-gray-400);
+  transform: rotate(-45deg);
   transition: transform var(--transition-fast);
 }
 
 .category-item[open] .category-row-name::before {
-  transform: rotate(90deg);
+  transform: rotate(45deg) translate(-0.1em, -0.1em);
 }
 
 .category-row-share {
@@ -345,24 +316,45 @@
 
 /* Expanded category details */
 .category-item-details {
-  padding: var(--spacing-4) var(--spacing-5) var(--spacing-5);
+  padding: var(--spacing-1) var(--spacing-3) var(--spacing-5);
   background: var(--color-gray-50);
-  border-top: 1px solid var(--color-gray-100);
 }
 
 .category-item-details .table {
-  background: var(--color-surface);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--border-radius-md);
   max-height: 24rem;
   overflow: auto;
   overscroll-behavior: contain;
 }
 
+/* A nested table takes a lighter rule than the page's ink. */
 .category-item-details .table-header {
   position: sticky;
   top: 0;
   z-index: 1;
+  background: var(--color-gray-50);
+  border-bottom: 1px solid var(--color-gray-300);
+}
+
+.category-item-details .table-header-cell,
+.category-item-details .table-cell {
+  padding-inline: 0 var(--spacing-3);
+}
+
+.category-item-details .table-header-cell:last-child,
+.category-item-details .table-cell:last-child {
+  flex: 0 0 8rem;
+  padding-right: 0;
+  text-align: right;
+}
+
+.category-item-details .table-cell:first-child {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-500);
+}
+
+.category-item-details .table-row:hover {
+  background-color: var(--color-gray-100);
 }
 
 .category-stats {
@@ -375,12 +367,6 @@
 }
 
 @media (max-width: 640px) {
-
-  .category-row,
-  .category-breakdown-header,
-  .category-item-details {
-    padding-inline: var(--spacing-4);
-  }
 
   .category-item-details .source-column {
     display: none;
@@ -400,16 +386,17 @@
 .year-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-1);
-  padding: var(--spacing-1);
+  gap: var(--spacing-0-5);
+  padding: var(--spacing-0-5);
   background-color: var(--color-gray-100);
   border: 1px solid var(--color-gray-200);
-  border-radius: var(--border-radius-md);
+  border-radius: var(--border-radius);
 }
 
 .year-tab {
+  margin: var(--spacing-0-5);
   padding: var(--spacing-1) var(--spacing-3);
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-sm);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-size: var(--font-size-sm);
@@ -419,13 +406,14 @@
 }
 
 .year-tab:hover {
-  background-color: var(--color-gray-200);
   color: var(--color-gray-800);
 }
 
 .year-tab.active {
-  background-color: var(--color-primary);
-  color: var(--color-surface);
+  background-color: var(--color-surface);
+  color: var(--color-gray-900);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-sm);
 }
 
 .year-tab:focus-visible {
@@ -451,6 +439,7 @@
   flex-direction: column;
   gap: var(--spacing-1);
   font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   color: var(--color-gray-500);
   margin-bottom: 0;
 }
@@ -460,27 +449,14 @@
   font-family: var(--font-mono);
 }
 
-.card-subtitle {
-  margin-top: var(--spacing-1);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--font-size-sm);
-  color: var(--color-gray-500);
-}
-
 /* Month-by-month table on range reports */
 .month-breakdown {
-  margin-top: var(--spacing-8);
-  background: var(--color-surface);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  margin-top: var(--spacing-10);
 }
 
-.month-breakdown-count {
-  font-size: var(--font-size-sm);
-  color: var(--color-gray-500);
+/* The column heads carry the ink rule, so the title sits on a hairline. */
+.month-breakdown > .ledger-subtitle {
+  border-bottom: 0;
 }
 
 .month-table-row {
@@ -488,7 +464,7 @@
   grid-template-columns: minmax(10rem, 1.5fr) repeat(3, minmax(0, 1fr)) 4.5rem;
   column-gap: var(--spacing-4);
   align-items: baseline;
-  padding: var(--spacing-2) var(--spacing-5);
+  padding: var(--spacing-3);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-size: var(--font-size-sm);
@@ -501,17 +477,15 @@
 }
 
 .month-table-head {
+  padding-block: var(--spacing-2);
   font-family: var(--font-family);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-weight: var(--font-weight-medium);
   color: var(--color-gray-500);
-  border-bottom: 1px solid var(--color-gray-200);
+  border-bottom: 2px solid var(--color-gray-800);
 }
 
-a.month-table-row+a.month-table-row {
-  border-top: 1px solid var(--color-gray-100);
+a.month-table-row {
+  border-bottom: 1px solid var(--color-gray-200);
 }
 
 a.month-table-row:hover {
@@ -528,7 +502,8 @@ a.month-table-row:focus-visible {
   align-items: center;
   gap: var(--spacing-2);
   font-family: var(--font-family);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
 }
 
 .month-rate {
@@ -585,7 +560,7 @@ a.month-table-row:focus-visible {
   .month-table-row {
     grid-template-columns: 1fr auto;
     row-gap: var(--spacing-1);
-    padding-inline: var(--spacing-4);
+    padding-inline: 0;
   }
 
   /* On phones show month + savings only; full figures live on the month card. */
@@ -607,8 +582,8 @@ a.month-table-row:focus-visible {
   align-items: center;
   justify-content: flex-end;
   gap: var(--spacing-2);
-  padding: var(--spacing-2) var(--spacing-5);
-  border-bottom: 1px solid var(--color-gray-100);
+  padding: var(--spacing-2) 0;
+  border-bottom: 1px solid var(--color-gray-200);
   font-size: var(--font-size-xs);
   color: var(--color-gray-500);
 }
@@ -665,8 +640,4 @@ a.month-table-row:focus-visible {
   display: block;
 }
 
-@media (max-width: 640px) {
-  .share-toggle-row {
-    padding-inline: var(--spacing-4);
-  }
-}
+
