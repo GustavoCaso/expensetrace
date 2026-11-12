@@ -1,31 +1,114 @@
-/* Import options layout */
-.import-option {
-  padding: var(--spacing-4);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--border-radius);
-  background-color: var(--color-gray-50);
+/* Import page: upload form beside a short guide, then preview and mapping
+   steps laid out as ledgers. */
+
+.import-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
+  gap: var(--spacing-8) var(--spacing-12);
+  align-items: start;
 }
 
-/* Form grid for field mapping */
+.import-steps {
+  display: grid;
+  gap: var(--spacing-1);
+  margin: 0;
+  max-width: 60ch;
+  font-size: var(--font-size-sm);
+}
+
+.import-steps dt {
+  margin-top: var(--spacing-3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+}
+
+.import-steps dd {
+  margin: 0;
+  color: var(--color-gray-600);
+}
+
+.import-steps code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-800);
+  background-color: var(--color-gray-100);
+  padding: 0 var(--spacing-1);
+  border-radius: var(--border-radius-sm);
+}
+
+.import-steps a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Preview and mapping steps */
+.import-step + .import-step,
+#mapping-preview:not(:empty) {
+  margin-top: var(--spacing-10);
+}
+
+.import-step-lede {
+  margin: var(--spacing-2) 0 var(--spacing-4);
+}
+
+.import-mapping {
+  margin-top: var(--spacing-10);
+}
+
+/* Field mapping: two columns of selects, closed by an ink rule. */
+.mapping-form {
+  display: grid;
+  gap: var(--spacing-5);
+  max-width: 44rem;
+}
+
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--spacing-4);
-  margin-bottom: var(--spacing-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-5) var(--spacing-6);
 }
 
-@media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
+.mapping-form .form-actions,
+.import-confirm .form-actions {
+  padding-top: var(--spacing-4);
+  border-top: 2px solid var(--color-gray-800);
 }
 
-/* Table container for preview (table itself uses the global table styles) */
+.import-confirm {
+  margin-top: var(--spacing-6);
+}
+
+/* Raw file preview: arbitrary columns, so it scrolls instead of wrapping. */
 .table-container {
   overflow-x: auto;
-  margin: var(--spacing-4) 0;
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--border-radius);
+  margin: 0;
+}
+
+.table-container td {
+  white-space: nowrap;
+}
+
+/* Mapped preview */
+.import-preview-table .col-date { width: 7rem; }
+.import-preview-table .col-source { width: 16%; }
+.import-preview-table .col-currency { width: 6rem; }
+.import-preview-table .col-amount { width: 9rem; }
+
+.import-date {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-500);
+}
+
+.import-description {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  overflow-wrap: anywhere;
+}
+
+.import-source,
+.import-currency {
+  color: var(--color-gray-600);
 }
 
 /* Error list */
@@ -39,4 +122,22 @@
 .error-list li {
   margin-bottom: var(--spacing-1);
   font-size: var(--font-size-sm);
+}
+
+@media (max-width: 860px) {
+  .import-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .import-description { grid-column: 1; grid-row: 1; }
+  .import-amount { grid-column: 2; grid-row: 1; }
+  .import-date { grid-column: 1; grid-row: 2; font-size: var(--font-size-xs); }
+  .import-source { grid-column: 2; grid-row: 2; text-align: right; font-size: var(--font-size-xs); }
+  .import-currency { display: none; }
 }

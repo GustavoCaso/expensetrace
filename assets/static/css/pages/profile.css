@@ -1,46 +1,18 @@
-.profile-container h1 {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-gray-900);
-  margin-bottom: var(--spacing-8);
+/* Settings: stacked sections, each a title on the ink rule over a narrow
+   form column. */
+
+.profile-container > .ledger-title {
+  margin-bottom: var(--spacing-6);
 }
 
 .profile-sections {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-8);
+  gap: var(--spacing-12);
 }
 
-/* Surface styling comes from .card in the markup */
-.profile-section {
-  padding: var(--spacing-6);
-}
-
-.profile-section h2 {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-gray-800);
-  margin-bottom: var(--spacing-6);
-  padding-bottom: var(--spacing-3);
-  border-bottom: 1px solid var(--color-gray-200);
-}
-
-.profile-section form {
-  background-color: transparent;
-  padding: 0;
-  margin-bottom: var(--spacing-4);
-}
-
-/* Disabled input styling */
-input:disabled {
-  background-color: var(--color-gray-100);
-  color: var(--color-gray-500);
-  cursor: not-allowed;
-}
-
-#username-result,
-#password-result {
-  margin-top: var(--spacing-4);
+.profile-section > .ledger-subtitle {
+  margin-bottom: var(--spacing-5);
 }
 
 /* API tokens */
@@ -54,15 +26,22 @@ input:disabled {
 
 .token-endpoint {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: var(--spacing-2) var(--spacing-4);
-  margin-bottom: var(--spacing-6);
+  max-width: 44rem;
+  margin: 0 0 var(--spacing-6);
+  padding: var(--spacing-3) 0;
+  border-block: 1px solid var(--color-gray-200);
   font-size: var(--font-size-sm);
 }
 
 .token-endpoint dt {
   color: var(--color-gray-500);
   font-weight: var(--font-weight-medium);
+}
+
+.token-endpoint dd {
+  margin: 0;
 }
 
 .token-endpoint code {
@@ -75,8 +54,9 @@ input:disabled {
 .token-list {
   list-style: none;
   padding: 0;
-  margin: 0;
-  border-top: 1px solid var(--color-gray-200);
+  margin: var(--spacing-8) 0 0;
+  max-width: 44rem;
+  border-top: 2px solid var(--color-gray-800);
 }
 
 .token-row {
@@ -85,15 +65,12 @@ input:disabled {
   justify-content: space-between;
   gap: var(--spacing-4);
   padding: var(--spacing-3) 0;
-  border-bottom: 1px solid var(--color-gray-100);
+  border-bottom: 1px solid var(--color-gray-200);
 }
 
 .token-row form {
   width: auto;
   flex: 0 0 auto;
-  margin: 0;
-  padding: 0;
-  background-color: transparent;
 }
 
 .token-meta {
@@ -105,7 +82,7 @@ input:disabled {
 }
 
 .token-name {
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-gray-900);
 }
 
@@ -116,21 +93,7 @@ input:disabled {
 }
 
 .token-empty {
+  margin-top: var(--spacing-6);
   color: var(--color-gray-500);
   font-size: var(--font-size-sm);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .profile-container {
-    padding: var(--spacing-4);
-  }
-
-  .profile-container h1 {
-    font-size: var(--font-size-2xl);
-  }
-
-  .profile-section {
-    padding: var(--spacing-4);
-  }
 }

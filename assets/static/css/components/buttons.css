@@ -64,6 +64,27 @@
   cursor: not-allowed;
 }
 
+/* Quiet danger: destructive actions that should not shout. */
+.btn-quiet-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-danger);
+  background: none;
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.btn-quiet-danger:hover {
+  background-color: var(--color-danger-light);
+  border-color: var(--color-danger-light);
+}
+
 /* Button sizes */
 .btn-small {
   font-size: var(--font-size-sm);

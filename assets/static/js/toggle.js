@@ -56,6 +56,9 @@ export function initializeToggleSystem() {
 
     // Toggle active class on button for visual feedback
     toggleBtn.classList.toggle('active', !isCollapsed);
+    if (toggleBtn.hasAttribute('aria-expanded')) {
+      toggleBtn.setAttribute('aria-expanded', String(isCollapsed));
+    }
 
     // Swap button text if data-toggle-text is provided
     const alternateText = toggleBtn.getAttribute('data-toggle-text');

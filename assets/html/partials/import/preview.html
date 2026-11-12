@@ -2,13 +2,13 @@
 {{ if gt (len .Error) 0 }}
   {{template "error" .Error}}
 {{else}}
-  <div class="card">
-    <div class="card-header">
-      <h2>File Preview: {{.Filename}}</h2>
-      <p>Total rows: {{.TotalRows}}</p>
-    </div>
-    <div class="card-body">
-      <p class="mb-2">We detected the following columns in your file. Please review the preview below:</p>
+  <section class="import-step">
+    <h3 class="ledger-subtitle">
+      {{.Filename}}
+      <span class="ledger-meta">{{.TotalRows}} rows</span>
+    </h3>
+    <div>
+      <p class="ledger-lede import-step-lede">These are the first rows of your file, with the columns we found.</p>
 
       <div class="table-container">
         <table>
@@ -31,24 +31,24 @@
         </table>
       </div>
 
-      <div class="mt-4">
-        <h3>Map Fields</h3>
-        <p class="mb-2">Select which column corresponds to each expense field:</p>
+      <div class="import-mapping">
+        <h3 class="ledger-subtitle">Match columns</h3>
+        <p class="ledger-lede import-step-lede">Choose the column that holds each field.</p>
 
-        <form id="mapping-form">
+        <form id="mapping-form" class="mapping-form">
           <input type="hidden" name="import_session_id" value="{{.ImportSessionID}}">
 
           <div class="form-grid">
             <div class="form-group">
-              <label for="source">Source *</label>
-              <input type="text" id="source" name="source" placeholder="e.g., Chase Bank" required>
-              <small>Enter the source/bank name for all expenses in this file</small>
+              <label for="source">Source</label>
+              <input type="text" id="source" name="source" placeholder="EVO" required>
+              <small>The bank or card name, used for every transaction in this file.</small>
             </div>
 
             <div class="form-group">
-              <label for="date_column">Date *</label>
+              <label for="date_column">Date</label>
               <select id="date_column" name="date_column" required>
-                <option value="">-- Select Column --</option>
+                <option value="">Choose a column</option>
                 {{range $index, $header := .Headers}}
                   <option value="{{$index}}">{{$header}}</option>
                 {{end}}
@@ -56,9 +56,9 @@
             </div>
 
             <div class="form-group">
-              <label for="description_column">Description *</label>
+              <label for="description_column">Description</label>
               <select id="description_column" name="description_column" required>
-                <option value="">-- Select Column --</option>
+                <option value="">Choose a column</option>
                 {{range $index, $header := .Headers}}
                   <option value="{{$index}}">{{$header}}</option>
                 {{end}}
@@ -66,9 +66,9 @@
             </div>
 
             <div class="form-group">
-              <label for="amount_column">Amount *</label>
+              <label for="amount_column">Amount</label>
               <select id="amount_column" name="amount_column" required>
-                <option value="">-- Select Column --</option>
+                <option value="">Choose a column</option>
                 {{range $index, $header := .Headers}}
                   <option value="{{$index}}">{{$header}}</option>
                 {{end}}
@@ -76,9 +76,9 @@
             </div>
 
             <div class="form-group">
-              <label for="currency_column">Currency *</label>
+              <label for="currency_column">Currency</label>
               <select id="currency_column" name="currency_column" required>
-                <option value="">-- Select Column --</option>
+                <option value="">Choose a column</option>
                 {{range $index, $header := .Headers}}
                   <option value="{{$index}}">{{$header}}</option>
                 {{end}}
@@ -93,14 +93,14 @@
               class="btn-primary"
               hx-post="/import/map"
               hx-target="#mapping-preview">
-              Preview Mapping
+              Preview import
             </button>
           </div>
         </form>
 
-        <div id="mapping-preview" class="mt-4"></div>
+        <div id="mapping-preview"></div>
       </div>
     </div>
-  </div>
+  </section>
 {{end}}
 {{end}}

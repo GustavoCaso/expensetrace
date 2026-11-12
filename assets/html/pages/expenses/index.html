@@ -1,6 +1,8 @@
-{{define "title"}}Expeses{{end}}
+{{define "title"}}Expenses{{end}}
 {{define "css"}}/static/css/pages/expenses.css{{end}}
 
+{{/* Every transaction as a ledger: one table per month, grouped by year.
+     Year and month headers collapse their tables (toggle.js). */}}
 {{define "main"}}
   {{ template "expenses/nav" "index" }}
 
@@ -8,137 +10,153 @@
     {{template "banner" .Banner}}
   {{end}}
 
-  <form method="GET" action="/expenses" class="filter-bar card">
-    <div class="filter-grid">
-      <div class="filter-row filter-row-main">
-        <div>
-          <label for="description">Description</label>
-          <input type="text" name="description" id="description" placeholder="Search..."
-                 value="{{if .Filter.Description}}{{deref .Filter.Description}}{{end}}">
-        </div>
-        <div>
-          <label for="source">Source</label>
-          <input type="text" name="source" id="source" placeholder="Search..."
-                 value="{{if .Filter.Source}}{{deref .Filter.Source}}{{end}}">
-        </div>
-        <div>
-          <label for="amount_min">Amount Min</label>
-          <input type="number" name="amount_min" id="amount_min" step="0.01" placeholder="0.00"
-                 value="{{if .Filter.AmountMin}}{{amountToDollars .Filter.AmountMin}}{{end}}">
-        </div>
-        <div>
-          <label for="amount_max">Amount Max</label>
-          <input type="number" name="amount_max" id="amount_max" step="0.01" placeholder="0.00"
-                 value="{{if .Filter.AmountMax}}{{amountToDollars .Filter.AmountMax}}{{end}}">
-        </div>
-      </div>
-      <div class="filter-row filter-row-dates">
-        <div>
-          <label for="date_from">Date From</label>
-          <input type="date" name="date_from" id="date_from"
-                 value="{{if .Filter.DateFrom}}{{formatDate .Filter.DateFrom}}{{end}}">
-        </div>
-        <div>
-          <label for="date_to">Date To</label>
-          <input type="date" name="date_to" id="date_to"
-                 value="{{if .Filter.DateTo}}{{formatDate .Filter.DateTo}}{{end}}">
-        </div>
-        <div>
-          <label for="sort">Sort By</label>
-          <select name="sort" id="sort">
-            <option value="date:desc" {{if eq .Sort.String "date:desc"}}selected{{end}}>Date (Newest)</option>
-            <option value="date:asc" {{if eq .Sort.String "date:asc"}}selected{{end}}>Date (Oldest)</option>
-            <option value="amount:desc" {{if eq .Sort.String "amount:desc"}}selected{{end}}>Amount (High to Low)</option>
-            <option value="amount:asc" {{if eq .Sort.String "amount:asc"}}selected{{end}}>Amount (Low to High)</option>
-          </select>
-        </div>
-      </div>
+  <form method="GET" action="/expenses" class="expense-filter" aria-label="Filter transactions">
+    <div class="filter-field filter-wide">
+      <label for="description">Description</label>
+      <input type="search" name="description" id="description" placeholder="Search descriptions"
+             value="{{if .Filter.Description}}{{deref .Filter.Description}}{{end}}">
     </div>
-    <div class="filter-actions">
-      <button type="submit" class="btn-primary">Apply Filters</button>
-      <a href="/expenses" class="btn-secondary">Clear All</a>
+    <div class="filter-field filter-wide">
+      <label for="source">Source</label>
+      <input type="search" name="source" id="source" placeholder="Search sources"
+             value="{{if .Filter.Source}}{{deref .Filter.Source}}{{end}}">
+    </div>
+    <div class="filter-field">
+      <label for="amount_min">Amount from</label>
+      <input type="number" name="amount_min" id="amount_min" step="0.01" placeholder="0.00"
+             value="{{if .Filter.AmountMin}}{{amountToDollars .Filter.AmountMin}}{{end}}">
+    </div>
+    <div class="filter-field">
+      <label for="amount_max">Amount to</label>
+      <input type="number" name="amount_max" id="amount_max" step="0.01" placeholder="0.00"
+             value="{{if .Filter.AmountMax}}{{amountToDollars .Filter.AmountMax}}{{end}}">
+    </div>
+    <div class="filter-field">
+      <label for="date_from">Date from</label>
+      <input type="date" name="date_from" id="date_from"
+             value="{{if .Filter.DateFrom}}{{formatDate .Filter.DateFrom}}{{end}}">
+    </div>
+    <div class="filter-field">
+      <label for="date_to">Date to</label>
+      <input type="date" name="date_to" id="date_to"
+             value="{{if .Filter.DateTo}}{{formatDate .Filter.DateTo}}{{end}}">
+    </div>
+    <div class="filter-field">
+      <label for="sort">Sort by</label>
+      <select name="sort" id="sort">
+        <option value="date:desc" {{if eq .Sort.String "date:desc"}}selected{{end}}>Newest first</option>
+        <option value="date:asc" {{if eq .Sort.String "date:asc"}}selected{{end}}>Oldest first</option>
+        <option value="amount:desc" {{if eq .Sort.String "amount:desc"}}selected{{end}}>Amount, high to low</option>
+        <option value="amount:asc" {{if eq .Sort.String "amount:asc"}}selected{{end}}>Amount, low to high</option>
+      </select>
+    </div>
+    <div class="form-actions filter-actions">
+      <button type="submit" class="btn-primary">Apply filters</button>
+      <a href="/expenses" class="btn-secondary">Clear</a>
     </div>
   </form>
 
   {{ if eq (len .Error) 0 }}
     {{with .Summary}}
-      <section class="filter-summary card" aria-label="Filtered totals">
-        <div class="filter-summary-item">
-          <span class="filter-summary-label">Transactions</span>
-          <span class="filter-summary-value">{{.Count}}</span>
+      <section class="ledger-totals filter-summary" aria-label="Filtered totals">
+        <div class="ledger-total">
+          <span class="ledger-total-label">Transactions</span>
+          <span class="ledger-total-value">{{.Count}}</span>
         </div>
-        <div class="filter-summary-item">
-          <span class="filter-summary-label">Income · {{.IncomeCount}}</span>
-          <span class="filter-summary-value income">{{formatMoney .Income "." ","}}€</span>
+        <div class="ledger-total">
+          <span class="ledger-total-label">Income · {{.IncomeCount}}</span>
+          <span class="ledger-total-value income">{{formatMoney .Income "." ","}}€</span>
         </div>
-        <div class="filter-summary-item">
-          <span class="filter-summary-label">Spending · {{.ChargeCount}}</span>
-          <span class="filter-summary-value expense">{{formatMoney .Spending "." ","}}€</span>
+        <div class="ledger-total">
+          <span class="ledger-total-label">Spending · {{.ChargeCount}}</span>
+          <span class="ledger-total-value expense">{{formatMoney .Spending "." ","}}€</span>
         </div>
       </section>
     {{end}}
 
-    <div class="expenses-container card">
+    {{if .Years}}
+      <div class="expense-ledger">
         {{range $year := .Years}}
           {{$currentYear := (eq $year $.CurrentYear)}}
-        
-          <div class="expense-year">
-            <div class="year-header" data-toggle>
-              <h2>{{$year}}</h2>
-            </div>
-            
-            <div class="expense-list {{if not $currentYear}}collapsed{{end}}">
+          <section class="ledger-section expense-year">
+            <h2 class="ledger-title">
+              <button type="button" class="ledger-toggle" data-toggle data-toggle-target="year-{{$year}}"
+                      aria-expanded="{{if $currentYear}}true{{else}}false{{end}}" aria-controls="year-{{$year}}">
+                {{$year}}
+              </button>
+            </h2>
+
+            <div id="year-{{$year}}" class="expense-months {{if not $currentYear}}collapsed{{end}}">
               {{range $month := $.Months}}
                 {{$currentMonth := (and (eq $month $.CurrentMonth) $currentYear)}}
                 {{$expenses := index $.Expenses $year $month}}
                 {{if gt (len $expenses) 0}}
-                  <div class="month-header" data-toggle>
-                    <h3>{{$month}}</h3>
+                  <div class="expense-month">
+                    <h3 class="ledger-subtitle">
+                      <button type="button" class="ledger-toggle" data-toggle data-toggle-target="month-{{$year}}-{{$month}}"
+                              aria-expanded="{{if $currentMonth}}true{{else}}false{{end}}" aria-controls="month-{{$year}}-{{$month}}">
+                        {{$month}}
+                      </button>
+                      <span class="ledger-meta">{{len $expenses}} transaction{{if ne (len $expenses) 1}}s{{end}}</span>
+                    </h3>
+
+                    <table id="month-{{$year}}-{{$month}}" class="ledger expense-table {{if not $currentMonth}}collapsed{{end}}">
+                      <colgroup>
+                        <col class="col-date">
+                        <col class="col-description">
+                        <col class="col-category">
+                        <col class="col-amount">
+                        <col class="col-actions">
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th scope="col">Date</th>
+                          <th scope="col">Description</th>
+                          <th scope="col">Category</th>
+                          <th scope="col" class="num">Amount</th>
+                          <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {{range $expense := $expenses}}
+                          <tr>
+                            <td class="expense-date">{{$expense.Date.Format "Jan 2"}}</td>
+                            <th scope="row" class="expense-description">
+                              <a href="/expense/{{$expense.ID}}">{{$expense.Description}}</a>
+                              <span class="expense-source">{{$expense.Source}}</span>
+                            </th>
+                            <td class="expense-category">
+                              {{if $expense.Category}}{{$expense.Category.Name}}{{else}}<span class="is-muted">Uncategorized</span>{{end}}
+                            </td>
+                            <td class="num expense-amount {{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
+                              {{formatMoney $expense.Amount "." ","}}&nbsp;€
+                            </td>
+                            <td class="expense-actions">
+                              <button type="button" class="ledger-delete"
+                                hx-delete="/expense/{{.Expense.ID}}"
+                                hx-target="#page"
+                                hx-swap="outerHTML show:window:top"
+                                hx-confirm="Delete {{$expense.Description}}? This cannot be undone."
+                                aria-label="Delete {{$expense.Description}}">Delete</button>
+                            </td>
+                          </tr>
+                        {{end}}
+                      </tbody>
+                    </table>
                   </div>
-                
-                  <ul class="expense-list {{if not $currentMonth}}collapsed{{end}}">
-                    {{range $expense := $expenses}}
-                      <li class="expense-item">
-                        <div class="text-gray-500 text-sm">{{$expense.Date.Format "2006-01-02"}}</div>
-                        <div class="mx-4">
-                          <p>{{$expense.Description}}</p>
-                          <div class="expense-meta">
-                            {{if $expense.Category}}
-                              <span class="badge">{{$expense.Category.Name}}</span>
-                            {{else}}
-                              <span class="badge"></span>
-                            {{end}}
-                            <span class="font-italic">via {{$expense.Source}}</span>
-                          </div>
-                        </div>
-                        <p class="amount ta-center {{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
-                          <b>{{formatMoney $expense.Amount "." ","}}€</b>
-                        </p>
-                        <div class="form-actions mt-0">
-                          <a 
-                            class="btn-danger btn-small"
-                            hx-delete="/expense/{{.Expense.ID}}"
-                            hx-target="#page" 
-                            hx-swap="outerHTML show:window:top"
-                            hx-confirm="Are you sure you want to delete the expense? This action cannot be undone.">
-                            Delete
-                          </a>
-                          <a class="btn-secondary btn-small" href="/expense/{{$expense.ID}}">
-                            Edit
-                          </a>
-                        </div>
-                      </li>
-                    {{end}}
-                  </ul>
                 {{end}}
               {{end}}
             </div>
-          </div>
+          </section>
         {{end}}
-      </ul>
-    </div>
+      </div>
+    {{else}}
+      <p class="ledger-empty">
+        No transactions{{if .Summary}} match these filters{{else}} yet{{end}}.
+        {{if .Summary}}<a href="/expenses">Clear filters</a>{{else}}<a href="/import">Import a file</a>{{end}}
+      </p>
+    {{end}}
   {{ else }}
     {{template "error" .Error}}
   {{ end }}
 {{end}}
- 

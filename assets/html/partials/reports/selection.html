@@ -1,33 +1,29 @@
 {{define "reports/selection"}}
   <div id="report">
-    <h2>{{.Title}} Summary</h2>
-    <div class="card-grid">
-      <div class="card ta-center">
-        <h3 class="card-title">Income</h3>
-        <div class="income">{{formatMoney .Income "." ","}}€</div>
-        <div class="card-subtitle">{{formatMoney (.PerMonth .Income) "." ","}}€ / month</div>
+    <h2 class="ledger-title">{{.Title}} Summary</h2>
+    <section class="ledger-totals report-totals" aria-label="Totals">
+      <div class="ledger-total">
+        <span class="ledger-total-label">Income</span>
+        <span class="ledger-total-value income">{{formatMoney .Income "." ","}}€</span>
+        <span class="ledger-total-note">{{formatMoney (.PerMonth .Income) "." ","}}€ a month</span>
       </div>
-
-      <div class="card ta-center">
-        <h3 class="card-title">Spending</h3>
-        <div class="expense">{{formatMoney .Spending "." ","}}€</div>
-        <div class="card-subtitle">{{formatMoney (abs (.PerMonth .Spending)) "." ","}}€ / month</div>
+      <div class="ledger-total">
+        <span class="ledger-total-label">Spending</span>
+        <span class="ledger-total-value expense">{{formatMoney .Spending "." ","}}€</span>
+        <span class="ledger-total-note">{{formatMoney (abs (.PerMonth .Spending)) "." ","}}€ a month</span>
       </div>
-
-      <div class="card ta-center">
-        <h3 class="card-title">Savings</h3>
-        <div class="{{if gt .Savings 0}}income{{else}}expense{{end}}">{{formatMoney .Savings "." ","}}€</div>
-        <div>
-          <span class="{{if gt .Savings 0}}income{{else}}expense{{end}}">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
-        </div>
+      <div class="ledger-total">
+        <span class="ledger-total-label">Savings</span>
+        <span class="ledger-total-value {{if gt .Savings 0}}income{{else}}expense{{end}}">{{formatMoney .Savings "." ","}}€</span>
+        <span class="ledger-total-note {{if gt .Savings 0}}income{{else}}expense{{end}}">{{printf "%.1f%%" .SavingsPercentage}} of income</span>
       </div>
-    </div>
+    </section>
 
     <section class="month-breakdown">
-      <header class="category-breakdown-header">
-        <h3>Months</h3>
-        <span class="month-breakdown-count">{{.MonthCount}} {{if eq .MonthCount 1}}month{{else}}months{{end}}</span>
-      </header>
+      <h3 class="ledger-subtitle">
+        Months
+        <span class="ledger-meta">{{.MonthCount}} {{if eq .MonthCount 1}}month{{else}}months{{end}}</span>
+      </h3>
       <div class="month-table" role="table">
         <div class="month-table-row month-table-head" role="row">
           <span role="columnheader">Month</span>

@@ -68,80 +68,10 @@
   display: none;
 }
 
-/* Expense/income filter (segmented control, no JS), shared by the ledger
-   pages (.ledger-page) and the category form. */
-
-.type-filter {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-0-5);
-  padding: var(--spacing-0-5);
-  background-color: var(--color-gray-100);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--border-radius);
-}
-
-.type-filter label {
-  position: relative;
-  cursor: pointer;
-  margin-bottom: 0;
-  padding: var(--spacing-0-5);
-}
-
-.type-filter input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.type-filter label>span {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-1);
-  padding: var(--spacing-1) var(--spacing-3);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-gray-600);
-}
-
-.type-filter label:hover>span {
-  color: var(--color-gray-800);
-}
-
-.type-filter input:checked+span {
-  background-color: var(--color-surface);
-  color: var(--color-gray-900);
-  font-weight: var(--font-weight-semibold);
-  box-shadow: var(--shadow-sm);
-}
-
-.type-filter input:focus-visible+span {
-  box-shadow: 0 0 0 3px var(--ring-primary);
-}
-
-.type-filter .filter-count {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--color-gray-500);
-}
-
 /* ---------------------------------------------------------------------------
    Categories page: chart of accounts. One ledger table per category type; the
    budget line is the only colored element in a row.
    --------------------------------------------------------------------------- */
-
-.ledger-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-3) var(--spacing-6);
-  margin-bottom: var(--spacing-6);
-}
-
-.ledger-toolbar .type-filter {
-  margin-bottom: 0;
-}
 
 .ledger-uncategorized {
   margin: 0;
@@ -163,57 +93,9 @@
   display: none;
 }
 
-/* Rows and tables hidden by search set display elsewhere, which beats the UA
-   [hidden] rule. */
-.ledger-section[hidden],
-.ledger tr[hidden] {
-  display: none;
-}
-
 .ledger-search {
   flex: 0 1 20rem;
   min-width: 0;
-}
-
-.ledger-summary,
-.uncategorized-no-match,
-.ledger-done {
-  max-width: 70ch;
-  font-size: var(--font-size-sm);
-  color: var(--color-gray-600);
-}
-
-.ledger-summary {
-  margin: 0 0 var(--spacing-6);
-}
-
-.ledger-summary:empty {
-  display: none;
-}
-
-.ledger-done a {
-  color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
-}
-
-.ledger-section + .ledger-section {
-  margin-top: var(--spacing-8);
-}
-
-.ledger-title {
-  margin: 0 0 var(--spacing-2);
-  font-family: var(--font-display);
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: -0.01em;
-  color: var(--color-gray-900);
-}
-
-.ledger {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-  font-size: var(--font-size-sm);
 }
 
 .ledger .col-name { width: 30%; }
@@ -223,48 +105,6 @@
 .ledger .col-amount { width: 15%; }
 .ledger .col-budget { width: 32%; }
 .ledger .col-actions { width: 10%; }
-
-/* Override the global table header tint: a ledger is ink on paper. */
-.ledger th {
-  background-color: transparent;
-}
-
-.ledger thead th {
-  padding: var(--spacing-2) var(--spacing-3);
-  border-bottom: 2px solid var(--color-gray-800);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-gray-500);
-  text-align: left;
-  white-space: nowrap;
-}
-
-.ledger tbody th,
-.ledger tbody td {
-  padding: var(--spacing-3);
-  border-bottom: 1px solid var(--color-gray-200);
-  vertical-align: middle;
-  text-align: left;
-}
-
-/* The global table style drops the last row's rule; a ledger closes with one. */
-.ledger tbody tr:last-child td {
-  border-bottom: 1px solid var(--color-gray-200);
-}
-
-.ledger tbody tr:hover {
-  background-color: var(--color-gray-50);
-}
-
-.ledger .num {
-  text-align: right;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.ledger thead th.num {
-  font-family: inherit;
-}
 
 .ledger-name {
   font-weight: var(--font-weight-normal);
@@ -289,7 +129,9 @@
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   color: var(--color-gray-500);
-  word-break: break-all;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* The column header names the unit on wide screens; stacked rows say it. */
@@ -368,60 +210,26 @@
   color: var(--color-gray-400);
 }
 
-.ledger-actions {
-  text-align: right;
-}
-
-/* Delete appears with the row it belongs to (always shown on touch). */
-.ledger-delete {
-  opacity: 0;
-  padding: var(--spacing-1) var(--spacing-2);
-  border: 0;
-  border-radius: var(--border-radius-sm);
-  background: none;
-  font: inherit;
-  font-size: var(--font-size-xs);
-  color: var(--color-gray-500);
-  cursor: pointer;
-}
-
-.ledger tr:hover .ledger-delete,
-.ledger tr:focus-within .ledger-delete {
-  opacity: 1;
-}
-
-@media (hover: none) {
-  .ledger-delete {
-    opacity: 1;
-  }
-}
-
-.ledger-delete:hover {
-  color: var(--color-danger);
-  background-color: var(--color-danger-light);
-}
-
-.ledger-delete:focus-visible,
-.ledger-name a:focus-visible,
-.ledger-hint:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--ring-primary);
-}
-
-.ledger-empty,
 .ledger-excluded {
+  margin: var(--spacing-8) 0 0;
   font-size: var(--font-size-sm);
   color: var(--color-gray-500);
 }
 
-.ledger-empty {
-  margin: 0;
-  padding: var(--spacing-4) 0;
-  border-top: 2px solid var(--color-gray-800);
+.uncategorized-no-match {
+  max-width: 70ch;
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
 }
 
-.ledger-excluded {
-  margin: var(--spacing-8) 0 0;
+.ledger-actions {
+  text-align: right;
+}
+
+.ledger-name a:focus-visible,
+.ledger-hint:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring-primary);
 }
 
 /* Category form: one column of fields beside a live preview of matches. */
@@ -473,32 +281,6 @@
 
 .pattern-input {
   font-family: var(--font-mono);
-}
-
-.money-input {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  max-width: 12rem;
-}
-
-.money-input input {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.money-input span {
-  color: var(--color-gray-500);
-}
-
-.category-form .input-help {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-1) var(--spacing-3);
-  margin-top: var(--spacing-1);
-  font-size: var(--font-size-xs);
-  color: var(--color-gray-500);
 }
 
 .category-form .form-actions {
@@ -574,14 +356,11 @@
   color: var(--color-gray-500);
 }
 
-/* Transaction amounts take the app's expense/income colors; the ledger's
-   neutral ink rules above would otherwise win on specificity. */
-.ledger .num.expense,
+/* Transaction amounts in the expanded details take the app's colors. */
 .ledger-details .num.expense {
   color: var(--color-danger);
 }
 
-.ledger .num.income,
 .ledger-details .num.income {
   color: var(--color-success);
 }
@@ -613,41 +392,6 @@
 
 /* Narrow screens: each row becomes a two-column block. */
 @media (max-width: 640px) {
-  .ledger,
-  .ledger tbody {
-    display: block;
-  }
-
-  .ledger colgroup {
-    display: none;
-  }
-
-  .ledger thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-  }
-
-  .ledger tbody tr {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: var(--spacing-1) var(--spacing-3);
-    padding: var(--spacing-3) 0;
-    border-bottom: 1px solid var(--color-gray-200);
-  }
-
-  .ledger tbody th,
-  .ledger tbody td {
-    padding: 0;
-    border: 0;
-  }
-
-  .ledger tbody tr:last-child td {
-    border-bottom: 0;
-  }
-
   .ledger-name { grid-column: 1; grid-row: 1; min-width: 0; }
   .ledger-amount { grid-column: 2; grid-row: 1; }
   .ledger-count { grid-column: 2; grid-row: 2; text-align: right; }

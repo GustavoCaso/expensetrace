@@ -12,11 +12,8 @@
     {{template "error" .Error}}
   {{end}}
 
-  <div class="expense-view">
-    <div class="card-grid gap-8">
-      <div class="card">        
-        {{template "expenses/form" .}}
-      </div>
-    </div>
+  <div class="expense-editor">
+    <h2 class="ledger-title">New expense</h2>
+    {{template "expenses/form" .}}
   </div>
 {{end}}

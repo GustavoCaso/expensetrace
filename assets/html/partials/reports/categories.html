@@ -4,17 +4,17 @@
 {{define "reports/categories"}}
   {{if or .ExpenseCategories .IncomeCategories}}
     <div class="report-details">
-      <h2>Categories Breakdown</h2>
+      <h2 class="ledger-title">Categories</h2>
       <div class="category-breakdown-grid">
         {{range $section := .CategorySections}}
           {{/* Expense shares can be shown against spending or income; the
                choice lives on <html data-share-basis> (see share-toggle.js). */}}
           {{$dual := and (eq $section.Kind "expense") (gt $.Income 0)}}
           <section class="category-breakdown">
-            <header class="category-breakdown-header">
-              <h3>{{$section.Title}}</h3>
+            <h3 class="ledger-subtitle category-breakdown-header">
+              {{$section.Title}}
               <span class="category-breakdown-total {{$section.Kind}}">{{formatMoney (abs $section.Total) "." ","}}€</span>
-            </header>
+            </h3>
             {{if $dual}}
               <div class="share-toggle-row">
                 <span class="share-toggle-label">Share of</span>

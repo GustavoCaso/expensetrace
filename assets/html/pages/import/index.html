@@ -3,11 +3,9 @@
 
 {{define "main"}}
 <div class="import-container">
-  <div class="import-header">
-    <h2>Import Expenses</h2>
-    <p>Upload a CSV or JSON file to import your expenses</p>
-  </div>
-  
+  <h2 class="ledger-title">Import expenses</h2>
+  <p class="ledger-lede">Upload a CSV or JSON export from your bank. New transactions are matched to your categories as they arrive.</p>
+
   {{template "import/form" .}}
 </div>
 {{end}}
