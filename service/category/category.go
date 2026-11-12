@@ -537,8 +537,14 @@ func (c *Service) GetUncategorized(
 
 	resultKeys := slices.Collect(maps.Keys(uncategorizeInfo))
 
+	// Most frequent first; ties by description so the order is stable across
+	// renders (map iteration order is random).
 	sort.SliceStable(resultKeys, func(i, j int) bool {
-		return uncategorizeInfo[resultKeys[i]].Count > uncategorizeInfo[resultKeys[j]].Count
+		ci, cj := uncategorizeInfo[resultKeys[i]].Count, uncategorizeInfo[resultKeys[j]].Count
+		if ci != cj {
+			return ci > cj
+		}
+		return resultKeys[i] < resultKeys[j]
 	})
 
 	for _, report := range uncategorizeInfo {

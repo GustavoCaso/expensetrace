@@ -1,38 +1,26 @@
 {{define "title"}}Uncategorized Expenses{{end}}
 {{define "css"}}/static/css/pages/categories.css{{end}}
 
-{{define "main"}}  
-  {{ if eq (len .Error) 0 }}
-    {{template "categories/nav" "uncategorized"}}
-    
-    {{if gt (len .Banner.Icon) 0}} 
+{{/* Assigning a category swaps only #uncategorized-results, plus
+     #uncategorized-status and #uncategorized-summary out of band. The search
+     box and type filter are never replaced, so they keep their state; search
+     runs in the browser (uncategorized-search.js) and the type filter is CSS
+     (.uncategorized-filter in categories.css). */}}
+{{define "main"}}
+  {{template "categories/nav" "uncategorized"}}
+
+  <div id="uncategorized-status">
+    {{if gt (len .Error) 0}}
+      {{template "error" .Error}}
+    {{end}}
+    {{if gt (len .Banner.Icon) 0}}
       {{template "banner" .Banner}}
     {{end}}
-    
-    <form class='search-form'>
-      <div class="form-group">
-        <input type='search' name='q' value="{{.Query}}" required>
-      </div>
-      <button 
-        class="btn-primary"
-        hx-post="/category/uncategorized/search" 
-        hx-include=".uncategorized-filter"
-        hx-target="#page" 
-        hx-swap="outerHTML"
-        type="submit">
-        Search
-      </button>
-    </form>
-  
-    <div id="uncategorized">
-      {{ if eq (len .Keys) 0 }}
-        <div class="empty-state">
-          <div class="empty-icon">🎉</div>
-          <h3>All Expenses Categorized!</h3>
-          <p>You've successfully categorized all your expenses. Check out your reports to see insights about your spending habits.</p>
-          <a href="/" class="btn-primary">View Reports</a>
-        </div>
-      {{ else }}
+  </div>
+
+  <div id="uncategorized">
+    <div id="uncategorized-summary">
+      {{if gt (len .Keys) 0}}
         <div class="card-grid">
           <div class="card ta-center">
             <h3 class="card-title">Different Transactions</h3>
@@ -47,34 +35,45 @@
             <div class="text-lg font-bold">{{formatMoney .TotalAmount "." ","}}€</div>
           </div>
         </div>
+      {{end}}
+    </div>
 
+    {{if gt (len .Keys) 0}}
+      <div class="uncategorized-instructions">
+        <p>These expenses haven't been automatically categorized. Select a category to organize them.</p>
+      </div>
 
-        <div class="uncategorized-instructions">
-          <p>These expenses haven't been automatically categorized. Select a category to organize them.</p>
+      <div class="uncategorized-toolbar">
+        <input id="uncategorized-search" class="uncategorized-search" type="search"
+          placeholder="Search descriptions" aria-label="Search uncategorized descriptions"
+          autocomplete="off">
+        <div class="uncategorized-filter" role="radiogroup" aria-label="Show uncategorized">
+          <label>
+            <input type="radio" name="filter" value="all" checked>
+            <span>All <span class="filter-count" data-count="all">{{len .Keys}}</span></span>
+          </label>
+          <label>
+            <input type="radio" name="filter" value="charge">
+            <span>Expenses <span class="filter-count" data-count="charge">{{.ChargeGroups}}</span></span>
+          </label>
+          <label>
+            <input type="radio" name="filter" value="income">
+            <span>Income <span class="filter-count" data-count="income">{{.IncomeGroups}}</span></span>
+          </label>
         </div>
+      </div>
 
-        {{/* Client-side filter: pure CSS, see .uncategorized-filter in categories.css.
-             Search and assign send the selection (hx-include) so it survives the swap. */}}
-          <div class="uncategorized-filter" role="radiogroup" aria-label="Show uncategorized">
-            <label>
-              <input type="radio" name="filter" value="all" {{if or (eq .Filter "all") (eq .Filter "")}}checked{{end}}>
-              <span>All <span class="filter-count">{{len .Keys}}</span></span>
-            </label>
-            <label>
-              <input type="radio" name="filter" value="charge" {{if eq .Filter "charge"}}checked{{end}}>
-              <span>Expenses <span class="filter-count">{{.ChargeGroups}}</span></span>
-            </label>
-            <label>
-              <input type="radio" name="filter" value="income" {{if eq .Filter "income"}}checked{{end}}>
-              <span>Income <span class="filter-count">{{.IncomeGroups}}</span></span>
-            </label>
-          </div>
+      <p class="uncategorized-no-match" hidden>No uncategorized transactions match.</p>
+    {{end}}
 
+    <div id="uncategorized-results">
+      {{if gt (len .Keys) 0}}
         <div class="card-grid">
           {{range $key := .Keys}}
             {{$uncategorized := index $.UncategorizeInfo $key}}
             {{$isIncome := eq $uncategorized.Type 1}}
-            <div class="card uncategorized-group" data-type="{{if $isIncome}}income{{else}}charge{{end}}">
+            <div class="card uncategorized-group" data-type="{{if $isIncome}}income{{else}}charge{{end}}"
+                 data-description="{{$key}}">
               <div class="card-header">
                 <h3 class="card-title">{{$key}}</h3>
                   {{if $isIncome}}
@@ -143,9 +142,10 @@
               </div>
               
               <div class="card-actions">
-                <form hx-post="/category/uncategorized/update" 
-                      hx-include=".uncategorized-filter"
-                      hx-target="#page" 
+                <form hx-post="/category/uncategorized/update"
+                      hx-target="#uncategorized-results"
+                      hx-select="#uncategorized-results"
+                      hx-select-oob="#uncategorized-status,#uncategorized-summary"
                       hx-swap="outerHTML show:window:top">
                   <input name="description" value="{{$key}}" type="hidden">
                   <div>
@@ -171,9 +171,14 @@
             </div>
           {{end}}
         </div>
+      {{else if eq (len .Error) 0}}
+        <div class="empty-state">
+          <div class="empty-icon">🎉</div>
+          <h3>All Expenses Categorized!</h3>
+          <p>You've successfully categorized all your expenses. Check out your reports to see insights about your spending habits.</p>
+          <a href="/" class="btn-primary">View Reports</a>
+        </div>
       {{end}}
     </div>
-  {{ else }}
-    {{template "error" .Error}}
-  {{ end }}
+  </div>
 {{end}}

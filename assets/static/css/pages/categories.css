@@ -138,11 +138,32 @@
 
 /* Uncategorized page: expense/income filter (segmented control, no JS).
    The checked radio hides groups of the other type via :has(). */
+.uncategorized-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+.uncategorized-search {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.uncategorized-no-match {
+  color: var(--color-gray-500);
+}
+
+/* Cards set their own display, which beats the UA [hidden] rule. */
+.uncategorized-group[hidden] {
+  display: none;
+}
+
 .uncategorized-filter {
   display: inline-flex;
   flex-wrap: wrap;
   gap: var(--spacing-0-5);
-  margin-bottom: var(--spacing-4);
   padding: var(--spacing-0-5);
   background-color: var(--color-gray-100);
   border: 1px solid var(--color-gray-200);
@@ -152,6 +173,8 @@
 .uncategorized-filter label {
   position: relative;
   cursor: pointer;
+  margin-bottom: 0;
+  padding: var(--spacing-0-5);
 }
 
 .uncategorized-filter input {
@@ -160,7 +183,7 @@
   pointer-events: none;
 }
 
-.uncategorized-filter label > span {
+.uncategorized-filter label>span {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-1);
@@ -170,18 +193,18 @@
   color: var(--color-gray-600);
 }
 
-.uncategorized-filter label:hover > span {
+.uncategorized-filter label:hover>span {
   color: var(--color-gray-800);
 }
 
-.uncategorized-filter input:checked + span {
+.uncategorized-filter input:checked+span {
   background-color: var(--color-surface);
   color: var(--color-gray-900);
   font-weight: var(--font-weight-semibold);
   box-shadow: var(--shadow-sm);
 }
 
-.uncategorized-filter input:focus-visible + span {
+.uncategorized-filter input:focus-visible+span {
   box-shadow: 0 0 0 3px var(--ring-primary);
 }
 

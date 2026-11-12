@@ -169,90 +169,6 @@ func TestUncategorizedHandler(t *testing.T) {
 	ensureNoErrorInTemplateResponse(t, "uncategorized", resp.Body)
 }
 
-func TestUncategorizedSearchHandler(t *testing.T) {
-	logger := testutil.TestLogger(t)
-	s, user := testutil.SetupTestStorage(t, logger)
-
-	expenses := []domain.Expense{
-		domain.NewExpense(
-			0,
-			"Test Source",
-			"Coffee shop purchase",
-			"USD",
-			-500,
-			time.Now(),
-			domain.ChargeType,
-			nil,
-		),
-		domain.NewExpense(
-			0,
-			"Test Source",
-			"Hardware store",
-			"USD",
-			-1500,
-			time.Now(),
-			domain.ChargeType,
-			nil,
-		),
-	}
-
-	_, err := s.InsertExpenses(context.Background(), user.ID(), expenses)
-	if err != nil {
-		t.Fatalf("Failed to insert test expenses: %v", err)
-	}
-
-	handler := New(s, logger)
-
-	body := strings.NewReader("q=Coffee")
-	req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/search", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status OK; got %v", resp.Status)
-	}
-
-	ensureNoErrorInTemplateResponse(t, "uncategorized search", resp.Body)
-
-	emptyBody := strings.NewReader("q=")
-	emptyReq := httptest.NewRequest(http.MethodPost, "/category/uncategorized/search", emptyBody)
-	emptyReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	testutil.SetupAuthCookie(t, s, emptyReq, user, sessionCookieName, sessionDuration)
-	emptyW := httptest.NewRecorder()
-
-	handler.ServeHTTP(emptyW, emptyReq)
-
-	emptyResp := emptyW.Result()
-	if emptyResp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status OK for empty query; got %v", emptyResp.Status)
-	}
-
-	responseBody := emptyW.Body.String()
-	if !strings.Contains(responseBody, errSearchCriteria) {
-		t.Error("Expected error message for empty search query")
-	}
-
-	invalidReq := httptest.NewRequest(
-		http.MethodPost,
-		"/category/uncategorized/search",
-		strings.NewReader("invalid%form"),
-	)
-	invalidReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	testutil.SetupAuthCookie(t, s, invalidReq, user, sessionCookieName, sessionDuration)
-	invalidW := httptest.NewRecorder()
-
-	handler.ServeHTTP(invalidW, invalidReq)
-
-	invalidResp := invalidW.Result()
-	if invalidResp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status OK for form parse error; got %v", invalidResp.Status)
-	}
-}
-
 func TestCreateCategoryHandler(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
@@ -1007,13 +923,19 @@ func TestParseCategoryForm(t *testing.T) {
 	}
 }
 
-func TestUncategorizedSearchKeepsFilter(t *testing.T) {
+func TestUncategorizedAssignSwapsResultsOnly(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
+	ctx := context.Background()
 
-	_, err := s.InsertExpenses(context.Background(), user.ID(), []domain.Expense{
+	categoryID, err := s.CreateCategory(ctx, user.ID(), "Shopping", "shop", 0, domain.ChargeCategory)
+	if err != nil {
+		t.Fatalf("Failed to create category: %v", err)
+	}
+
+	_, err = s.InsertExpenses(ctx, user.ID(), []domain.Expense{
 		domain.NewExpense(0, "bank", "Coffee shop", "EUR", -500, time.Now(), domain.ChargeType, nil),
-		domain.NewExpense(0, "bank", "Coffee refund", "EUR", 500, time.Now(), domain.IncomeType, nil),
+		domain.NewExpense(0, "bank", "Hardware store", "EUR", -1500, time.Now(), domain.ChargeType, nil),
 	})
 	if err != nil {
 		t.Fatalf("Failed to insert test expenses: %v", err)
@@ -1021,62 +943,60 @@ func TestUncategorizedSearchKeepsFilter(t *testing.T) {
 
 	handler := New(s, logger)
 
-	tests := []struct {
-		name        string
-		filter      string
-		wantChecked string
-	}{
-		{"income kept", "income", "income"},
-		{"charge kept", "charge", "charge"},
-		{"unknown falls back to all", "bogus", "all"},
-		{"missing falls back to all", "", "all"},
+	assign := func(t *testing.T, body string) string {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/update", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected status OK; got %d", w.Code)
+		}
+		return w.Body.String()
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			body := "q=Coffee"
-			if tt.filter != "" {
-				body += "&filter=" + tt.filter
+	// The assign form picks these regions out of the response, so every
+	// response, error or not, must contain them.
+	requireRegions := func(t *testing.T, html string) {
+		t.Helper()
+		for _, id := range []string{"uncategorized-results", "uncategorized-status", "uncategorized-summary"} {
+			if !strings.Contains(html, fmt.Sprintf(`id="%s"`, id)) {
+				t.Errorf("response is missing #%s", id)
 			}
-			req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/search", strings.NewReader(body))
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
-			w := httptest.NewRecorder()
-
-			handler.ServeHTTP(w, req)
-
-			html := w.Body.String()
-			for _, value := range []string{"all", "charge", "income"} {
-				checked := strings.Contains(html, fmt.Sprintf(`name="filter" value="%s" checked`, value))
-				if checked != (value == tt.wantChecked) {
-					t.Errorf("filter %q checked = %v, want %v", value, checked, value == tt.wantChecked)
-				}
-			}
-		})
+		}
 	}
-}
 
-func TestUncategorizedSearchKeepsQuery(t *testing.T) {
-	logger := testutil.TestLogger(t)
-	s, user := testutil.SetupTestStorage(t, logger)
-
-	_, err := s.InsertExpenses(context.Background(), user.ID(), []domain.Expense{
-		domain.NewExpense(0, "bank", "Coffee shop", "EUR", -500, time.Now(), domain.ChargeType, nil),
+	t.Run("missing category shows error and keeps cards", func(t *testing.T) {
+		html := assign(t, "description=Hardware+store&category_id=")
+		requireRegions(t, html)
+		if !strings.Contains(html, "select a category to assign") {
+			t.Error("expected missing category error")
+		}
+		if !strings.Contains(html, `data-description="Hardware store"`) {
+			t.Error("expected cards to still be rendered")
+		}
 	})
-	if err != nil {
-		t.Fatalf("Failed to insert test expenses: %v", err)
-	}
 
-	handler := New(s, logger)
+	t.Run("assign updates results and banner", func(t *testing.T) {
+		html := assign(t, fmt.Sprintf("description=Hardware+store&category_id=%d", categoryID))
+		requireRegions(t, html)
+		if !strings.Contains(html, "Expenses succesfully categorized") {
+			t.Error("expected success banner")
+		}
+		if strings.Contains(html, `data-description="Hardware store"`) {
+			t.Error("assigned group should no longer be uncategorized")
+		}
+		if !strings.Contains(html, `data-description="Coffee shop"`) {
+			t.Error("expected remaining group to be rendered")
+		}
+	})
 
-	req := httptest.NewRequest(http.MethodPost, "/category/uncategorized/search", strings.NewReader("q=Coffee"))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	if !strings.Contains(w.Body.String(), `name='q' value="Coffee"`) {
-		t.Error("Expected search box to keep the query")
-	}
+	t.Run("assigning the last group shows the empty state", func(t *testing.T) {
+		html := assign(t, fmt.Sprintf("description=Coffee+shop&category_id=%d", categoryID))
+		requireRegions(t, html)
+		if !strings.Contains(html, "All Expenses Categorized!") {
+			t.Error("expected empty state")
+		}
+	})
 }

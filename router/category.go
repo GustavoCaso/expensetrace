@@ -12,8 +12,6 @@ import (
 	"github.com/GustavoCaso/expensetrace/service/category"
 )
 
-const errSearchCriteria = "You must provide a search criteria"
-
 type categoryHandler struct {
 	*router
 }
@@ -38,7 +36,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, r *http.Request) {
-		c.uncategorizedHandler(r.Context(), w, "", uncategorizedFilter(r), nil)
+		c.uncategorizedHandler(r.Context(), w, nil, nil)
 	})
 
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -64,28 +62,6 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {
 		c.updateUncategorizedHandler(r.Context(), w, r)
-	})
-
-	mux.HandleFunc("POST /category/uncategorized/search", func(w http.ResponseWriter, r *http.Request) {
-		data := domain.ViewBase{}
-		r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
-		err := r.ParseForm()
-
-		if err != nil {
-			data.Error = err.Error()
-			c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
-			return
-		}
-
-		query := r.FormValue("q")
-
-		if query == "" {
-			data.Error = errSearchCriteria
-			c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
-			return
-		}
-
-		c.uncategorizedHandler(r.Context(), w, query, uncategorizedFilter(r), nil)
 	})
 }
 
@@ -228,25 +204,26 @@ func (c *categoryHandler) updateCategoryHandler(
 	}
 }
 
+// uncategorizedHandler renders every uncategorized group; search and the type
+// filter run in the browser. outerErr and banner show in the status slot,
+// which assign swaps out of band along with the results.
 func (c *categoryHandler) uncategorizedHandler(
 	ctx context.Context,
 	w http.ResponseWriter,
-	query, filter string,
+	outerErr error,
 	banner *domain.Banner,
 ) {
 	userID := userIDFromContext(ctx)
 	base := viewBaseFromContext(ctx)
 	data := domain.UncategorizedViewData{
 		ViewBase: base,
-		Filter:   filter,
-		Query:    query,
 	}
 
 	defer func() {
 		c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
 	}()
 
-	grouped, keys, totalExpenses, totalAmount, err := c.categoryService.GetUncategorized(ctx, userID, query)
+	grouped, keys, totalExpenses, totalAmount, err := c.categoryService.GetUncategorized(ctx, userID, "")
 	if err != nil {
 		data.Error = err.Error()
 		return
@@ -272,6 +249,10 @@ func (c *categoryHandler) uncategorizedHandler(
 		}
 	}
 
+	if outerErr != nil {
+		data.Error = outerErr.Error()
+	}
+
 	if banner != nil {
 		data.Banner = *banner
 	}
@@ -279,41 +260,35 @@ func (c *categoryHandler) uncategorizedHandler(
 
 func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
-	data := viewBaseFromContext(ctx)
-
-	defer func() {
-		if data.Error != "" {
-			c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
-		}
-	}()
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
-	err := r.ParseForm()
-	if err != nil {
+	if err := r.ParseForm(); err != nil {
 		c.logger.Error(fmt.Sprintf("error r.ParseForm() %s", err.Error()))
-
-		data.Error = err.Error()
+		c.uncategorizedHandler(ctx, w, err, nil)
 		return
 	}
 
 	expenseDescription := r.FormValue("description")
 	categoryIDStr := r.FormValue("category_id")
 
-	categoryID, err := strconv.Atoi(categoryIDStr)
+	if categoryIDStr == "" {
+		c.uncategorizedHandler(ctx, w, errors.New("select a category to assign"), nil)
+		return
+	}
 
+	categoryID, err := strconv.ParseInt(categoryIDStr, 10, 64)
 	if err != nil {
-		c.logger.Error(fmt.Sprintf("error strconv.Atoi with value %s. %s", categoryIDStr, err.Error()))
-
-		data.Error = err.Error()
+		c.logger.Error(fmt.Sprintf("error strconv.ParseInt with value %s. %s", categoryIDStr, err.Error()))
+		c.uncategorizedHandler(ctx, w, fmt.Errorf("invalid category %q", categoryIDStr), nil)
 		return
 	}
 
-	if err = c.categoryService.UpdateCategoryPattern(ctx, userID, int64(categoryID), expenseDescription); err != nil {
-		data.Error = err.Error()
+	if err = c.categoryService.UpdateCategoryPattern(ctx, userID, categoryID, expenseDescription); err != nil {
+		c.uncategorizedHandler(ctx, w, err, nil)
 		return
 	}
 
-	c.uncategorizedHandler(ctx, w, "", uncategorizedFilter(r), &domain.Banner{
+	c.uncategorizedHandler(ctx, w, nil, &domain.Banner{
 		Icon:    "✅",
 		Message: "Expenses succesfully categorized",
 	})
@@ -450,17 +425,6 @@ func (c *categoryHandler) categoryIndexError(ctx context.Context, w http.Respons
 	data := viewBaseFromContext(ctx)
 	data.Error = err.Error()
 	c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/index.html")
-}
-
-// uncategorizedFilter returns the uncategorized page's type filter from the
-// request, defaulting to "all" for missing or unknown values.
-func uncategorizedFilter(r *http.Request) string {
-	switch f := r.FormValue("filter"); f {
-	case "charge", "income":
-		return f
-	default:
-		return "all"
-	}
 }
 
 // parseCategoryForm parses and validates category form fields from the request.

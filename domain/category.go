@@ -114,11 +114,6 @@ type UncategorizedViewData struct {
 	TotalAmount      int64
 	ChargeGroups     int
 	IncomeGroups     int
-	// Filter is the selected client-side type filter: "all", "charge" or
-	// "income". Kept across search and assign round trips.
-	Filter string
-	// Query is the current search query, echoed back into the search box.
-	Query string
 }
 
 type CreateCategoryViewData struct {
