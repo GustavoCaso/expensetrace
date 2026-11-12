@@ -84,21 +84,21 @@
   
   <div class="form-group">
     <label for="expense-category">Category</label>
-    <select id="expense-category" name="category_id">
+    <select id="expense-category" name="category_id" data-category-filter>
       <option value="">None</option>
       {{range .Categories}}
         {{if eq .Type.String "any"}}
-          <option value="{{.ID}}" {{if eq $.Expense.CategoryID .ID}}selected{{end}}>{{.Name}}</option>
+          <option value="{{.ID}}" data-category-type="any" {{if eq $.Expense.CategoryID .ID}}selected{{end}}>{{.Name}}</option>
         {{end}}
       {{end}}
-      <optgroup label="Expense categories">
+      <optgroup label="Expense categories" data-category-type="charge">
         {{range .Categories}}
           {{if eq .Type.String "charge"}}
             <option value="{{.ID}}" {{if eq $.Expense.CategoryID .ID}}selected{{end}}>{{.Name}}</option>
           {{end}}
         {{end}}
       </optgroup>
-      <optgroup label="Income categories">
+      <optgroup label="Income categories" data-category-type="income">
         {{range .Categories}}
           {{if eq .Type.String "income"}}
             <option value="{{.ID}}" {{if eq $.Expense.CategoryID .ID}}selected{{end}}>{{.Name}}</option>
