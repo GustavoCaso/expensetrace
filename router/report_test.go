@@ -173,7 +173,7 @@ func TestHomeHandlerCategoryBreakdown(t *testing.T) {
 	s, user := testutil.SetupTestStorage(t, logger)
 	ctx := context.Background()
 
-	categoryID, err := s.CreateCategory(ctx, user.ID(), "Food & Drinks", "restaurant", 10000)
+	categoryID, err := s.CreateCategory(ctx, user.ID(), "Food & Drinks", "restaurant", 10000, domain.ChargeCategory)
 	if err != nil {
 		t.Fatalf("Failed to create category: %v", err)
 	}

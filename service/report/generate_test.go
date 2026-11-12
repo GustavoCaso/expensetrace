@@ -128,7 +128,7 @@ func TestGenerate_ScalesBudgetByMonths(t *testing.T) {
 
 	// 100.00 monthly budget; 250.00 spent over three months is under the
 	// 300.00 range budget, but would be "over" against a single month.
-	catID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "food", 10000)
+	catID, err := s.CreateCategory(context.Background(), user.ID(), "Food", "food", 10000, domain.ChargeCategory)
 	if err != nil {
 		t.Fatalf("Error creating category: %s", err.Error())
 	}
@@ -163,7 +163,14 @@ func TestCategories(t *testing.T) {
 
 	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	catID, catErr := s.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food|grocery", 0)
+	catID, catErr := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Food",
+		"restaurant|food|grocery",
+		0,
+		domain.ChargeCategory,
+	)
 	if catErr != nil {
 		t.Fatalf("Error creating category: %s", catErr.Error())
 	}
@@ -378,5 +385,55 @@ func TestGenerate_PercentageOfIncome(t *testing.T) {
 				t.Errorf("IncomeBarWidth = %v, must be capped at 100", bar)
 			}
 		})
+	}
+}
+
+func TestIncomeCategories(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+	ctx := context.Background()
+
+	salaryID, err := s.CreateCategory(ctx, user.ID(), "Salary", "payroll", 0, domain.IncomeCategory)
+	if err != nil {
+		t.Fatalf("Error creating category: %s", err.Error())
+	}
+
+	date := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	expenses := []domain.Expense{
+		domain.NewExpense(0, "bank", "payroll jan", "EUR", 300000, date, domain.IncomeType, &salaryID),
+		domain.NewExpense(0, "bank", "payroll bonus", "EUR", 50000, date, domain.IncomeType, &salaryID),
+		domain.NewExpense(0, "bank", "gift", "EUR", 1000, date, domain.IncomeType, nil),
+	}
+
+	_, incomeCategories, totalIncome, _, err := splitByExpenseType(ctx, user.ID(), s, expenses, 1)
+	if err != nil {
+		t.Fatalf("splitByExpenseType returned error: %s", err.Error())
+	}
+
+	if totalIncome != 351000 {
+		t.Errorf("income = %d, want 351000", totalIncome)
+	}
+
+	got := map[string]int64{}
+	for _, c := range incomeCategories {
+		got[c.Name] = c.Amount
+		if c.Budget.Status != domain.BudgetStatusNoBudget {
+			t.Errorf("%s: budget status = %s, want no budget", c.Name, c.Budget.Status)
+		}
+	}
+
+	want := map[string]int64{"Salary": 350000, "uncategorized income": 1000}
+	if len(got) != len(want) {
+		t.Fatalf("income categories = %v, want %v", got, want)
+	}
+	for name, amount := range want {
+		if got[name] != amount {
+			t.Errorf("%s = %d, want %d", name, got[name], amount)
+		}
+	}
+
+	// Largest first.
+	if incomeCategories[0].Name != "Salary" {
+		t.Errorf("first income category = %s, want Salary", incomeCategories[0].Name)
 	}
 }

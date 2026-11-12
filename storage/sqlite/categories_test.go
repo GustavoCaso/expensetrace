@@ -21,7 +21,7 @@ func TestCreateCategoriesTable(t *testing.T) {
 	stor, user := setupTestStorage(t)
 
 	// Verify we can create a category (which means table exists)
-	_, err := stor.CreateCategory(context.Background(), user.ID(), "Test", "test.*", 0)
+	_, err := stor.CreateCategory(context.Background(), user.ID(), "Test", "test.*", 0, domain.ChargeCategory)
 	if err != nil {
 		t.Errorf("Failed to create test category: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestGetCategories(t *testing.T) {
 	}
 
 	for _, cat := range testCategories {
-		_, err := stor.CreateCategory(context.Background(), user.ID(), cat.name, cat.pattern, 0)
+		_, err := stor.CreateCategory(context.Background(), user.ID(), cat.name, cat.pattern, 0, domain.ChargeCategory)
 		if err != nil {
 			t.Fatalf("Failed to create test category: %v", err)
 		}
@@ -69,7 +69,7 @@ func TestGetCategory(t *testing.T) {
 	stor, user := setupTestStorage(t)
 
 	// Create test category
-	id, err := stor.CreateCategory(context.Background(), user.ID(), "Test", "test.*", 0)
+	id, err := stor.CreateCategory(context.Background(), user.ID(), "Test", "test.*", 0, domain.ChargeCategory)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestGetCategory(t *testing.T) {
 func TestCreateCategory(t *testing.T) {
 	stor, user := setupTestStorage(t)
 
-	id, err := stor.CreateCategory(context.Background(), user.ID(), "Test", "test.*", 0)
+	id, err := stor.CreateCategory(context.Background(), user.ID(), "Test", "test.*", 0, domain.ChargeCategory)
 	if err != nil {
 		t.Errorf("Failed to create category: %v", err)
 	}
@@ -123,12 +123,12 @@ func TestDeleteCategories(t *testing.T) {
 	stor, user := setupTestStorage(t)
 
 	// Create test categories
-	_, err := stor.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food", 0)
+	_, err := stor.CreateCategory(context.Background(), user.ID(), "Food", "restaurant|food", 0, domain.ChargeCategory)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	_, err = stor.CreateCategory(context.Background(), user.ID(), "Transport", "uber|taxi", 0)
+	_, err = stor.CreateCategory(context.Background(), user.ID(), "Transport", "uber|taxi", 0, domain.ChargeCategory)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
@@ -156,7 +156,14 @@ func TestDeleteCategories(t *testing.T) {
 func TestDeleteCategoriesWithExpenses(t *testing.T) {
 	stor, user := setupTestStorage(t)
 
-	catID, createCategoryErr := stor.CreateCategory(context.Background(), user.ID(), "Food", "restaurant", 0)
+	catID, createCategoryErr := stor.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Food",
+		"restaurant",
+		0,
+		domain.ChargeCategory,
+	)
 	if createCategoryErr != nil {
 		t.Fatalf("Failed to create test category: %v", createCategoryErr)
 	}
@@ -245,7 +252,14 @@ func TestDeleteCategoriesWithExpenses(t *testing.T) {
 func TestDeleteCategory(t *testing.T) {
 	stor, user := setupTestStorage(t)
 
-	catID, createCategoryErr := stor.CreateCategory(context.Background(), user.ID(), "Food", "restaurant", 0)
+	catID, createCategoryErr := stor.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Food",
+		"restaurant",
+		0,
+		domain.ChargeCategory,
+	)
 	if createCategoryErr != nil {
 		t.Fatalf("Failed to create test category: %v", createCategoryErr)
 	}
@@ -308,12 +322,20 @@ func TestDeleteCategory(t *testing.T) {
 func TestUpdateCategory(t *testing.T) {
 	stor, user := setupTestStorage(t)
 
-	catID, err := stor.CreateCategory(context.Background(), user.ID(), "Food", "restaurant", 0)
+	catID, err := stor.CreateCategory(context.Background(), user.ID(), "Food", "restaurant", 0, domain.ChargeCategory)
 	if err != nil {
 		t.Fatalf("Failed to create test category: %v", err)
 	}
 
-	err = stor.UpdateCategory(context.Background(), user.ID(), catID, "Dining", "restaurant|dining|food", 0)
+	err = stor.UpdateCategory(
+		context.Background(),
+		user.ID(),
+		catID,
+		"Dining",
+		"restaurant|dining|food",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Errorf("Failed to update category: %v", err)
 	}

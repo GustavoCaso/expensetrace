@@ -1,157 +1,154 @@
 {{define "title"}}Uncategorized Expenses{{end}}
 {{define "css"}}/static/css/pages/categories.css{{end}}
 
-{{define "main"}}  
-  {{ if eq (len .Error) 0 }}
-    {{template "categories/nav" "uncategorized"}}
-    
-    {{if gt (len .Banner.Icon) 0}} 
+{{/* Ledger of uncategorized transactions, grouped by description and type.
+     Assigning a category swaps only #uncategorized-results, plus
+     #uncategorized-status and #uncategorized-summary out of band. The search
+     box and type filter are never replaced, so they keep their state; search
+     runs in the browser (uncategorized-search.js) and the type filter is CSS
+     (.uncategorized-ledger rules in categories.css). */}}
+{{define "main"}}
+  {{template "categories/nav" "uncategorized"}}
+
+  <div id="uncategorized-status">
+    {{if gt (len .Error) 0}}
+      {{template "error" .Error}}
+    {{end}}
+    {{if gt (len .Banner.Icon) 0}}
       {{template "banner" .Banner}}
     {{end}}
-    
-    <form class='search-form'>
-      <div class="form-group">
-        <input type='search' name='q' required>
+  </div>
+
+  <div id="uncategorized" class="ledger-page">
+    {{if gt (len .Groups) 0}}
+      <div class="ledger-toolbar">
+        <div class="type-filter uncategorized-filter" role="radiogroup" aria-label="Show uncategorized">
+          <label>
+            <input type="radio" name="filter" value="all" checked>
+            <span>All <span class="filter-count" data-count="all">{{len .Groups}}</span></span>
+          </label>
+          <label>
+            <input type="radio" name="filter" value="charge">
+            <span>Expenses <span class="filter-count" data-count="charge">{{.ChargeGroups}}</span></span>
+          </label>
+          <label>
+            <input type="radio" name="filter" value="income">
+            <span>Income <span class="filter-count" data-count="income">{{.IncomeGroups}}</span></span>
+          </label>
+        </div>
+
+        <input id="uncategorized-search" class="ledger-search" type="search"
+          placeholder="Search descriptions" aria-label="Search uncategorized descriptions"
+          autocomplete="off">
       </div>
-      <button 
-        class="btn-primary"
-        hx-post="/category/uncategorized/search" 
-        hx-target="#page" 
-        hx-swap="outerHTML"
-        type="submit">
-        Search
-      </button>
-    </form>
-  
-    <div id="uncategorized">
-      {{ if eq (len .Keys) 0 }}
-        <div class="empty-state">
-          <div class="empty-icon">🎉</div>
-          <h3>All Expenses Categorized!</h3>
-          <p>You've successfully categorized all your expenses. Check out your reports to see insights about your spending habits.</p>
-          <a href="/" class="btn-primary">View Reports</a>
-        </div>
-      {{ else }}
-        <div class="card-grid">
-          <div class="card ta-center">
-            <h3 class="card-title">Different Transactions</h3>
-            <div class="text-lg font-bold">{{len .Keys}}</div>
-          </div>
-          <div class="card ta-center">
-            <h3 class="card-title">Total Expenses</h3>
-            <div class="text-lg font-bold">{{.TotalExpenses}}</div>
-          </div>
-          <div class="card ta-center">
-            <h3 class="card-title">Total Amount</h3>
-            <div class="text-lg font-bold">{{formatMoney .TotalAmount "." ","}}€</div>
-          </div>
-        </div>
+    {{end}}
 
+    <p id="uncategorized-summary" class="ledger-summary">
+      {{if gt (len .Groups) 0}}
+        {{.TotalExpenses}} transaction{{if ne .TotalExpenses 1}}s{{end}} without a category.
+        Assigning a category also adds the description to its pattern, so future imports match it.
+      {{end}}
+    </p>
 
-        <div class="uncategorized-instructions">
-          <p>These expenses haven't been automatically categorized. Select a category to organize them.</p>
-        </div>
+    {{if gt (len .Groups) 0}}
+      <p class="uncategorized-no-match" hidden>No uncategorized transactions match your search.</p>
+    {{end}}
 
-        <div class="card-grid">
-          {{range $key := .Keys}}
-            {{$uncategorized := index $.UncategorizeInfo $key}}
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">{{$key}}</h3>
-                  {{if gt $uncategorized.Total 0}}
-                    <span class="badge income">Income</span>
-                  {{else}}
-                    <span class="badge expense">Expense</span>
-                  {{end}}
-              </div>
-              
-              <div class="category-meta">
-                <div class="meta-item">
-                  <span class="meta-label">Transactions:</span>
-                  <span class="meta-value">
-                    {{$uncategorized.Count}} transaction{{if gt $uncategorized.Count 1}}s{{end}}
-                  </span>
-                </div>
-                
-                <div class="meta-item">
-                  <span class="{{if gt $uncategorized.Total 0}}income{{else}}expense{{end}}">
-                  <span class="meta-value">
-                    {{formatMoney $uncategorized.Total "." ","}}€
-                  </span>
-                </div>
-              </div> 
-                
-              <div class="transactions-preview">
-                {{$maxShow := 3}}
-                {{$remaining := sub $uncategorized.Count $maxShow}}
-                
-                {{range $index, $expense := $uncategorized.Expenses}}
-                  {{if lt $index $maxShow}}
-                    <div>
-                      <span>{{$expense.Date.Format "2006-01-02"}}</span>
-                      <span>{{$expense.Source}}</span>
-                      <span class="{{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
-                        {{formatMoney $expense.Amount "." ","}}€
-                      </span>
-                    </div>
-                  {{end}}
-                {{end}}
-                
-                {{if gt $remaining 0}}
-                  <div class="more-transactions">
-                    <button class="text-button"
-                            data-toggle
-                            data-toggle-target="transactions-{{$uncategorized.Slug}}"
-                            data-toggle-text="Hide transactions">
-                      Show {{$remaining}} more transactions
-                    </button>
-                  </div>
-                {{end}}
-              </div>
-              
-              <div id="transactions-{{$uncategorized.Slug}}" class="all-transactions collapsed">
-                {{range $index, $expense := $uncategorized.Expenses}}
-                  {{if ge $index $maxShow}}
-                    <div>
-                      <span>{{$expense.Date.Format "2006-01-02"}}</span>
-                      <span>{{$expense.Source}}</span>
-                      <span class="{{if gt $expense.Amount 0}}income{{else}}expense{{end}}">
-                        {{formatMoney $expense.Amount "." ","}}€
-                      </span>
-                    </div>
-                  {{end}}
-                {{end}}
-              </div>
-              
-              <div class="card-actions">
-                <form hx-post="/category/uncategorized/update" 
-                      hx-target="#page" 
-                      hx-swap="outerHTML show:window:top">
-                  <input name="description" value="{{$key}}" type="hidden">
-                  <div>
-                    <label for="category-select-{{$key}}">Assign category:</label>
-                    <div class="grid">
-                      <select id="category-select-{{$key}}"
-                              class="category-select mb-1"
-                              name="category_id">
-                        <option value="">-- Select a category --</option>
-                        {{ range $category := $.Categories }}
-                          <option value={{$category.ID}}>{{$category.Name}}</option>
-                        {{ end }}
-                      </select>
-                      <button type="submit" class="btn-primary btn-assign">
-                        <span class="btn-text">Assign</span>
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              </div>
-            </div>
-          {{end}}
-        </div>
+    <div id="uncategorized-results">
+      {{if gt (len .Groups) 0}}
+        {{template "uncategorized/section" (dict "Title" "Expenses" "Type" "charge" "Count" .ChargeGroups "Groups" .Groups "Categories" .Categories)}}
+        {{template "uncategorized/section" (dict "Title" "Income" "Type" "income" "Count" .IncomeGroups "Groups" .Groups "Categories" .Categories)}}
+      {{else if eq (len .Error) 0}}
+        <p class="ledger-done">
+          Every transaction has a category.
+          <a href="/">View reports</a>
+        </p>
       {{end}}
     </div>
-  {{ else }}
-    {{template "error" .Error}}
-  {{ end }}
+  </div>
+{{end}}
+
+{{/* One ledger table of uncategorized groups of a single type. Expects a dict
+     with Title, Type ("charge" or "income"), Count, Groups (all groups; only
+     those of Type are rendered) and Categories. Element ids use the group's
+     position in Groups, so they are unique across both tables. */}}
+{{define "uncategorized/section"}}
+  {{$type := .Type}}
+  {{$expenseType := 0}}{{if eq .Type "income"}}{{$expenseType = 1}}{{end}}
+  {{$categories := .Categories}}
+  {{$amountClass := "expense"}}{{if eq .Type "income"}}{{$amountClass = "income"}}{{end}}
+  <section class="ledger-section" data-type="{{.Type}}" aria-labelledby="uncategorized-{{.Type}}">
+    <h2 id="uncategorized-{{.Type}}" class="ledger-title">{{.Title}}</h2>
+
+    {{if gt .Count 0}}
+      <table class="ledger">
+        <colgroup>
+          <col class="col-name">
+          <col class="col-count">
+          <col class="col-amount">
+          <col class="col-date">
+          <col class="col-assign">
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col">Description</th>
+            <th scope="col" class="num">Transactions</th>
+            <th scope="col" class="num">Total</th>
+            <th scope="col" class="num">Latest</th>
+            <th scope="col">Assign to</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $group := .Groups}}
+            {{if eq $group.Type $expenseType}}
+              <tr class="uncategorized-group" data-type="{{$type}}" data-description="{{$group.Description}}">
+                <th scope="row" class="ledger-name">
+                  <span class="ledger-description">{{$group.Description}}</span>
+                  <details class="ledger-details">
+                    <summary>{{if eq $group.Count 1}}Show transaction{{else}}Show {{$group.Count}} transactions{{end}}</summary>
+                    <ul>
+                      {{range $group.Expenses}}
+                        <li>
+                          <span>{{.Date.Format "2 Jan 2006"}}</span>
+                          <span>{{.Source}}</span>
+                          <span class="num {{$amountClass}}">{{formatMoney (abs .Amount) "." ","}}&nbsp;€</span>
+                        </li>
+                      {{end}}
+                    </ul>
+                  </details>
+                </th>
+                <td class="num ledger-count">
+                  {{$group.Count}}<span class="ledger-count-unit"> transaction{{if ne $group.Count 1}}s{{end}}</span>
+                </td>
+                <td class="num ledger-amount {{$amountClass}}">{{formatMoney (abs $group.Total) "." ","}}&nbsp;€</td>
+                <td class="num ledger-date">{{(index $group.Expenses 0).Date.Format "2 Jan"}}</td>
+                <td class="ledger-assign">
+                  <form class="assign-form"
+                        hx-post="/category/uncategorized/update"
+                        hx-target="#uncategorized-results"
+                        hx-select="#uncategorized-results"
+                        hx-select-oob="#uncategorized-status,#uncategorized-summary"
+                        hx-swap="outerHTML show:window:top">
+                    <input name="description" value="{{$group.Description}}" type="hidden">
+                    <label for="category-select-{{$i}}" class="visually-hidden">Category for {{$group.Description}}</label>
+                    <select id="category-select-{{$i}}" name="category_id">
+                      <option value="">Choose…</option>
+                      {{range $categories}}
+                        {{if .Type.Accepts $group.Type}}
+                          <option value="{{.ID}}">{{.Name}}</option>
+                        {{end}}
+                      {{end}}
+                    </select>
+                    <button type="submit" class="btn-primary assign-button">Assign</button>
+                  </form>
+                </td>
+              </tr>
+            {{end}}
+          {{end}}
+        </tbody>
+      </table>
+    {{else}}
+      <p class="ledger-empty">No uncategorized {{if eq .Type "charge"}}expenses{{else}}income{{end}}.</p>
+    {{end}}
+  </section>
 {{end}}

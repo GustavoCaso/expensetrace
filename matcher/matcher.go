@@ -9,9 +9,10 @@ import (
 var Exclude = "exclude"
 
 type matcher struct {
-	re       *regexp.Regexp
-	category string
-	id       int64
+	re           *regexp.Regexp
+	category     string
+	id           int64
+	categoryType domain.CategoryType
 }
 
 type Matcher struct {
@@ -24,9 +25,10 @@ func New(categories []domain.Category) *Matcher {
 
 	for i, category := range categories {
 		m := matcher{
-			re:       regexp.MustCompile(category.Pattern()),
-			category: category.Name(),
-			id:       category.ID(),
+			re:           regexp.MustCompile(category.Pattern()),
+			category:     category.Name(),
+			id:           category.ID(),
+			categoryType: category.Type(),
 		}
 		matchers[i] = m
 	}
@@ -41,9 +43,11 @@ func (c Matcher) Categories() []domain.Category {
 	return c.categories
 }
 
-func (c Matcher) Match(s string) (*int64, string) {
+// Match returns the first category whose pattern matches s and that accepts
+// expenses of type t.
+func (c Matcher) Match(s string, t domain.ExpenseType) (*int64, string) {
 	for _, matcher := range c.matchers {
-		if matcher.re.MatchString(s) {
+		if matcher.categoryType.Accepts(t) && matcher.re.MatchString(s) {
 			return &matcher.id, matcher.category
 		}
 	}

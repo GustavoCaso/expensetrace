@@ -135,9 +135,14 @@ func splitByExpenseType(
 				continue
 			}
 
-			categoryName = category.Name()
-			// Store the budget for the whole range, not just one month.
-			categoryBudgets[categoryName] = category.MonthlyBudget() * int64(months)
+			// A category only groups expenses of a type it accepts. Anything
+			// else (legacy data) is reported as uncategorized, so income never
+			// nets against spending in a charge category.
+			if category.Type().Accepts(ex.Type()) {
+				categoryName = category.Name()
+				// Store the budget for the whole range, not just one month.
+				categoryBudgets[categoryName] = category.MonthlyBudget() * int64(months)
+			}
 		}
 
 		switch ex.Type() {
@@ -181,7 +186,7 @@ func splitByExpenseType(
 		if category.Amount < 0 {
 			budget, hasBudget := categoryBudgets[key]
 			if hasBudget && budget > 0 {
-				category.Budget = calculateBudgetInfo(budget, category.Amount)
+				category.Budget = CalculateBudgetInfo(budget, category.Amount)
 			} else {
 				category.Budget = domain.BudgetInfo{
 					Amount: 0,
@@ -250,14 +255,14 @@ func addExpenseToCategory(categories map[string]domain.CategoryReport, ex domain
 }
 
 func expeseCategoryName(ex domain.Expense, categoryName string) string {
-	if ex.Type() == domain.IncomeType {
-		return "income"
+	if categoryName != "" {
+		return categoryName
 	}
 
-	if categoryName == "" {
-		return "uncategorized charge"
+	if ex.Type() == domain.IncomeType {
+		return "uncategorized income"
 	}
-	return categoryName
+	return "uncategorized charge"
 }
 
 const (
@@ -274,7 +279,9 @@ func calendarDays(t1, t2 time.Time) int {
 	return int(days)
 }
 
-func calculateBudgetInfo(budgetAmount int64, spentAmount int64) domain.BudgetInfo {
+// CalculateBudgetInfo returns the budget status for spentAmount (negative for
+// charges) against budgetAmount. Also used by the categories page.
+func CalculateBudgetInfo(budgetAmount int64, spentAmount int64) domain.BudgetInfo {
 	// spentAmount is negative for expenses, convert to positive
 	spent := spentAmount * -1
 

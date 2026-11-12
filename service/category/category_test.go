@@ -13,7 +13,14 @@ func TestServiceList_IncludesExcludeCategory(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	_, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "cinema|movie", 0)
+	_, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Entertainment",
+		"cinema|movie",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
@@ -99,7 +106,14 @@ func TestServiceUpdate_PatternChangeRecategorizesExpenses(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "restaurant|bars|cinema", 0)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Entertainment",
+		"restaurant|bars|cinema",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
@@ -125,6 +139,7 @@ func TestServiceUpdate_PatternChangeRecategorizesExpenses(t *testing.T) {
 		categoryID,
 		"",
 		"restaurant|bars|cinema|gym",
+		"",
 		"",
 	)
 	if err != nil {
@@ -161,7 +176,14 @@ func TestServiceUpdate_NoopWhenNothingChanged(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "restaurant|bars|cinema", 0)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Entertainment",
+		"restaurant|bars|cinema",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
@@ -174,6 +196,7 @@ func TestServiceUpdate_NoopWhenNothingChanged(t *testing.T) {
 		categoryID,
 		"Entertainment",
 		"restaurant|bars|cinema",
+		"",
 		"",
 	)
 	if err != nil {
@@ -198,7 +221,14 @@ func TestServiceUpdateCategoryPattern_ExtendsPatternAndRecategorizes(t *testing.
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(context.Background(), user.ID(), "Entertainment", "cinema|movie", 0)
+	categoryID, err := s.CreateCategory(
+		context.Background(),
+		user.ID(),
+		"Entertainment",
+		"cinema|movie",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
@@ -272,7 +302,7 @@ func TestServiceGetUncategorized_GroupsByDescription(t *testing.T) {
 
 	svc := New(s, logger)
 
-	grouped, keys, totalExpenses, totalAmount, err := svc.GetUncategorized(context.Background(), user.ID(), "")
+	groups, totalExpenses, totalAmount, err := svc.GetUncategorized(context.Background(), user.ID(), "")
 	if err != nil {
 		t.Fatalf("GetUncategorized returned error: %v", err)
 	}
@@ -285,30 +315,84 @@ func TestServiceGetUncategorized_GroupsByDescription(t *testing.T) {
 		t.Fatalf("Expected total amount -2600, got %d", totalAmount)
 	}
 
-	if len(keys) != 2 {
-		t.Fatalf("Expected 2 grouping keys, got %d (%v)", len(keys), keys)
+	if len(groups) != 2 {
+		t.Fatalf("Expected 2 groups, got %d", len(groups))
 	}
 
-	coffeeInfo, ok := grouped["coffee shop"]
-	if !ok {
-		t.Fatal("Expected 'coffee shop' group to exist")
+	// Sorted by count descending.
+	coffee := groups[0]
+	if coffee.Description != "coffee shop" {
+		t.Fatalf("Expected 'coffee shop' first, got %q", coffee.Description)
 	}
 
-	if coffeeInfo.Count != 2 {
-		t.Fatalf("Expected coffee shop count to be 2, got %d", coffeeInfo.Count)
+	if coffee.Count != 2 {
+		t.Fatalf("Expected coffee shop count to be 2, got %d", coffee.Count)
 	}
 
-	if coffeeInfo.Total != -1100 {
-		t.Fatalf("Expected coffee shop total to be -1100, got %d", coffeeInfo.Total)
+	if coffee.Total != -1100 {
+		t.Fatalf("Expected coffee shop total to be -1100, got %d", coffee.Total)
 	}
 
-	if coffeeInfo.Slug != "coffee-shop" {
-		t.Fatalf("Expected slug 'coffee-shop', got %s", coffeeInfo.Slug)
+	if coffee.Type != domain.ChargeType {
+		t.Fatalf("Expected coffee shop to be a charge group, got %v", coffee.Type)
+	}
+}
+
+func TestServiceGetUncategorized_SplitsChargeAndIncome(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	now := time.Now()
+	_, err := s.InsertExpenses(context.Background(), user.ID(), []domain.Expense{
+		domain.NewExpense(0, "bank", "amazon", "EUR", -3000, now, domain.ChargeType, nil),
+		domain.NewExpense(0, "bank", "amazon", "EUR", -2000, now.Add(-time.Hour), domain.ChargeType, nil),
+		domain.NewExpense(0, "bank", "amazon", "EUR", 1500, now, domain.IncomeType, nil),
+		domain.NewExpense(0, "bank", "bakery", "EUR", -400, now, domain.ChargeType, nil),
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	// keys should be sorted by count descending
-	if keys[0] != "coffee shop" {
-		t.Fatalf("Expected 'coffee shop' to be the first key (highest count), got %s", keys[0])
+	groups, totalExpenses, _, err := New(s, logger).GetUncategorized(context.Background(), user.ID(), "")
+	if err != nil {
+		t.Fatalf("GetUncategorized returned error: %v", err)
+	}
+
+	if totalExpenses != 4 {
+		t.Fatalf("Expected 4 total expenses, got %d", totalExpenses)
+	}
+
+	type summary struct {
+		description string
+		expenseType domain.ExpenseType
+		count       int
+		total       int64
+	}
+	// Count descending, then description, then type (charge before income).
+	want := []summary{
+		{"amazon", domain.ChargeType, 2, -5000},
+		{"amazon", domain.IncomeType, 1, 1500},
+		{"bakery", domain.ChargeType, 1, -400},
+	}
+
+	if len(groups) != len(want) {
+		t.Fatalf("Expected %d groups, got %d", len(want), len(groups))
+	}
+	for i, g := range groups {
+		got := summary{g.Description, g.Type, g.Count, g.Total}
+		if got != want[i] {
+			t.Errorf("group %d = %+v, want %+v", i, got, want[i])
+		}
+		for _, ex := range g.Expenses {
+			if ex.Type() != g.Type {
+				t.Errorf("group %d holds an expense of the other type", i)
+			}
+		}
+	}
+
+	// Expenses within a group are newest first.
+	if !groups[0].Expenses[0].Date().After(groups[0].Expenses[1].Date()) {
+		t.Error("Expected expenses newest first")
 	}
 }
 
@@ -328,7 +412,7 @@ func TestServiceTest_ReturnsMatchesWithoutWriting(t *testing.T) {
 
 	svc := New(s, logger)
 
-	matched, err := svc.Test(context.Background(), user.ID(), "cinema|movie")
+	matched, err := svc.Test(context.Background(), user.ID(), "cinema|movie", domain.ChargeCategory)
 	if err != nil {
 		t.Fatalf("Test returned error: %v", err)
 	}
@@ -364,4 +448,200 @@ func TestServiceTest_ReturnsMatchesWithoutWriting(t *testing.T) {
 			t.Fatalf("Expected no categories to be created, found %s", c.Name())
 		}
 	}
+}
+
+func TestServiceCreate_IncomeCategoryOnlyCategorizesIncome(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+	ctx := context.Background()
+
+	_, err := s.InsertExpenses(ctx, user.ID(), []domain.Expense{
+		domain.NewExpense(0, "bank", "acme payroll", "EUR", 300000, time.Now(), domain.IncomeType, nil),
+		domain.NewExpense(0, "bank", "acme store", "EUR", -2000, time.Now(), domain.ChargeType, nil),
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
+	}
+
+	svc := New(s, logger)
+
+	categoryID, matched, err := svc.Create(ctx, user.ID(), domain.CategoryFormData{
+		Name:          "Salary",
+		Pattern:       "acme",
+		MonthlyBudget: 50000,
+		Type:          domain.IncomeCategory,
+	})
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	if len(matched) != 1 || matched[0].Description() != "acme payroll" {
+		t.Fatalf("Expected only the income expense to be categorized, got %d", len(matched))
+	}
+
+	created, err := s.GetCategory(ctx, user.ID(), categoryID)
+	if err != nil {
+		t.Fatalf("Failed to get category: %v", err)
+	}
+	if created.Type() != domain.IncomeCategory {
+		t.Errorf("Type = %v, want income", created.Type())
+	}
+	if created.MonthlyBudget() != 0 {
+		t.Errorf("MonthlyBudget = %d, want 0 for income category", created.MonthlyBudget())
+	}
+
+	// The test preview must agree with Create.
+	preview, err := svc.Test(ctx, user.ID(), "acme", domain.ChargeCategory)
+	if err != nil {
+		t.Fatalf("Test returned error: %v", err)
+	}
+	if len(preview) != 1 || preview[0].Description() != "acme store" {
+		t.Fatalf("Expected preview to only include the charge, got %d", len(preview))
+	}
+}
+
+func TestServiceUpdate_TypeChange(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+	ctx := context.Background()
+
+	usedID, err := s.CreateCategory(ctx, user.ID(), "Food", "food", 10000, domain.ChargeCategory)
+	if err != nil {
+		t.Fatalf("Failed to create Category: %v", err)
+	}
+	emptyID, err := s.CreateCategory(ctx, user.ID(), "Salary", "payroll", 10000, domain.ChargeCategory)
+	if err != nil {
+		t.Fatalf("Failed to create Category: %v", err)
+	}
+
+	_, err = s.InsertExpenses(ctx, user.ID(), []domain.Expense{
+		domain.NewExpense(0, "bank", "food shop", "EUR", -1000, time.Now(), domain.ChargeType, &usedID),
+		domain.NewExpense(0, "bank", "payroll", "EUR", 300000, time.Now(), domain.IncomeType, nil),
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
+	}
+
+	svc := New(s, logger)
+
+	// A category holding charges cannot become an income category.
+	if _, _, _, err = svc.Update(ctx, user.ID(), usedID, "", "", "", "income"); err == nil {
+		t.Fatal("Expected error changing type of a category holding charges")
+	}
+
+	// An empty one can; its budget is dropped and income gets swept in.
+	updated, changed, matchingChanged, err := svc.Update(ctx, user.ID(), emptyID, "", "", "", "income")
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if !changed || !matchingChanged {
+		t.Fatalf("Expected changed and matchingChanged, got %v %v", changed, matchingChanged)
+	}
+	if updated.Type() != domain.IncomeCategory || updated.MonthlyBudget() != 0 {
+		t.Fatalf("Expected income category without budget, got %v %d", updated.Type(), updated.MonthlyBudget())
+	}
+
+	byCategory, err := s.GetExpensesByCategory(ctx, user.ID(), emptyID)
+	if err != nil {
+		t.Fatalf("Failed to get expenses: %v", err)
+	}
+	if len(byCategory) != 1 || byCategory[0].Description() != "payroll" {
+		t.Fatalf("Expected payroll to be recategorized into Salary, got %d expenses", len(byCategory))
+	}
+}
+
+func TestServiceUpdate_ExcludeCategoryKeepsAnyType(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+	ctx := context.Background()
+
+	exclude, err := s.GetExcludeCategory(ctx, user.ID())
+	if err != nil {
+		t.Fatalf("Failed to get exclude category: %v", err)
+	}
+
+	svc := New(s, logger)
+
+	updated, _, _, err := svc.Update(ctx, user.ID(), exclude.ID(), "", "", "", "charge")
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if updated.Type() != domain.AnyCategory {
+		t.Fatalf("Type = %v, want any", updated.Type())
+	}
+}
+
+func TestServiceUpdateCategoryPattern_SkipsOtherType(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+	ctx := context.Background()
+
+	categoryID, err := s.CreateCategory(ctx, user.ID(), "Shopping", "shop", 0, domain.ChargeCategory)
+	if err != nil {
+		t.Fatalf("Failed to create Category: %v", err)
+	}
+
+	_, err = s.InsertExpenses(ctx, user.ID(), []domain.Expense{
+		domain.NewExpense(0, "bank", "amazon", "EUR", -1000, time.Now(), domain.ChargeType, nil),
+		domain.NewExpense(0, "bank", "amazon", "EUR", 1000, time.Now(), domain.IncomeType, nil),
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
+	}
+
+	svc := New(s, logger)
+	if err = svc.UpdateCategoryPattern(ctx, user.ID(), categoryID, "amazon"); err != nil {
+		t.Fatalf("UpdateCategoryPattern returned error: %v", err)
+	}
+
+	byCategory, err := s.GetExpensesByCategory(ctx, user.ID(), categoryID)
+	if err != nil {
+		t.Fatalf("Failed to get expenses: %v", err)
+	}
+	if len(byCategory) != 1 || byCategory[0].Type() != domain.ChargeType {
+		t.Fatalf("Expected only the charge in Shopping, got %d expenses", len(byCategory))
+	}
+}
+
+func TestCreateEnhancedCategory_MonthAndBudget(t *testing.T) {
+	now := time.Date(2026, time.November, 15, 12, 0, 0, 0, time.UTC)
+	thisMonth := time.Date(2026, time.November, 3, 0, 0, 0, 0, time.UTC)
+	lastMonth := time.Date(2026, time.October, 30, 0, 0, 0, 0, time.UTC)
+
+	expenses := []domain.Expense{
+		domain.NewExpense(1, "bank", "lidl", "EUR", -7000, thisMonth, domain.ChargeType, nil),
+		domain.NewExpense(2, "bank", "lidl", "EUR", -1500, thisMonth, domain.ChargeType, nil),
+		domain.NewExpense(3, "bank", "lidl", "EUR", -9900, lastMonth, domain.ChargeType, nil),
+	}
+
+	t.Run("charge category with budget", func(t *testing.T) {
+		cat := domain.NewCategory(1, "Groceries", "lidl", 10000, domain.ChargeCategory)
+		got := createEnhancedCategory(cat, expenses, now)
+
+		if got.MonthAmount != -8500 {
+			t.Errorf("MonthAmount = %d, want -8500 (last month excluded)", got.MonthAmount)
+		}
+		if got.Budget.Status != domain.BudgetStatusNear || got.Budget.Spent != 8500 {
+			t.Errorf("Budget = %+v, want near with 8500 spent", got.Budget)
+		}
+		if got.BudgetBarWidth() != 85 {
+			t.Errorf("BudgetBarWidth = %v, want 85", got.BudgetBarWidth())
+		}
+	})
+
+	t.Run("over budget caps the bar", func(t *testing.T) {
+		cat := domain.NewCategory(1, "Groceries", "lidl", 5000, domain.ChargeCategory)
+		got := createEnhancedCategory(cat, expenses, now)
+
+		if got.Budget.Status != domain.BudgetStatusOver || got.BudgetBarWidth() != 100 {
+			t.Errorf("Budget = %+v width %v, want over capped at 100", got.Budget, got.BudgetBarWidth())
+		}
+	})
+
+	t.Run("no budget", func(t *testing.T) {
+		cat := domain.NewCategory(1, "Groceries", "lidl", 0, domain.ChargeCategory)
+		if got := createEnhancedCategory(cat, expenses, now); got.Budget.Status != domain.BudgetStatusNoBudget {
+			t.Errorf("Status = %s, want no_budget", got.Budget.Status)
+		}
+	})
 }

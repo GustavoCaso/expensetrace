@@ -1,39 +1,54 @@
 {{define "title"}}Categories{{end}}
 {{define "css"}}/static/css/pages/categories.css{{end}}
 
+{{/* Chart of accounts: one ledger table per category type. The type filter
+     is pure CSS (.categories-ledger rules in categories.css). */}}
 {{define "main"}}
   {{template "categories/nav" "index"}}
-  
-  {{if gt (len .Banner.Icon) 0}} 
+
+  {{if gt (len .Banner.Icon) 0}}
     {{template "banner" .Banner}}
   {{end}}
-  
-  {{ if gt (len .Error) 0 }}
+
+  {{if gt (len .Error) 0}}
     {{template "error" .Error}}
+  {{else}}
+    <div id="category-content" class="ledger-page">
+      <div class="ledger-toolbar">
+        <div class="type-filter" role="radiogroup" aria-label="Show categories">
+          <label>
+            <input type="radio" name="category-filter" value="all" checked>
+            <span>All <span class="filter-count">{{add (len .ExpenseCategories) (len .IncomeCategories)}}</span></span>
+          </label>
+          <label>
+            <input type="radio" name="category-filter" value="charge">
+            <span>Expenses <span class="filter-count">{{len .ExpenseCategories}}</span></span>
+          </label>
+          <label>
+            <input type="radio" name="category-filter" value="income">
+            <span>Income <span class="filter-count">{{len .IncomeCategories}}</span></span>
+          </label>
+        </div>
+
+        <p class="ledger-uncategorized">
+          {{if gt .UncategorizedCount 0}}
+            {{.UncategorizedCount}} transaction{{if gt .UncategorizedCount 1}}s need{{else}} needs{{end}} a category.
+            <a href="/category/uncategorized">Review uncategorized</a>
+          {{else}}
+            Every transaction has a category.
+          {{end}}
+        </p>
+      </div>
+
+      {{template "categories/section" (dict "Title" "Expenses" "Type" "charge" "Categories" .ExpenseCategories)}}
+      {{template "categories/section" (dict "Title" "Income" "Type" "income" "Categories" .IncomeCategories)}}
+
+      {{with .Excluded}}
+        <p class="ledger-excluded">
+          Transactions in <a href="/category/{{.ID}}">{{.Name}}</a> are left out of reports.
+          {{if gt .Total 0}}It holds {{.Total}} transaction{{if gt .Total 1}}s{{end}}.{{else}}It holds none yet.{{end}}
+        </p>
+      {{end}}
+    </div>
   {{end}}
-
-  <div id="category-content">
-    {{ if eq (len .Error) 0 }}
-      <div class="card-grid">
-        <div class="card ta-center">
-          <h3 class="card-title">Total Categories</h3>
-          <div class="text-lg font-bold">{{len .Categories}}</div>
-        </div>
-        <div class="card ta-center">
-          <h3 class="card-title">Categorized Expenses</h3>
-          <div class="text-lg font-bold">{{.CategorizedCount}}</div>
-        </div>
-        <div class="card ta-center">
-          <h3 class="card-title">Uncategorized Expenses</h3>
-          <div class="text-lg font-bold">{{.UncategorizedCount}}</div>
-        </div>
-      </div>
-
-      <div class="card-list">
-        {{range $category := .Categories}}
-          {{template "categories/card" $category}}
-        {{end}}
-      </div>
-    {{ end }}
-  </div>
 {{end}}

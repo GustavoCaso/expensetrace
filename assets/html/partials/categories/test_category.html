@@ -1,60 +1,46 @@
+{{/* Pattern test results, swapped into #pattern-results on the category form. */}}
 {{define "categories/test_category"}}
   {{if gt (len .Error) 0 }}
     {{template "error" .Error}}
+  {{else if eq .Total 0}}
+    <p class="ledger-summary">
+      No uncategorized {{if eq .Category.Type.String "income"}}income{{else}}expenses{{end}} match
+      <code class="ledger-pattern">{{.Category.Pattern}}</code>.
+      Try a broader pattern, or check whether these transactions already have a category.
+    </p>
   {{else}}
-    {{if eq .Total 0}}
-      <!-- No matches result -->
-      <div class="card no-matches">
-        <div class="card-header">
-          <h3>No Matching Transactions</h3>
-          <div class="pattern-badge">{{.Category.Pattern}}</div>
-        </div>
-        <div class="empty-state">
-          <div class="empty-icon">🔍</div>
-          <p>Your pattern didn't match any uncategorized transactions.</p>
-          <p>Try a different pattern or check if all similar transactions are already categorized.</p>
-        </div>
-      </div>
-    {{else}}
-      <!-- Success result with matched transactions -->
-      <div class="card success">
-        <div class="card-header">
-          <h3>Pattern Matched <span class="match-count">{{.Total}}</span> Transactions</h3>
-          <div class="pattern-badge">{{.Category.Pattern}}</div>
-        </div>
-        <div class="matched-transactions">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{$maxShown := 5}}
-              {{range $index, $expense := .Results}}
-                {{if lt $index $maxShown}}
-                  <tr>
-                    <td>{{$expense.Date.Format "2006-01-02"}}</td>
-                    <td>{{$expense.Description}}</td>
-                    {{if gt $expense.Amount 0}}
-                      <td class="income">{{formatMoney $expense.Amount "." ","}}€</td>
-                    {{else}}
-                      <td class="expense">{{formatMoney $expense.Amount "." ","}}€</td>
-                    {{end}}
-                  </tr>
-                {{end}}
-              {{end}}
-            </tbody>
-          </table>
-          
-          <!-- Show when there are more matches than shown -->
-          {{if gt .Total $maxShown}}
-            <div class="more-matches">And {{sub .Total $maxShown}} more transactions</div>
+    {{$maxShown := 8}}
+    <p class="ledger-summary">
+      <code class="ledger-pattern">{{.Category.Pattern}}</code> would pick up
+      {{.Total}} uncategorized transaction{{if ne .Total 1}}s{{end}}.
+    </p>
+    <table class="ledger ledger-compact">
+      <colgroup>
+        <col class="col-preview-date">
+        <col>
+        <col class="col-preview-amount">
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col">Description</th>
+          <th scope="col" class="num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $index, $expense := .Results}}
+          {{if lt $index $maxShown}}
+            <tr>
+              <td class="ledger-date">{{$expense.Date.Format "2 Jan 2006"}}</td>
+              <td>{{$expense.Description}}</td>
+              <td class="num {{if eq $expense.Type 1}}income{{else}}expense{{end}}">{{formatMoney (abs $expense.Amount) "." ","}}&nbsp;€</td>
+            </tr>
           {{end}}
-        </div>
-      </div>
+        {{end}}
+      </tbody>
+    </table>
+    {{if gt .Total $maxShown}}
+      <p class="ledger-summary">And {{sub .Total $maxShown}} more.</p>
     {{end}}
   {{end}}
 {{end}}

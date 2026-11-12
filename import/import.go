@@ -87,14 +87,14 @@ func ImportJSON(ctx context.Context, userID int64, expenses []JSONExpense, stora
 
 	for _, jsonExp := range expenses {
 		description := strings.ToLower(jsonExp.Description)
-		categoryID, _ := categoryMatcher.Match(description)
-
 		var et domain.ExpenseType
 		if jsonExp.Amount < 0 {
 			et = domain.ChargeType
 		} else {
 			et = domain.IncomeType
 		}
+
+		categoryID, _ := categoryMatcher.Match(description, et)
 
 		expense := domain.NewExpense(
 			0,
@@ -186,13 +186,13 @@ func ImportCSV(
 			}
 		}
 
-		categoryID, _ := categoryMatcher.Match(ex.description)
 		var et domain.ExpenseType
 		if ex.amount < 0 {
 			et = domain.ChargeType
 		} else {
 			et = domain.IncomeType
 		}
+		categoryID, _ := categoryMatcher.Match(ex.description, et)
 
 		expense := domain.NewExpense(
 			0,

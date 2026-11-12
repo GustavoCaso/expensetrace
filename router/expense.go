@@ -146,7 +146,7 @@ func (c *expenseHandler) newExpenseHandler(ctx context.Context, w http.ResponseW
 	data.Categories = categories
 	data.Expense = &domain.ExpenseView{
 		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
-		Cat:     domain.NewCategory(0, "", "", 0),
+		Cat:     domain.EmptyCategory(),
 	}
 }
 
@@ -161,7 +161,7 @@ func (c *expenseHandler) createExpenseHandler(ctx context.Context, w http.Respon
 	data.FormErrors = make(map[string]string)
 	data.Expense = &domain.ExpenseView{
 		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
-		Cat:     domain.NewCategory(0, "", "", 0),
+		Cat:     domain.EmptyCategory(),
 	}
 
 	defer func() {
@@ -213,7 +213,7 @@ func (c *expenseHandler) expenseHandler(ctx context.Context, w http.ResponseWrit
 	data.Action = editAction
 	data.Expense = &domain.ExpenseView{
 		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
-		Cat:     domain.NewCategory(0, "", "", 0),
+		Cat:     domain.EmptyCategory(),
 	}
 
 	defer func() {
@@ -254,7 +254,7 @@ func (c *expenseHandler) updateExpenseHandler(ctx context.Context, w http.Respon
 	data.Action = "edit"
 	data.Expense = &domain.ExpenseView{
 		Expense: domain.NewExpense(0, "", "", "", 0, time.Now(), domain.ChargeType, nil),
-		Cat:     domain.NewCategory(0, "", "", 0),
+		Cat:     domain.EmptyCategory(),
 	}
 
 	redirected := false

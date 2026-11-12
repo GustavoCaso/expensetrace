@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/GustavoCaso/expensetrace/domain"
 	"github.com/GustavoCaso/expensetrace/service/category"
 )
-
-const errSearchCriteria = "You must provide a search criteria"
 
 type categoryHandler struct {
 	*router
@@ -38,7 +38,7 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /category/uncategorized", func(w http.ResponseWriter, r *http.Request) {
-		c.uncategorizedHandler(r.Context(), w, "", nil)
+		c.uncategorizedHandler(r.Context(), w, nil, nil)
 	})
 
 	mux.HandleFunc("PUT /category/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -65,28 +65,6 @@ func (c *categoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /category/uncategorized/update", func(w http.ResponseWriter, r *http.Request) {
 		c.updateUncategorizedHandler(r.Context(), w, r)
 	})
-
-	mux.HandleFunc("POST /category/uncategorized/search", func(w http.ResponseWriter, r *http.Request) {
-		data := domain.ViewBase{}
-		r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
-		err := r.ParseForm()
-
-		if err != nil {
-			data.Error = err.Error()
-			c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
-			return
-		}
-
-		query := r.FormValue("q")
-
-		if query == "" {
-			data.Error = errSearchCriteria
-			c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
-			return
-		}
-
-		c.uncategorizedHandler(r.Context(), w, query, nil)
-	})
 }
 
 func (c *categoryHandler) categoriesHandler(
@@ -111,7 +89,22 @@ func (c *categoryHandler) categoriesHandler(
 		return
 	}
 
-	data.Categories = enhancedCategories
+	for _, cat := range enhancedCategories {
+		switch cat.Type() {
+		case domain.IncomeCategory:
+			data.IncomeCategories = append(data.IncomeCategories, cat)
+		case domain.AnyCategory:
+			data.Excluded = &cat
+		case domain.ChargeCategory:
+			data.ExpenseCategories = append(data.ExpenseCategories, cat)
+		}
+	}
+	byName := func(a, b domain.EnhancedCategory) int {
+		return strings.Compare(strings.ToLower(a.Name()), strings.ToLower(b.Name()))
+	}
+	slices.SortFunc(data.ExpenseCategories, byName)
+	slices.SortFunc(data.IncomeCategories, byName)
+
 	data.CategorizedCount = categorizedCount
 	data.UncategorizedCount = uncategorizedCount
 
@@ -194,6 +187,12 @@ func (c *categoryHandler) updateCategoryHandler(
 	name := r.FormValue("name")
 	pattern := r.FormValue("pattern")
 	budgetStr := r.FormValue("monthly_budget")
+	// The form always sends the budget field; empty there means "no budget".
+	// Requests that omit the field keep the existing budget.
+	if _, sent := r.PostForm["monthly_budget"]; sent && budgetStr == "" {
+		budgetStr = "0"
+	}
+	typeStr := r.FormValue("type")
 
 	updatedCategory, changed, _, updateErr := c.categoryService.Update(
 		ctx,
@@ -202,6 +201,7 @@ func (c *categoryHandler) updateCategoryHandler(
 		name,
 		pattern,
 		budgetStr,
+		typeStr,
 	)
 	if updateErr != nil {
 		c.logger.Error("Failed to update category", "error", updateErr)
@@ -226,10 +226,13 @@ func (c *categoryHandler) updateCategoryHandler(
 	}
 }
 
+// uncategorizedHandler renders every uncategorized group; search and the type
+// filter run in the browser. outerErr and banner show in the status slot,
+// which assign swaps out of band along with the results.
 func (c *categoryHandler) uncategorizedHandler(
 	ctx context.Context,
 	w http.ResponseWriter,
-	query string,
+	outerErr error,
 	banner *domain.Banner,
 ) {
 	userID := userIDFromContext(ctx)
@@ -242,7 +245,7 @@ func (c *categoryHandler) uncategorizedHandler(
 		c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
 	}()
 
-	grouped, keys, totalExpenses, totalAmount, err := c.categoryService.GetUncategorized(ctx, userID, query)
+	groups, totalExpenses, totalAmount, err := c.categoryService.GetUncategorized(ctx, userID, "")
 	if err != nil {
 		data.Error = err.Error()
 		return
@@ -254,11 +257,22 @@ func (c *categoryHandler) uncategorizedHandler(
 		return
 	}
 
-	data.Keys = keys
-	data.UncategorizeInfo = grouped
+	data.Groups = groups
 	data.Categories = categories
 	data.TotalExpenses = totalExpenses
 	data.TotalAmount = totalAmount
+
+	for _, group := range groups {
+		if group.Type == domain.IncomeType {
+			data.IncomeGroups++
+		} else {
+			data.ChargeGroups++
+		}
+	}
+
+	if outerErr != nil {
+		data.Error = outerErr.Error()
+	}
 
 	if banner != nil {
 		data.Banner = *banner
@@ -267,41 +281,35 @@ func (c *categoryHandler) uncategorizedHandler(
 
 func (c *categoryHandler) updateUncategorizedHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	userID := userIDFromContext(ctx)
-	data := viewBaseFromContext(ctx)
-
-	defer func() {
-		if data.Error != "" {
-			c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
-		}
-	}()
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxFormSize)
-	err := r.ParseForm()
-	if err != nil {
+	if err := r.ParseForm(); err != nil {
 		c.logger.Error(fmt.Sprintf("error r.ParseForm() %s", err.Error()))
-
-		data.Error = err.Error()
+		c.uncategorizedHandler(ctx, w, err, nil)
 		return
 	}
 
 	expenseDescription := r.FormValue("description")
 	categoryIDStr := r.FormValue("category_id")
 
-	categoryID, err := strconv.Atoi(categoryIDStr)
+	if categoryIDStr == "" {
+		c.uncategorizedHandler(ctx, w, errors.New("select a category to assign"), nil)
+		return
+	}
 
+	categoryID, err := strconv.ParseInt(categoryIDStr, 10, 64)
 	if err != nil {
-		c.logger.Error(fmt.Sprintf("error strconv.Atoi with value %s. %s", categoryIDStr, err.Error()))
-
-		data.Error = err.Error()
+		c.logger.Error(fmt.Sprintf("error strconv.ParseInt with value %s. %s", categoryIDStr, err.Error()))
+		c.uncategorizedHandler(ctx, w, fmt.Errorf("invalid category %q", categoryIDStr), nil)
 		return
 	}
 
-	if err = c.categoryService.UpdateCategoryPattern(ctx, userID, int64(categoryID), expenseDescription); err != nil {
-		data.Error = err.Error()
+	if err = c.categoryService.UpdateCategoryPattern(ctx, userID, categoryID, expenseDescription); err != nil {
+		c.uncategorizedHandler(ctx, w, err, nil)
 		return
 	}
 
-	c.uncategorizedHandler(ctx, w, "", &domain.Banner{
+	c.uncategorizedHandler(ctx, w, nil, &domain.Banner{
 		Icon:    "✅",
 		Message: "Expenses succesfully categorized",
 	})
@@ -375,7 +383,7 @@ func (c *categoryHandler) createCategoryHandler(
 	}
 
 	// Store parsed values in category for re-rendering
-	data.Category = domain.NewCategory(0, formData.Name, formData.Pattern, formData.MonthlyBudget)
+	data.Category = domain.NewCategory(0, formData.Name, formData.Pattern, formData.MonthlyBudget, formData.Type)
 
 	_, matched, createErr := c.categoryService.Create(ctx, userID, *formData)
 	if createErr != nil {
@@ -421,9 +429,9 @@ func (c *categoryHandler) testCategoryHandler(
 	}
 
 	// Store parsed values in category for re-rendering
-	data.Category = domain.NewCategory(0, formData.Name, formData.Pattern, formData.MonthlyBudget)
+	data.Category = domain.NewCategory(0, formData.Name, formData.Pattern, formData.MonthlyBudget, formData.Type)
 
-	matched, testErr := c.categoryService.Test(ctx, userID, formData.Pattern)
+	matched, testErr := c.categoryService.Test(ctx, userID, formData.Pattern, formData.Type)
 	if testErr != nil {
 		c.logger.Error("Failed to test category pattern", "error", testErr)
 		data.Error = testErr.Error()
@@ -461,6 +469,11 @@ func parseCategoryForm(r *http.Request) (*domain.CategoryFormData, error) {
 		return nil, fmt.Errorf("invalid pattern: %w", err)
 	}
 
+	categoryType, typeErr := domain.ParseCategoryType(r.FormValue("type"))
+	if typeErr != nil {
+		return nil, typeErr
+	}
+
 	// Validate budget
 	monthlyBudget, budgetErr := category.ValidateBudget(budgetStr)
 	if budgetErr != nil {
@@ -471,5 +484,6 @@ func parseCategoryForm(r *http.Request) (*domain.CategoryFormData, error) {
 		Name:          name,
 		Pattern:       pattern,
 		MonthlyBudget: monthlyBudget,
+		Type:          categoryType,
 	}, nil
 }

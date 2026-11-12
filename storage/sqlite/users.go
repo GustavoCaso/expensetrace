@@ -35,8 +35,8 @@ func (s *sqliteStorage) CreateUser(ctx context.Context, username, passwordHash s
 
 	// Create Exclude category for this user
 	_, err = tx.ExecContext(ctx,
-		`INSERT INTO categories (name, pattern, user_id) VALUES (?, ?, ?)`,
-		domain.ExcludeCategory, "$a", userID)
+		`INSERT INTO categories (name, pattern, user_id, type) VALUES (?, ?, ?, ?)`,
+		domain.ExcludeCategory, "$a", userID, domain.AnyCategory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create exclude category: %w", err)
 	}

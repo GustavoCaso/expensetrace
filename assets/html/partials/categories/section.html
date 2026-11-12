@@ -1,0 +1,86 @@
+{{/* One ledger table of categories of a single type.
+     Expects a dict with Title, Type ("charge" or "income") and Categories. */}}
+{{define "categories/section"}}
+  {{$isCharge := eq .Type "charge"}}
+  <section class="ledger-section" data-type="{{.Type}}" aria-labelledby="ledger-{{.Type}}">
+    <h2 id="ledger-{{.Type}}" class="ledger-title">{{.Title}}</h2>
+
+    {{if .Categories}}
+      {{/* Both tables share column widths so the numbers line up. */}}
+      <table class="ledger">
+        <colgroup>
+          <col class="col-name">
+          <col class="col-count">
+          <col class="col-amount">
+          <col class="col-budget">
+          <col class="col-actions">
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col">Category</th>
+            <th scope="col" class="num">Transactions, all time</th>
+            <th scope="col" class="num">This month</th>
+            <th scope="col">{{if $isCharge}}Monthly budget{{end}}</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Categories}}
+            <tr id="category-{{.ID}}">
+              <th scope="row" class="ledger-name">
+                <a href="/category/{{.ID}}">{{.Name}}</a>
+                <code class="ledger-pattern" title="Pattern">{{.Pattern}}</code>
+              </th>
+              <td class="num ledger-count">
+                {{if gt .Total 0}}
+                  {{.Total}}<span class="ledger-count-unit"> transaction{{if ne .Total 1}}s{{end}} in total</span>
+                {{else}}
+                  <a class="ledger-hint" href="/category/{{.ID}}">No matches yet</a>
+                {{end}}
+              </td>
+              {{/* Zero stays grey; otherwise the app's expense/income color. */}}
+              <td class="num ledger-amount {{if eq .MonthAmount 0}}is-zero{{else if $isCharge}}expense{{else}}income{{end}}">
+                {{formatMoney (abs .MonthAmount) "." ","}}&nbsp;€
+              </td>
+              {{if $isCharge}}
+                <td class="ledger-budget">
+                  {{if gt .MonthlyBudget 0}}
+                    <div class="budget-line budget-{{.Budget.Status}}"
+                         role="img"
+                         aria-label="{{formatMoney .Budget.Spent "." ","}} € of {{formatMoney .MonthlyBudget "." ","}} € spent this month">
+                      <span class="budget-fill" style="width: {{printf "%.1f" .BudgetBarWidth}}%"></span>
+                    </div>
+                    <span class="budget-caption">
+                      {{if lt .Budget.Remaining 0}}
+                        {{formatMoney (abs .Budget.Remaining) "." ","}}&nbsp;€ over {{formatMoney .MonthlyBudget "." ","}}&nbsp;€
+                      {{else}}
+                        of {{formatMoney .MonthlyBudget "." ","}}&nbsp;€
+                      {{end}}
+                    </span>
+                  {{else}}
+                    <span class="budget-caption is-empty">No budget</span>
+                  {{end}}
+                </td>
+              {{else}}
+                <td class="ledger-budget"></td>
+              {{end}}
+              <td class="ledger-actions">
+                <button type="button" class="ledger-delete"
+                  hx-delete="/category/{{.ID}}"
+                  hx-confirm="Delete {{.Name}}? Its transactions become uncategorized."
+                  hx-target="#page"
+                  hx-swap="outerHTML show:window:top"
+                  aria-label="Delete {{.Name}}">Delete</button>
+              </td>
+            </tr>
+          {{end}}
+        </tbody>
+      </table>
+    {{else}}
+      <p class="ledger-empty">
+        No {{if $isCharge}}expense{{else}}income{{end}} categories yet.
+        <a href="/category/new">Create a category</a>
+      </p>
+    {{end}}
+  </section>
+{{end}}

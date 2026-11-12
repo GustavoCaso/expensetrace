@@ -93,8 +93,8 @@ func TestApplyMapping(t *testing.T) {
 	catFoodID := int64(1)
 	catTransportID := int64(2)
 	categories := []domain.Category{
-		domain.NewCategory(catFoodID, "Food", "restaurant|food|grocery", 0),
-		domain.NewCategory(catTransportID, "Transport", "uber|taxi|transit", 0),
+		domain.NewCategory(catFoodID, "Food", "restaurant|food|grocery", 0, domain.ChargeCategory),
+		domain.NewCategory(catTransportID, "Transport", "uber|taxi|transit", 0, domain.ChargeCategory),
 	}
 	categoryMatcher := matcher.New(categories)
 

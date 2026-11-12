@@ -10,7 +10,7 @@ import (
 )
 
 func (s *sqliteStorage) GetCategories(ctx context.Context, userID int64) ([]domain.Category, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT * FROM categories WHERE user_id = ?", userID)
+	rows, err := s.db.QueryContext(ctx, "SELECT "+categoryColumns+" FROM categories WHERE user_id = ?", userID)
 	if err != nil {
 		return []domain.Category{}, err
 	}
@@ -37,14 +37,19 @@ func (s *sqliteStorage) GetCategories(ctx context.Context, userID int64) ([]doma
 }
 
 func (s *sqliteStorage) GetCategory(ctx context.Context, userID, categoryID int64) (domain.Category, error) {
-	row := s.db.QueryRowContext(ctx, "SELECT * FROM categories WHERE id=? AND user_id = ?", categoryID, userID)
+	row := s.db.QueryRowContext(
+		ctx,
+		"SELECT "+categoryColumns+" FROM categories WHERE id=? AND user_id = ?",
+		categoryID,
+		userID,
+	)
 	return categoryFromRow(row.Scan)
 }
 
 func (s *sqliteStorage) GetExcludeCategory(ctx context.Context, userID int64) (domain.Category, error) {
 	row := s.db.QueryRowContext(
 		ctx,
-		"SELECT * FROM categories WHERE name=? AND user_id = ?",
+		"SELECT "+categoryColumns+" FROM categories WHERE name=? AND user_id = ?",
 		domain.ExcludeCategory,
 		userID,
 	)
@@ -56,12 +61,14 @@ func (s *sqliteStorage) UpdateCategory(
 	userID, categoryID int64,
 	name, pattern string,
 	monthlyBudget int64,
+	categoryType domain.CategoryType,
 ) error {
 	_, err := s.db.ExecContext(ctx,
-		"UPDATE categories SET name = ?, pattern = ?, monthly_budget = ? WHERE id = ? AND user_id = ?;",
+		"UPDATE categories SET name = ?, pattern = ?, monthly_budget = ?, type = ? WHERE id = ? AND user_id = ?;",
 		name,
 		pattern,
 		monthlyBudget,
+		categoryType,
 		categoryID,
 		userID,
 	)
@@ -73,14 +80,16 @@ func (s *sqliteStorage) CreateCategory(
 	userID int64,
 	name, pattern string,
 	monthlyBudget int64,
+	categoryType domain.CategoryType,
 ) (int64, error) {
 	result, err := s.db.ExecContext(
 		ctx,
-		"INSERT INTO categories(name, pattern, user_id, monthly_budget) values(?, ?, ?, ?)",
+		"INSERT INTO categories(name, pattern, user_id, monthly_budget, type) values(?, ?, ?, ?, ?)",
 		name,
 		pattern,
 		userID,
 		monthlyBudget,
+		categoryType,
 	)
 
 	if err != nil {
@@ -98,7 +107,7 @@ func (s *sqliteStorage) DeleteCategories(ctx context.Context, userID int64) (int
 
 	excludeRow := tx.QueryRowContext(
 		ctx,
-		"SELECT * FROM categories WHERE name=? AND user_id = ?",
+		"SELECT "+categoryColumns+" FROM categories WHERE name=? AND user_id = ?",
 		domain.ExcludeCategory,
 		userID,
 	)
@@ -169,18 +178,21 @@ func (s *sqliteStorage) DeleteCategory(ctx context.Context, userID, categoryID i
 	return result.RowsAffected()
 }
 
+// categoryColumns lists the columns categoryFromRow scans, in order.
+const categoryColumns = "id, name, pattern, monthly_budget, type"
+
 func categoryFromRow(scan func(dest ...any) error) (domain.Category, error) {
 	var id int64
 	var name, pattern string
-	var userID int64
 	var monthlyBudget int64
+	var categoryType domain.CategoryType
 
-	if err := scan(&id, &name, &pattern, &userID, &monthlyBudget); err != nil {
+	if err := scan(&id, &name, &pattern, &monthlyBudget, &categoryType); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, &domain.NotFoundError{}
 		}
 		return nil, err
 	}
 
-	return domain.NewCategory(id, name, pattern, monthlyBudget), nil
+	return domain.NewCategory(id, name, pattern, monthlyBudget, categoryType), nil
 }

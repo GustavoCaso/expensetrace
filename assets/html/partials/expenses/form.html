@@ -87,10 +87,24 @@
     <select id="expense-category" name="category_id">
       <option value="">None</option>
       {{range .Categories}}
-        <option value="{{.ID}}" {{if eq $.Expense.CategoryID .ID}}selected{{end}}>
-          {{.Name}}
-        </option>
+        {{if eq .Type.String "any"}}
+          <option value="{{.ID}}" {{if eq $.Expense.CategoryID .ID}}selected{{end}}>{{.Name}}</option>
+        {{end}}
       {{end}}
+      <optgroup label="Expense categories">
+        {{range .Categories}}
+          {{if eq .Type.String "charge"}}
+            <option value="{{.ID}}" {{if eq $.Expense.CategoryID .ID}}selected{{end}}>{{.Name}}</option>
+          {{end}}
+        {{end}}
+      </optgroup>
+      <optgroup label="Income categories">
+        {{range .Categories}}
+          {{if eq .Type.String "income"}}
+            <option value="{{.ID}}" {{if eq $.Expense.CategoryID .ID}}selected{{end}}>{{.Name}}</option>
+          {{end}}
+        {{end}}
+      </optgroup>
     </select>
     {{if eq .Action "edit"}}
       <div class="radio-group">

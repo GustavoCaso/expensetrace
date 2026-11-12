@@ -300,7 +300,7 @@ func (s *Service) Budgets(ctx context.Context, userID int64, month, year int) ([
 		}
 		budgets = append(budgets, CategoryBudget{
 			Name:   c.Name(),
-			Budget: calculateBudgetInfo(c.MonthlyBudget(), spentByName[c.Name()]),
+			Budget: CalculateBudgetInfo(c.MonthlyBudget(), spentByName[c.Name()]),
 		})
 	}
 

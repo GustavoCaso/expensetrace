@@ -8,8 +8,8 @@ import (
 
 func TestNew(t *testing.T) {
 	categories := []domain.Category{
-		domain.NewCategory(1, "Food", "restaurant|food|grocery", 0),
-		domain.NewCategory(2, "Transport", "uber|taxi|transit", 0),
+		domain.NewCategory(1, "Food", "restaurant|food|grocery", 0, domain.ChargeCategory),
+		domain.NewCategory(2, "Transport", "uber|taxi|transit", 0, domain.ChargeCategory),
 	}
 
 	matcher := New(categories)
@@ -29,9 +29,9 @@ func TestMatch(t *testing.T) {
 	entertaimentCategoryID := int64(1)
 
 	categories := []domain.Category{
-		domain.NewCategory(foodCategoryID, "Food", "restaurant|food|grocery", 0),
-		domain.NewCategory(transportCategoryID, "Transport", "uber|taxi|transit", 0),
-		domain.NewCategory(entertaimentCategoryID, "Entertainment", "netflix|spotify|movie", 0),
+		domain.NewCategory(foodCategoryID, "Food", "restaurant|food|grocery", 0, domain.ChargeCategory),
+		domain.NewCategory(transportCategoryID, "Transport", "uber|taxi|transit", 0, domain.ChargeCategory),
+		domain.NewCategory(entertaimentCategoryID, "Entertainment", "netflix|spotify|movie", 0, domain.ChargeCategory),
 	}
 
 	matcher := New(categories)
@@ -70,7 +70,7 @@ func TestMatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotID, gotName := matcher.Match(tt.input)
+			gotID, gotName := matcher.Match(tt.input, domain.ChargeType)
 
 			if gotID == nil {
 				if gotID != tt.wantID {
@@ -91,8 +91,8 @@ func TestMatch(t *testing.T) {
 
 func TestCategories(t *testing.T) {
 	categories := []domain.Category{
-		domain.NewCategory(1, "Food", "restaurant|food|grocery", 0),
-		domain.NewCategory(2, "Transport", "uber|taxi|transit", 0),
+		domain.NewCategory(1, "Food", "restaurant|food|grocery", 0, domain.ChargeCategory),
+		domain.NewCategory(2, "Transport", "uber|taxi|transit", 0, domain.ChargeCategory),
 	}
 
 	matcher := New(categories)
@@ -112,5 +112,42 @@ func TestCategories(t *testing.T) {
 		if cat.Pattern() != categories[i].Pattern() {
 			t.Errorf("Categories()[%d].Pattern = %v, want %v", i, cat.Pattern(), categories[i].Pattern())
 		}
+	}
+}
+
+func TestMatchRespectsCategoryType(t *testing.T) {
+	refundsID := int64(1)
+	shoppingID := int64(2)
+	excludeID := int64(3)
+
+	m := New([]domain.Category{
+		domain.NewCategory(refundsID, "Refunds", "amazon", 0, domain.IncomeCategory),
+		domain.NewCategory(shoppingID, "Shopping", "amazon", 0, domain.ChargeCategory),
+		domain.NewCategory(excludeID, domain.ExcludeCategory, "transfer", 0, domain.AnyCategory),
+	})
+
+	tests := []struct {
+		name        string
+		input       string
+		expenseType domain.ExpenseType
+		wantID      *int64
+	}{
+		{"charge skips income category", "amazon order", domain.ChargeType, &shoppingID},
+		{"income skips charge category", "amazon refund", domain.IncomeType, &refundsID},
+		{"any category matches charge", "transfer out", domain.ChargeType, &excludeID},
+		{"any category matches income", "transfer in", domain.IncomeType, &excludeID},
+		{"no match", "coffee", domain.IncomeType, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotID, _ := m.Match(tt.input, tt.expenseType)
+			switch {
+			case tt.wantID == nil && gotID != nil:
+				t.Errorf("Match() = %d, want nil", *gotID)
+			case tt.wantID != nil && (gotID == nil || *gotID != *tt.wantID):
+				t.Errorf("Match() = %v, want %d", gotID, *tt.wantID)
+			}
+		})
 	}
 }

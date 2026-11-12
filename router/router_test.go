@@ -22,7 +22,14 @@ func TestCategoryMatcherIncludesExcludeCategory(t *testing.T) {
 	logger := testutil.TestLogger(t)
 	s, user := testutil.SetupTestStorage(t, logger)
 
-	categoryID, err := s.CreateCategory(t.Context(), user.ID(), "Entertainment", "cinema|movie", 0)
+	categoryID, err := s.CreateCategory(
+		t.Context(),
+		user.ID(),
+		"Entertainment",
+		"cinema|movie",
+		0,
+		domain.ChargeCategory,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create Category: %v", err)
 	}
@@ -45,7 +52,7 @@ func TestCategoryMatcherIncludesExcludeCategory(t *testing.T) {
 		t.Fatal("Expected matcher categories to include the exclude category")
 	}
 
-	matchedID, matchedName := m.Match("cinema")
+	matchedID, matchedName := m.Match("cinema", domain.ChargeType)
 	if matchedID == nil || *matchedID != categoryID {
 		t.Fatalf("Expected 'cinema' to match category %d, got %v", categoryID, matchedID)
 	}

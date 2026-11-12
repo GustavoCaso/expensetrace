@@ -3,6 +3,7 @@ package router
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -28,6 +29,26 @@ func newHTMLRenderer(templateFS fs.FS, sharedTemplateFiles ...string) (*htmlRend
 				return -v
 			}
 			return v
+		},
+		"add": func(a, b int) int {
+			return a + b
+		},
+		// dict builds a map from alternating keys and values, for passing
+		// several values to a sub-template.
+		"dict": func(pairs ...any) (map[string]any, error) {
+			const pair = 2
+			if len(pairs)%pair != 0 {
+				return nil, errors.New("dict needs an even number of arguments")
+			}
+			m := make(map[string]any, len(pairs)/pair)
+			for i := 0; i < len(pairs); i += pair {
+				key, ok := pairs[i].(string)
+				if !ok {
+					return nil, fmt.Errorf("dict key %v is not a string", pairs[i])
+				}
+				m[key] = pairs[i+1]
+			}
+			return m, nil
 		},
 		"sub": func(a, b int) int {
 			return a - b
