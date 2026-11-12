@@ -72,6 +72,18 @@ type EnhancedCategory struct {
 	TotalAmount     int64
 	SpendingCount   int
 	IncomeCount     int
+	// MonthAmount is the signed sum of this month's expenses (charges are
+	// negative).
+	MonthAmount int64
+	// Budget is this month's budget status; Status is no_budget for income
+	// categories and charge categories without a budget.
+	Budget BudgetInfo
+}
+
+// BudgetBarWidth is the budget percentage used, capped at 100, for drawing a
+// bar.
+func (c EnhancedCategory) BudgetBarWidth() float64 {
+	return min(c.Budget.PercentageUsed, percentageCap)
 }
 
 // CategoryFormData holds parsed and validated category form data.
@@ -84,7 +96,11 @@ type CategoryFormData struct {
 
 type CategoriesViewData struct {
 	ViewBase
-	Categories         []EnhancedCategory
+	// ExpenseCategories and IncomeCategories are sorted by name; Excluded is
+	// the exclude category (nil if missing).
+	ExpenseCategories  []EnhancedCategory
+	IncomeCategories   []EnhancedCategory
+	Excluded           *EnhancedCategory
 	CategorizedCount   int
 	UncategorizedCount int
 }

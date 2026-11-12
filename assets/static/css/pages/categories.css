@@ -1,39 +1,4 @@
-/* Categories page specific styles */
-
-.pattern-badge {
-  font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
-  background-color: var(--color-gray-100);
-  padding: var(--spacing-1) var(--spacing-3);
-  border-radius: var(--border-radius);
-  color: var(--color-gray-600);
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  border-left: 3px solid var(--color-gray-300);
-}
-
-.pattern-badge.error {
-  background-color: var(--color-danger-light);
-  color: var(--color-danger);
-  border-left-color: var(--color-danger);
-}
-
-/* Match count badge */
-.match-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--color-primary-light);
-  color: var(--color-primary-dark);
-  font-size: var(--font-size-sm);
-  border-radius: var(--border-radius-full);
-  padding: var(--spacing-0-5) var(--spacing-3);
-  margin-left: var(--spacing-2);
-  font-weight: var(--font-weight-semibold);
-}
-
+/* Categories pages: index, uncategorized, and the new/edit form. */
 /* Pattern quick reference */
 .pattern-quick-reference {
   margin-top: var(--spacing-4);
@@ -91,41 +56,8 @@
   color: var(--color-primary-dark);
 }
 
-/* Uncategorized section */
-.uncategorized-instructions {
-  margin-bottom: var(--spacing-6);
-  color: var(--color-gray-600);
-  font-size: var(--font-size-sm);
-  padding: var(--spacing-3) var(--spacing-4);
-  background-color: var(--color-gray-50);
-  border-left: 3px solid var(--color-primary);
-  border-radius: 0 var(--border-radius) var(--border-radius) 0;
-}
-
-/* Transaction preview */
-.transactions-preview {
-  margin-bottom: var(--spacing-3);
-}
-
-.more-transactions {
-  margin-top: var(--spacing-2);
-  text-align: center;
-}
-
-.all-transactions {
-  margin-top: var(--spacing-3);
-  padding-top: var(--spacing-2);
-  border-top: 1px dashed var(--color-gray-200);
-  max-height: 400px;
-  overflow-y: auto;
-}
-
 /* Responsive adjustments */
 @media (max-width: 640px) {
-  .pattern-badge {
-    max-width: 100%;
-  }
-
   .example-categories {
     grid-template-columns: 1fr;
   }
@@ -136,31 +68,10 @@
   display: none;
 }
 
-/* Uncategorized page: expense/income filter (segmented control, no JS).
-   The checked radio hides groups of the other type via :has(). */
-.uncategorized-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-3);
-  margin-bottom: var(--spacing-4);
-}
+/* Expense/income filter (segmented control, no JS), shared by the ledger
+   pages (.ledger-page) and the category form. */
 
-.uncategorized-search {
-  flex: 1 1 16rem;
-  min-width: 0;
-}
-
-.uncategorized-no-match {
-  color: var(--color-gray-500);
-}
-
-/* Cards set their own display, which beats the UA [hidden] rule. */
-.uncategorized-group[hidden] {
-  display: none;
-}
-
-.uncategorized-filter {
+.type-filter {
   display: inline-flex;
   flex-wrap: wrap;
   gap: var(--spacing-0-5);
@@ -170,20 +81,20 @@
   border-radius: var(--border-radius);
 }
 
-.uncategorized-filter label {
+.type-filter label {
   position: relative;
   cursor: pointer;
   margin-bottom: 0;
   padding: var(--spacing-0-5);
 }
 
-.uncategorized-filter input {
+.type-filter input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
 
-.uncategorized-filter label>span {
+.type-filter label>span {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-1);
@@ -193,28 +104,563 @@
   color: var(--color-gray-600);
 }
 
-.uncategorized-filter label:hover>span {
+.type-filter label:hover>span {
   color: var(--color-gray-800);
 }
 
-.uncategorized-filter input:checked+span {
+.type-filter input:checked+span {
   background-color: var(--color-surface);
   color: var(--color-gray-900);
   font-weight: var(--font-weight-semibold);
   box-shadow: var(--shadow-sm);
 }
 
-.uncategorized-filter input:focus-visible+span {
+.type-filter input:focus-visible+span {
   box-shadow: 0 0 0 3px var(--ring-primary);
 }
 
-.uncategorized-filter .filter-count {
+.type-filter .filter-count {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   color: var(--color-gray-500);
 }
 
-#uncategorized:has(.uncategorized-filter input[value="charge"]:checked) .uncategorized-group[data-type="income"],
-#uncategorized:has(.uncategorized-filter input[value="income"]:checked) .uncategorized-group[data-type="charge"] {
+/* ---------------------------------------------------------------------------
+   Categories page: chart of accounts. One ledger table per category type; the
+   budget line is the only colored element in a row.
+   --------------------------------------------------------------------------- */
+
+.ledger-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3) var(--spacing-6);
+  margin-bottom: var(--spacing-6);
+}
+
+.ledger-toolbar .type-filter {
+  margin-bottom: 0;
+}
+
+.ledger-uncategorized {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+}
+
+.ledger-uncategorized a,
+.ledger-empty a,
+.ledger-excluded a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* The type filter hides the other type's table (and the exclude note). */
+.ledger-page:has(.ledger-toolbar .type-filter input[value="charge"]:checked) .ledger-section[data-type="income"],
+.ledger-page:has(.ledger-toolbar .type-filter input[value="income"]:checked) .ledger-section[data-type="charge"],
+.ledger-page:has(.ledger-toolbar .type-filter input:not([value="all"]):checked) .ledger-excluded {
   display: none;
+}
+
+/* Rows and tables hidden by search set display elsewhere, which beats the UA
+   [hidden] rule. */
+.ledger-section[hidden],
+.ledger tr[hidden] {
+  display: none;
+}
+
+.ledger-search {
+  flex: 0 1 20rem;
+  min-width: 0;
+}
+
+.ledger-summary,
+.uncategorized-no-match,
+.ledger-done {
+  max-width: 70ch;
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+}
+
+.ledger-summary {
+  margin: 0 0 var(--spacing-6);
+}
+
+.ledger-summary:empty {
+  display: none;
+}
+
+.ledger-done a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ledger-section + .ledger-section {
+  margin-top: var(--spacing-8);
+}
+
+.ledger-title {
+  margin: 0 0 var(--spacing-2);
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--color-gray-900);
+}
+
+.ledger {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.ledger .col-name { width: 30%; }
+.ledger .col-date { width: 10%; }
+.ledger .col-assign { width: 34%; }
+.ledger .col-count { width: 13%; }
+.ledger .col-amount { width: 15%; }
+.ledger .col-budget { width: 32%; }
+.ledger .col-actions { width: 10%; }
+
+/* Override the global table header tint: a ledger is ink on paper. */
+.ledger th {
+  background-color: transparent;
+}
+
+.ledger thead th {
+  padding: var(--spacing-2) var(--spacing-3);
+  border-bottom: 2px solid var(--color-gray-800);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-500);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ledger tbody th,
+.ledger tbody td {
+  padding: var(--spacing-3);
+  border-bottom: 1px solid var(--color-gray-200);
+  vertical-align: middle;
+  text-align: left;
+}
+
+/* The global table style drops the last row's rule; a ledger closes with one. */
+.ledger tbody tr:last-child td {
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.ledger tbody tr:hover {
+  background-color: var(--color-gray-50);
+}
+
+.ledger .num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ledger thead th.num {
+  font-family: inherit;
+}
+
+.ledger-name {
+  font-weight: var(--font-weight-normal);
+}
+
+.ledger-name a {
+  display: block;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  text-decoration: none;
+}
+
+.ledger-name a:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.ledger-pattern {
+  display: inline-block;
+  margin-top: var(--spacing-0-5);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  word-break: break-all;
+}
+
+/* The column header names the unit on wide screens; stacked rows say it. */
+.ledger-count-unit {
+  display: none;
+}
+
+.ledger-count .ledger-hint {
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  color: var(--color-warning);
+}
+
+.ledger-amount {
+  color: var(--color-gray-900);
+}
+
+.ledger-amount.is-zero {
+  color: var(--color-gray-400);
+}
+
+/* Budget line: thin rule filled to the share of budget spent this month. */
+.ledger-budget {
+  padding-right: var(--spacing-5);
+}
+
+.budget-line {
+  position: relative;
+  height: 6px;
+  background-color: var(--color-gray-100);
+  border-radius: var(--border-radius-full);
+}
+
+.budget-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--border-radius-full);
+  background-color: var(--color-primary);
+}
+
+.budget-near .budget-fill {
+  background-color: var(--color-warning);
+}
+
+.budget-over .budget-fill {
+  background-color: var(--color-danger);
+}
+
+/* Over budget: a tick past the end of the line marks the overspend. */
+.budget-over::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  width: 3px;
+  height: 14px;
+  border-radius: 1px;
+  background-color: var(--color-danger);
+}
+
+.budget-caption {
+  display: block;
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-500);
+}
+
+.budget-over + .budget-caption {
+  color: var(--color-danger);
+}
+
+.budget-caption.is-empty {
+  font-family: var(--font-family);
+  color: var(--color-gray-400);
+}
+
+.ledger-actions {
+  text-align: right;
+}
+
+/* Delete appears with the row it belongs to (always shown on touch). */
+.ledger-delete {
+  opacity: 0;
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 0;
+  border-radius: var(--border-radius-sm);
+  background: none;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  cursor: pointer;
+}
+
+.ledger tr:hover .ledger-delete,
+.ledger tr:focus-within .ledger-delete {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .ledger-delete {
+    opacity: 1;
+  }
+}
+
+.ledger-delete:hover {
+  color: var(--color-danger);
+  background-color: var(--color-danger-light);
+}
+
+.ledger-delete:focus-visible,
+.ledger-name a:focus-visible,
+.ledger-hint:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring-primary);
+}
+
+.ledger-empty,
+.ledger-excluded {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
+}
+
+.ledger-empty {
+  margin: 0;
+  padding: var(--spacing-4) 0;
+  border-top: 2px solid var(--color-gray-800);
+}
+
+.ledger-excluded {
+  margin: var(--spacing-8) 0 0;
+}
+
+/* Category form: one column of fields beside a live preview of matches. */
+.category-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
+  gap: var(--spacing-8);
+  align-items: start;
+  margin-top: var(--spacing-4);
+}
+
+@media (max-width: 860px) {
+  .category-editor-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Reset the global form panel: the editor is ink on paper like the ledger. */
+.category-form {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  gap: var(--spacing-5);
+}
+
+.category-form .form-group {
+  margin-bottom: 0;
+}
+
+.category-form label,
+.category-form .form-label {
+  display: block;
+  margin-bottom: var(--spacing-1);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-800);
+}
+
+/* Labels inside the segmented control keep the control's own styling. */
+.category-form .type-filter label {
+  display: inline-block;
+  margin: 0;
+  font-weight: inherit;
+}
+
+.category-form .type-filter {
+  margin-bottom: 0;
+}
+
+.pattern-input {
+  font-family: var(--font-mono);
+}
+
+.money-input {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  max-width: 12rem;
+}
+
+.money-input input {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.money-input span {
+  color: var(--color-gray-500);
+}
+
+.category-form .input-help {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1) var(--spacing-3);
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+}
+
+.category-form .form-actions {
+  justify-content: flex-start;
+  gap: var(--spacing-2);
+  padding-top: var(--spacing-4);
+  border-top: 2px solid var(--color-gray-800);
+}
+
+.pattern-preview-title {
+  margin: 0 0 var(--spacing-2);
+  padding-bottom: var(--spacing-2);
+  border-bottom: 2px solid var(--color-gray-800);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+}
+
+.pattern-preview .ledger-summary {
+  margin: var(--spacing-3) 0;
+}
+
+.ledger .col-preview-date { width: 8rem; }
+.ledger .col-preview-amount { width: 7rem; }
+
+/* Uncategorized rows: the description, its transactions on demand, and an
+   inline assign form. */
+.ledger-description {
+  display: block;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  overflow-wrap: anywhere;
+}
+
+.ledger-details summary {
+  width: fit-content;
+  margin-top: var(--spacing-0-5);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.ledger-details summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring-primary);
+}
+
+.ledger-details ul {
+  margin: var(--spacing-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-gray-600);
+}
+
+.ledger-details li {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr auto;
+  gap: var(--spacing-2);
+  padding: var(--spacing-0-5) 0;
+}
+
+.ledger-details .num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-800);
+}
+
+.ledger-date {
+  color: var(--color-gray-500);
+}
+
+/* Transaction amounts take the app's expense/income colors; the ledger's
+   neutral ink rules above would otherwise win on specificity. */
+.ledger .num.expense,
+.ledger-details .num.expense {
+  color: var(--color-danger);
+}
+
+.ledger .num.income,
+.ledger-details .num.income {
+  color: var(--color-success);
+}
+
+/* Reset the global form panel: this form sits inline in a table cell. */
+.assign-form {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin: 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
+.assign-form select {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.assign-button {
+  flex: none;
+  align-self: stretch;
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-sm);
+}
+
+/* Narrow screens: each row becomes a two-column block. */
+@media (max-width: 640px) {
+  .ledger,
+  .ledger tbody {
+    display: block;
+  }
+
+  .ledger colgroup {
+    display: none;
+  }
+
+  .ledger thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .ledger tbody tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--spacing-1) var(--spacing-3);
+    padding: var(--spacing-3) 0;
+    border-bottom: 1px solid var(--color-gray-200);
+  }
+
+  .ledger tbody th,
+  .ledger tbody td {
+    padding: 0;
+    border: 0;
+  }
+
+  .ledger tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .ledger-name { grid-column: 1; grid-row: 1; min-width: 0; }
+  .ledger-amount { grid-column: 2; grid-row: 1; }
+  .ledger-count { grid-column: 2; grid-row: 2; text-align: right; }
+  .ledger-budget { grid-column: 1; grid-row: 2; }
+  .ledger-budget:empty { display: none; }
+  .ledger-actions { grid-column: 1 / -1; text-align: left; }
+  .ledger .ledger-date { grid-column: 1; grid-row: 2; text-align: left; }
+  .ledger-assign { grid-column: 1 / -1; }
+
+  .ledger-count-unit {
+    display: inline;
+    font-family: var(--font-family);
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-500);
+  }
 }

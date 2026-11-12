@@ -13,6 +13,7 @@ import (
 	"github.com/GustavoCaso/expensetrace/domain"
 	"github.com/GustavoCaso/expensetrace/logger"
 	"github.com/GustavoCaso/expensetrace/matcher"
+	"github.com/GustavoCaso/expensetrace/service/report"
 	"github.com/GustavoCaso/expensetrace/storage"
 )
 
@@ -58,6 +59,7 @@ func (c *Service) EnhancedList(
 	uncategorizedCount := len(uncategorizedInfos)
 
 	enhancedCategories := make([]domain.EnhancedCategory, len(cats))
+	now := time.Now()
 
 	categorizedCount := 0
 	for i, cat := range cats {
@@ -67,7 +69,7 @@ func (c *Service) EnhancedList(
 		}
 
 		categorizedCount += len(expenses)
-		enhancedCategories[i] = createEnhancedCategory(cat, expenses)
+		enhancedCategories[i] = createEnhancedCategory(cat, expenses, now)
 	}
 
 	return enhancedCategories, categorizedCount, uncategorizedCount, nil
@@ -105,14 +107,24 @@ func ValidateBudget(budgetStr string) (int64, error) {
 	return budgetCents, nil
 }
 
-func createEnhancedCategory(category domain.Category, expenses []domain.Expense) domain.EnhancedCategory {
-	var totalAmount int64
+// createEnhancedCategory computes the category's statistics; "this month" is
+// the calendar month containing now.
+func createEnhancedCategory(
+	category domain.Category,
+	expenses []domain.Expense,
+	now time.Time,
+) domain.EnhancedCategory {
+	var totalAmount, monthAmount int64
 	var lastTransaction time.Time
 	spendingCount := 0
 	incomeCount := 0
 
 	for _, exp := range expenses {
 		totalAmount += exp.Amount()
+
+		if exp.Date().Year() == now.Year() && exp.Date().Month() == now.Month() {
+			monthAmount += exp.Amount()
+		}
 
 		if exp.Amount() < 0 {
 			spendingCount++
@@ -135,6 +147,11 @@ func createEnhancedCategory(category domain.Category, expenses []domain.Expense)
 		lastTransactionStr = lastTransaction.Format("2006-01-02")
 	}
 
+	budget := domain.BudgetInfo{Status: domain.BudgetStatusNoBudget}
+	if category.Type() == domain.ChargeCategory && category.MonthlyBudget() > 0 {
+		budget = report.CalculateBudgetInfo(category.MonthlyBudget(), monthAmount)
+	}
+
 	return domain.EnhancedCategory{
 		Category:        category,
 		AvgAmount:       avgAmount,
@@ -143,6 +160,8 @@ func createEnhancedCategory(category domain.Category, expenses []domain.Expense)
 		TotalAmount:     totalAmount,
 		SpendingCount:   spendingCount,
 		IncomeCount:     incomeCount,
+		MonthAmount:     monthAmount,
+		Budget:          budget,
 	}
 }
 

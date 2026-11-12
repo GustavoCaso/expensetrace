@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/GustavoCaso/expensetrace/domain"
 	"github.com/GustavoCaso/expensetrace/service/category"
@@ -87,7 +89,22 @@ func (c *categoryHandler) categoriesHandler(
 		return
 	}
 
-	data.Categories = enhancedCategories
+	for _, cat := range enhancedCategories {
+		switch cat.Type() {
+		case domain.IncomeCategory:
+			data.IncomeCategories = append(data.IncomeCategories, cat)
+		case domain.AnyCategory:
+			data.Excluded = &cat
+		case domain.ChargeCategory:
+			data.ExpenseCategories = append(data.ExpenseCategories, cat)
+		}
+	}
+	byName := func(a, b domain.EnhancedCategory) int {
+		return strings.Compare(strings.ToLower(a.Name()), strings.ToLower(b.Name()))
+	}
+	slices.SortFunc(data.ExpenseCategories, byName)
+	slices.SortFunc(data.IncomeCategories, byName)
+
 	data.CategorizedCount = categorizedCount
 	data.UncategorizedCount = uncategorizedCount
 
@@ -170,6 +187,11 @@ func (c *categoryHandler) updateCategoryHandler(
 	name := r.FormValue("name")
 	pattern := r.FormValue("pattern")
 	budgetStr := r.FormValue("monthly_budget")
+	// The form always sends the budget field; empty there means "no budget".
+	// Requests that omit the field keep the existing budget.
+	if _, sent := r.PostForm["monthly_budget"]; sent && budgetStr == "" {
+		budgetStr = "0"
+	}
 	typeStr := r.FormValue("type")
 
 	updatedCategory, changed, _, updateErr := c.categoryService.Update(

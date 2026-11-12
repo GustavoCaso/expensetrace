@@ -12,7 +12,8 @@
  *
  * Usage:
  *   <input id="uncategorized-search">
- *   <div class="uncategorized-group" data-type="charge|income" data-description="...">
+ *   <section class="ledger-section">
+ *     <tr class="uncategorized-group" data-type="charge|income" data-description="...">
  *   <span data-count="all|charge|income"></span>
  *   <p class="uncategorized-no-match" hidden></p>
  */
@@ -39,6 +40,12 @@ function applySearch() {
 
   document.querySelectorAll('.uncategorized-filter [data-count]').forEach(el => {
     el.textContent = counts[el.dataset.count];
+  });
+
+  // A table whose rows all miss the search is hidden, heading included.
+  document.querySelectorAll('#uncategorized-results .ledger-section').forEach(section => {
+    const rows = section.querySelectorAll('.uncategorized-group');
+    section.hidden = rows.length > 0 && [...rows].every(row => row.hidden);
   });
 
   const noMatch = document.querySelector('.uncategorized-no-match');

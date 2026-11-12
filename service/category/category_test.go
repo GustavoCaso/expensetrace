@@ -602,3 +602,46 @@ func TestServiceUpdateCategoryPattern_SkipsOtherType(t *testing.T) {
 		t.Fatalf("Expected only the charge in Shopping, got %d expenses", len(byCategory))
 	}
 }
+
+func TestCreateEnhancedCategory_MonthAndBudget(t *testing.T) {
+	now := time.Date(2026, time.November, 15, 12, 0, 0, 0, time.UTC)
+	thisMonth := time.Date(2026, time.November, 3, 0, 0, 0, 0, time.UTC)
+	lastMonth := time.Date(2026, time.October, 30, 0, 0, 0, 0, time.UTC)
+
+	expenses := []domain.Expense{
+		domain.NewExpense(1, "bank", "lidl", "EUR", -7000, thisMonth, domain.ChargeType, nil),
+		domain.NewExpense(2, "bank", "lidl", "EUR", -1500, thisMonth, domain.ChargeType, nil),
+		domain.NewExpense(3, "bank", "lidl", "EUR", -9900, lastMonth, domain.ChargeType, nil),
+	}
+
+	t.Run("charge category with budget", func(t *testing.T) {
+		cat := domain.NewCategory(1, "Groceries", "lidl", 10000, domain.ChargeCategory)
+		got := createEnhancedCategory(cat, expenses, now)
+
+		if got.MonthAmount != -8500 {
+			t.Errorf("MonthAmount = %d, want -8500 (last month excluded)", got.MonthAmount)
+		}
+		if got.Budget.Status != domain.BudgetStatusNear || got.Budget.Spent != 8500 {
+			t.Errorf("Budget = %+v, want near with 8500 spent", got.Budget)
+		}
+		if got.BudgetBarWidth() != 85 {
+			t.Errorf("BudgetBarWidth = %v, want 85", got.BudgetBarWidth())
+		}
+	})
+
+	t.Run("over budget caps the bar", func(t *testing.T) {
+		cat := domain.NewCategory(1, "Groceries", "lidl", 5000, domain.ChargeCategory)
+		got := createEnhancedCategory(cat, expenses, now)
+
+		if got.Budget.Status != domain.BudgetStatusOver || got.BudgetBarWidth() != 100 {
+			t.Errorf("Budget = %+v width %v, want over capped at 100", got.Budget, got.BudgetBarWidth())
+		}
+	})
+
+	t.Run("no budget", func(t *testing.T) {
+		cat := domain.NewCategory(1, "Groceries", "lidl", 0, domain.ChargeCategory)
+		if got := createEnhancedCategory(cat, expenses, now); got.Budget.Status != domain.BudgetStatusNoBudget {
+			t.Errorf("Status = %s, want no_budget", got.Budget.Status)
+		}
+	})
+}

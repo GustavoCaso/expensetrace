@@ -186,7 +186,7 @@ func splitByExpenseType(
 		if category.Amount < 0 {
 			budget, hasBudget := categoryBudgets[key]
 			if hasBudget && budget > 0 {
-				category.Budget = calculateBudgetInfo(budget, category.Amount)
+				category.Budget = CalculateBudgetInfo(budget, category.Amount)
 			} else {
 				category.Budget = domain.BudgetInfo{
 					Amount: 0,
@@ -279,7 +279,9 @@ func calendarDays(t1, t2 time.Time) int {
 	return int(days)
 }
 
-func calculateBudgetInfo(budgetAmount int64, spentAmount int64) domain.BudgetInfo {
+// CalculateBudgetInfo returns the budget status for spentAmount (negative for
+// charges) against budgetAmount. Also used by the categories page.
+func CalculateBudgetInfo(budgetAmount int64, spentAmount int64) domain.BudgetInfo {
 	// spentAmount is negative for expenses, convert to positive
 	spent := spentAmount * -1
 
