@@ -302,7 +302,7 @@ func TestServiceGetUncategorized_GroupsByDescription(t *testing.T) {
 
 	svc := New(s, logger)
 
-	grouped, keys, totalExpenses, totalAmount, err := svc.GetUncategorized(context.Background(), user.ID(), "")
+	groups, totalExpenses, totalAmount, err := svc.GetUncategorized(context.Background(), user.ID(), "")
 	if err != nil {
 		t.Fatalf("GetUncategorized returned error: %v", err)
 	}
@@ -315,30 +315,84 @@ func TestServiceGetUncategorized_GroupsByDescription(t *testing.T) {
 		t.Fatalf("Expected total amount -2600, got %d", totalAmount)
 	}
 
-	if len(keys) != 2 {
-		t.Fatalf("Expected 2 grouping keys, got %d (%v)", len(keys), keys)
+	if len(groups) != 2 {
+		t.Fatalf("Expected 2 groups, got %d", len(groups))
 	}
 
-	coffeeInfo, ok := grouped["coffee shop"]
-	if !ok {
-		t.Fatal("Expected 'coffee shop' group to exist")
+	// Sorted by count descending.
+	coffee := groups[0]
+	if coffee.Description != "coffee shop" {
+		t.Fatalf("Expected 'coffee shop' first, got %q", coffee.Description)
 	}
 
-	if coffeeInfo.Count != 2 {
-		t.Fatalf("Expected coffee shop count to be 2, got %d", coffeeInfo.Count)
+	if coffee.Count != 2 {
+		t.Fatalf("Expected coffee shop count to be 2, got %d", coffee.Count)
 	}
 
-	if coffeeInfo.Total != -1100 {
-		t.Fatalf("Expected coffee shop total to be -1100, got %d", coffeeInfo.Total)
+	if coffee.Total != -1100 {
+		t.Fatalf("Expected coffee shop total to be -1100, got %d", coffee.Total)
 	}
 
-	if coffeeInfo.Slug != "coffee-shop" {
-		t.Fatalf("Expected slug 'coffee-shop', got %s", coffeeInfo.Slug)
+	if coffee.Type != domain.ChargeType {
+		t.Fatalf("Expected coffee shop to be a charge group, got %v", coffee.Type)
+	}
+}
+
+func TestServiceGetUncategorized_SplitsChargeAndIncome(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+
+	now := time.Now()
+	_, err := s.InsertExpenses(context.Background(), user.ID(), []domain.Expense{
+		domain.NewExpense(0, "bank", "amazon", "EUR", -3000, now, domain.ChargeType, nil),
+		domain.NewExpense(0, "bank", "amazon", "EUR", -2000, now.Add(-time.Hour), domain.ChargeType, nil),
+		domain.NewExpense(0, "bank", "amazon", "EUR", 1500, now, domain.IncomeType, nil),
+		domain.NewExpense(0, "bank", "bakery", "EUR", -400, now, domain.ChargeType, nil),
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
 	}
 
-	// keys should be sorted by count descending
-	if keys[0] != "coffee shop" {
-		t.Fatalf("Expected 'coffee shop' to be the first key (highest count), got %s", keys[0])
+	groups, totalExpenses, _, err := New(s, logger).GetUncategorized(context.Background(), user.ID(), "")
+	if err != nil {
+		t.Fatalf("GetUncategorized returned error: %v", err)
+	}
+
+	if totalExpenses != 4 {
+		t.Fatalf("Expected 4 total expenses, got %d", totalExpenses)
+	}
+
+	type summary struct {
+		description string
+		expenseType domain.ExpenseType
+		count       int
+		total       int64
+	}
+	// Count descending, then description, then type (charge before income).
+	want := []summary{
+		{"amazon", domain.ChargeType, 2, -5000},
+		{"amazon", domain.IncomeType, 1, 1500},
+		{"bakery", domain.ChargeType, 1, -400},
+	}
+
+	if len(groups) != len(want) {
+		t.Fatalf("Expected %d groups, got %d", len(want), len(groups))
+	}
+	for i, g := range groups {
+		got := summary{g.Description, g.Type, g.Count, g.Total}
+		if got != want[i] {
+			t.Errorf("group %d = %+v, want %+v", i, got, want[i])
+		}
+		for _, ex := range g.Expenses {
+			if ex.Type() != g.Type {
+				t.Errorf("group %d holds an expense of the other type", i)
+			}
+		}
+	}
+
+	// Expenses within a group are newest first.
+	if !groups[0].Expenses[0].Date().After(groups[0].Expenses[1].Date()) {
+		t.Error("Expected expenses newest first")
 	}
 }
 

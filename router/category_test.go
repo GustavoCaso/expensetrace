@@ -1000,3 +1000,57 @@ func TestUncategorizedAssignSwapsResultsOnly(t *testing.T) {
 		}
 	})
 }
+
+func TestUncategorizedSplitsChargeAndIncome(t *testing.T) {
+	logger := testutil.TestLogger(t)
+	s, user := testutil.SetupTestStorage(t, logger)
+	ctx := context.Background()
+
+	if _, err := s.CreateCategory(ctx, user.ID(), "Shopping", "^$", 0, domain.ChargeCategory); err != nil {
+		t.Fatalf("Failed to create category: %v", err)
+	}
+	if _, err := s.CreateCategory(ctx, user.ID(), "Refunds", "^$", 0, domain.IncomeCategory); err != nil {
+		t.Fatalf("Failed to create category: %v", err)
+	}
+
+	_, err := s.InsertExpenses(ctx, user.ID(), []domain.Expense{
+		domain.NewExpense(0, "bank", "amazon", "EUR", -3000, time.Now(), domain.ChargeType, nil),
+		domain.NewExpense(0, "bank", "amazon", "EUR", 1500, time.Now(), domain.IncomeType, nil),
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert test expenses: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/category/uncategorized", nil)
+	testutil.SetupAuthCookie(t, s, req, user, sessionCookieName, sessionDuration)
+	w := httptest.NewRecorder()
+	New(s, logger).ServeHTTP(w, req)
+
+	html := w.Body.String()
+	ensureNoErrorInTemplateResponse(t, "uncategorized", io.NopCloser(strings.NewReader(html)))
+
+	cards := strings.Split(html, `class="card uncategorized-group"`)[1:]
+	if len(cards) != 2 {
+		t.Fatalf("Expected 2 groups for amazon, got %d", len(cards))
+	}
+
+	for _, tt := range []struct {
+		card, wantType, offers, hides string
+	}{
+		{cards[0], `data-type="charge"`, ">Shopping<", ">Refunds<"},
+		{cards[1], `data-type="income"`, ">Refunds<", ">Shopping<"},
+	} {
+		if !strings.Contains(tt.card, tt.wantType) {
+			t.Errorf("Expected card with %s", tt.wantType)
+		}
+		if !strings.Contains(tt.card, tt.offers) || strings.Contains(tt.card, tt.hides) {
+			t.Errorf("%s card should offer %s and not %s", tt.wantType, tt.offers, tt.hides)
+		}
+	}
+
+	for _, id := range []string{`id="category-select-0"`, `id="category-select-1"`} {
+		if strings.Count(html, id) != 1 {
+			t.Errorf("Expected exactly one %s", id)
+		}
+	}
+}

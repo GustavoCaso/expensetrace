@@ -327,12 +327,12 @@ func TestSpendingTrendAndUncategorized(t *testing.T) {
 
 	uncategorized := call[listUncategorizedOutput](t, session, "list_uncategorized", nil)
 	// Income can be categorized too, so the uncategorized salary is listed.
-	descriptions := map[string]bool{}
+	types := map[string]string{}
 	for _, g := range uncategorized.Groups {
-		descriptions[g.Description] = true
+		types[g.Description] = g.Type
 	}
 	if uncategorized.TotalExpenses != 2 || len(uncategorized.Groups) != 2 ||
-		!descriptions["Coffee shop"] || !descriptions["Salary"] {
+		types["Coffee shop"] != "charge" || types["Salary"] != "income" {
 		t.Errorf("unexpected uncategorized: %+v", uncategorized)
 	}
 

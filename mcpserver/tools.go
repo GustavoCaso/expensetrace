@@ -594,6 +594,7 @@ type listUncategorizedInput struct {
 
 type uncategorizedGroupOutput struct {
 	Description string  `json:"description"`
+	Type        string  `json:"type"        jsonschema:"charge or income; a description with both appears as two groups"`
 	Count       int     `json:"count"`
 	Total       float64 `json:"total"       jsonschema:"signed sum; charges are negative"`
 	LastDate    string  `json:"last_date"`
@@ -616,7 +617,7 @@ func (s *server) listUncategorized(
 		return listUncategorizedOutput{}, err
 	}
 
-	groups, keys, totalExpenses, totalAmount, err := s.Category.GetUncategorized(ctx, userID, in.Query)
+	groups, totalExpenses, totalAmount, err := s.Category.GetUncategorized(ctx, userID, in.Query)
 	if err != nil {
 		return listUncategorizedOutput{}, err
 	}
@@ -624,14 +625,14 @@ func (s *server) listUncategorized(
 	out := listUncategorizedOutput{
 		TotalExpenses: totalExpenses,
 		TotalAmount:   toUnits(totalAmount),
-		Groups:        make([]uncategorizedGroupOutput, 0, min(limit, len(keys))),
-		Truncated:     len(keys) > limit,
+		Groups:        make([]uncategorizedGroupOutput, 0, min(limit, len(groups))),
+		Truncated:     len(groups) > limit,
 	}
 
-	for _, key := range keys[:min(limit, len(keys))] {
-		g := groups[key]
+	for _, g := range groups[:min(limit, len(groups))] {
 		group := uncategorizedGroupOutput{
-			Description: key,
+			Description: g.Description,
+			Type:        expenseTypeName(g.Type),
 			Count:       g.Count,
 			Total:       toUnits(g.Total),
 		}

@@ -20,11 +20,11 @@
 
   <div id="uncategorized">
     <div id="uncategorized-summary">
-      {{if gt (len .Keys) 0}}
+      {{if gt (len .Groups) 0}}
         <div class="card-grid">
           <div class="card ta-center">
             <h3 class="card-title">Different Transactions</h3>
-            <div class="text-lg font-bold">{{len .Keys}}</div>
+            <div class="text-lg font-bold">{{len .Groups}}</div>
           </div>
           <div class="card ta-center">
             <h3 class="card-title">Total Expenses</h3>
@@ -38,7 +38,7 @@
       {{end}}
     </div>
 
-    {{if gt (len .Keys) 0}}
+    {{if gt (len .Groups) 0}}
       <div class="uncategorized-instructions">
         <p>These expenses haven't been automatically categorized. Select a category to organize them.</p>
       </div>
@@ -50,7 +50,7 @@
         <div class="uncategorized-filter" role="radiogroup" aria-label="Show uncategorized">
           <label>
             <input type="radio" name="filter" value="all" checked>
-            <span>All <span class="filter-count" data-count="all">{{len .Keys}}</span></span>
+            <span>All <span class="filter-count" data-count="all">{{len .Groups}}</span></span>
           </label>
           <label>
             <input type="radio" name="filter" value="charge">
@@ -67,15 +67,16 @@
     {{end}}
 
     <div id="uncategorized-results">
-      {{if gt (len .Keys) 0}}
+      {{if gt (len .Groups) 0}}
         <div class="card-grid">
-          {{range $key := .Keys}}
-            {{$uncategorized := index $.UncategorizeInfo $key}}
+          {{/* A description seen as both a charge and income is two groups, so
+               element ids use the group's position, not its description. */}}
+          {{range $i, $uncategorized := .Groups}}
             {{$isIncome := eq $uncategorized.Type 1}}
             <div class="card uncategorized-group" data-type="{{if $isIncome}}income{{else}}charge{{end}}"
-                 data-description="{{$key}}">
+                 data-description="{{$uncategorized.Description}}">
               <div class="card-header">
-                <h3 class="card-title">{{$key}}</h3>
+                <h3 class="card-title">{{$uncategorized.Description}}</h3>
                   {{if $isIncome}}
                     <span class="badge income">Income</span>
                   {{else}}
@@ -119,7 +120,7 @@
                   <div class="more-transactions">
                     <button class="text-button"
                             data-toggle
-                            data-toggle-target="transactions-{{$uncategorized.Slug}}"
+                            data-toggle-target="transactions-{{$i}}"
                             data-toggle-text="Hide transactions">
                       Show {{$remaining}} more transactions
                     </button>
@@ -127,7 +128,7 @@
                 {{end}}
               </div>
               
-              <div id="transactions-{{$uncategorized.Slug}}" class="all-transactions collapsed">
+              <div id="transactions-{{$i}}" class="all-transactions collapsed">
                 {{range $index, $expense := $uncategorized.Expenses}}
                   {{if ge $index $maxShow}}
                     <div>
@@ -147,11 +148,11 @@
                       hx-select="#uncategorized-results"
                       hx-select-oob="#uncategorized-status,#uncategorized-summary"
                       hx-swap="outerHTML show:window:top">
-                  <input name="description" value="{{$key}}" type="hidden">
+                  <input name="description" value="{{$uncategorized.Description}}" type="hidden">
                   <div>
-                    <label for="category-select-{{$key}}">Assign category:</label>
+                    <label for="category-select-{{$i}}">Assign category:</label>
                     <div class="grid">
-                      <select id="category-select-{{$key}}"
+                      <select id="category-select-{{$i}}"
                               class="category-select mb-1"
                               name="category_id">
                         <option value="">-- Select a category --</option>

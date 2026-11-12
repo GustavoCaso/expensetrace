@@ -223,7 +223,7 @@ func (c *categoryHandler) uncategorizedHandler(
 		c.renderHTML(w, http.StatusOK, data, "base", "pages/categories/uncategorized.html")
 	}()
 
-	grouped, keys, totalExpenses, totalAmount, err := c.categoryService.GetUncategorized(ctx, userID, "")
+	groups, totalExpenses, totalAmount, err := c.categoryService.GetUncategorized(ctx, userID, "")
 	if err != nil {
 		data.Error = err.Error()
 		return
@@ -235,14 +235,13 @@ func (c *categoryHandler) uncategorizedHandler(
 		return
 	}
 
-	data.Keys = keys
-	data.UncategorizeInfo = grouped
+	data.Groups = groups
 	data.Categories = categories
 	data.TotalExpenses = totalExpenses
 	data.TotalAmount = totalAmount
 
-	for _, info := range grouped {
-		if info.Type == domain.IncomeType {
+	for _, group := range groups {
+		if group.Type == domain.IncomeType {
 			data.IncomeGroups++
 		} else {
 			data.ChargeGroups++

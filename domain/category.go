@@ -95,25 +95,24 @@ type CategoryViewData struct {
 	Action   string
 }
 
+// UncategorizedInfo groups uncategorized expenses sharing a description and
+// type; a description seen as both a charge and income is two groups.
 type UncategorizedInfo struct {
-	Count    int
-	Expenses []Expense
-	Total    int64
-	Slug     string
-	// Type is the type of the group's first expense; descriptions shared by
-	// charges and income are rare enough not to split.
-	Type ExpenseType
+	Description string
+	Type        ExpenseType
+	Count       int
+	Expenses    []Expense
+	Total       int64
 }
 
 type UncategorizedViewData struct {
 	ViewBase
-	Keys             []string
-	UncategorizeInfo map[string]UncategorizedInfo
-	Categories       []Category
-	TotalExpenses    int
-	TotalAmount      int64
-	ChargeGroups     int
-	IncomeGroups     int
+	Groups        []UncategorizedInfo
+	Categories    []Category
+	TotalExpenses int
+	TotalAmount   int64
+	ChargeGroups  int
+	IncomeGroups  int
 }
 
 type CreateCategoryViewData struct {

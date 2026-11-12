@@ -1,15 +1,13 @@
 package category
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/GustavoCaso/expensetrace/domain"
@@ -491,13 +489,15 @@ func expenseBelongsToCategoryWeAreUpdating(ex domain.Expense, categoryID int64) 
 }
 
 // GetUncategorized fetches uncategorized expenses (optionally filtered by
-// query) and groups them by description, returning the grouped map, a list
-// of keys sorted by descending count, and the overall totals.
+// query) and groups them by description and type, so a description seen as
+// both a charge and income yields two groups. Groups are ordered by count
+// (descending), then description, then type; each group's expenses are newest
+// first. It also returns the overall totals.
 func (c *Service) GetUncategorized(
 	ctx context.Context,
 	userID int64,
 	query string,
-) (map[string]domain.UncategorizedInfo, []string, int, int64, error) {
+) ([]domain.UncategorizedInfo, int, int64, error) {
 	var expenses []domain.Expense
 	var err error
 
@@ -508,69 +508,53 @@ func (c *Service) GetUncategorized(
 	}
 
 	if err != nil {
-		return nil, nil, 0, 0, err
+		return nil, 0, 0, err
 	}
 
-	uncategorizeInfo := map[string]domain.UncategorizedInfo{}
-	totalExpenses := 0
+	type groupKey struct {
+		description string
+		expenseType domain.ExpenseType
+	}
+
+	index := map[groupKey]int{}
+	groups := []domain.UncategorizedInfo{}
 	var totalAmount int64
 
 	for _, ex := range expenses {
-		if r, ok := uncategorizeInfo[ex.Description()]; ok {
-			r.Count++
-			r.Expenses = append(r.Expenses, ex)
-			r.Total += ex.Amount()
-			uncategorizeInfo[ex.Description()] = r
-		} else {
-			uncategorizeInfo[ex.Description()] = domain.UncategorizedInfo{
-				Count:    1,
-				Total:    ex.Amount(),
-				Expenses: []domain.Expense{ex},
-				Slug:     slugify(ex.Description()),
-				Type:     ex.Type(),
-			}
+		key := groupKey{ex.Description(), ex.Type()}
+		i, ok := index[key]
+		if !ok {
+			i = len(groups)
+			index[key] = i
+			groups = append(groups, domain.UncategorizedInfo{
+				Description: ex.Description(),
+				Type:        ex.Type(),
+			})
 		}
 
-		totalExpenses++
+		groups[i].Count++
+		groups[i].Total += ex.Amount()
+		groups[i].Expenses = append(groups[i].Expenses, ex)
 		totalAmount += ex.Amount()
 	}
 
-	resultKeys := slices.Collect(maps.Keys(uncategorizeInfo))
-
-	// Most frequent first; ties by description so the order is stable across
-	// renders (map iteration order is random).
-	sort.SliceStable(resultKeys, func(i, j int) bool {
-		ci, cj := uncategorizeInfo[resultKeys[i]].Count, uncategorizeInfo[resultKeys[j]].Count
-		if ci != cj {
-			return ci > cj
+	slices.SortStableFunc(groups, func(a, b domain.UncategorizedInfo) int {
+		if c := cmp.Compare(b.Count, a.Count); c != 0 {
+			return c
 		}
-		return resultKeys[i] < resultKeys[j]
+		if c := cmp.Compare(a.Description, b.Description); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.Type, b.Type)
 	})
 
-	for _, report := range uncategorizeInfo {
-		sort.SliceStable(report.Expenses, func(i, j int) bool {
-			return report.Expenses[i].Date().After(report.Expenses[j].Date())
+	for _, group := range groups {
+		slices.SortStableFunc(group.Expenses, func(a, b domain.Expense) int {
+			return b.Date().Compare(a.Date())
 		})
 	}
 
-	return uncategorizeInfo, resultKeys, totalExpenses, totalAmount, nil
-}
-
-var specialCharactersRegex = regexp.MustCompile(`[^a-z0-9\-]`)
-var multipleHyphenRegex = regexp.MustCompile(`-{2,}`)
-
-func slugify(s string) string {
-	// Convert to lowercase
-	s = strings.ToLower(s)
-	// Replace spaces with hyphens
-	s = strings.ReplaceAll(s, " ", "-")
-	// Remove special characters
-	s = specialCharactersRegex.ReplaceAllString(s, "")
-	// Replace multiple hyphens with a single one
-	s = multipleHyphenRegex.ReplaceAllString(s, "-")
-	// Remove leading and trailing hyphens
-	s = strings.Trim(s, "-")
-	return s
+	return groups, len(expenses), totalAmount, nil
 }
 
 // Test returns the uncategorized expenses of a type categoryType accepts that
